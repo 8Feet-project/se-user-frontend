@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "allowJs": false,
     "skipLibCheck": true,
@@ -14,8 +13,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
