@@ -79,9 +79,14 @@ export function LoginPage() {
               <Button className="w-full sm:w-auto" onClick={handleLogin} disabled={submitting}>
                 {submitting ? '登录中...' : '登录'}
               </Button>
-              <Link to="/register" className="text-sm font-medium text-slate-700 hover:text-slate-950">
-                注册新账号
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link to="/reset-password" className="text-sm font-medium text-slate-700 hover:text-slate-950">
+                  重置密码
+                </Link>
+                <Link to="/register" className="text-sm font-medium text-slate-700 hover:text-slate-950">
+                  注册新账号
+                </Link>
+              </div>
             </div>
           </Card>
 

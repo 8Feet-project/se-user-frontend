@@ -22,6 +22,9 @@ const navItems = [
     { label: '流程', path: '/process' },
     { label: '报告', path: '/report' },
     { label: '历史', path: '/history' },
+    { label: '收藏夹', path: '/favorites' },
+    { label: '提醒消息', path: '/alerts' },
+    { label: '个人中心', path: '/profile' },
   ]},
 ];
 

@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { register } from '../api/client';
+import { register, sendEmailCode, verifyEmail } from '../api/client';
 
 export function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -12,6 +12,7 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
+  const [emailCode, setEmailCode] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,6 +36,40 @@ export function RegisterPage() {
       setMessage(`注册成功：${response.user_id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '注册失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSendEmailCode = async () => {
+    if (!email.trim()) {
+      setMessage('请先填写邮箱。');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const response = await sendEmailCode({ email: email.trim(), scene: 'register' });
+      setMessage(`验证码发送结果：${response.result}，有效期 ${response.expire_in}s`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '发送验证码失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!email.trim() || !emailCode.trim()) {
+      setMessage('请填写邮箱和验证码。');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const response = await verifyEmail({ email: email.trim(), code: emailCode.trim() });
+      setMessage(`邮箱验证结果：${response.verified ? '已通过' : '未通过'}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '验证邮箱失败';
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -79,6 +114,22 @@ export function RegisterPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="请输入企业邮箱"
                 />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={handleSendEmailCode} disabled={submitting}>
+                  发送邮箱验证码
+                </Button>
+                <Input
+                  id="register-email-code"
+                  type="text"
+                  value={emailCode}
+                  onChange={(event) => setEmailCode(event.target.value)}
+                  placeholder="请输入验证码"
+                  className="sm:max-w-[220px]"
+                />
+                <Button size="sm" variant="secondary" onClick={handleVerifyEmail} disabled={submitting}>
+                  验证邮箱
+                </Button>
               </div>
               <div>
                 <Label htmlFor="register-phone">手机号（可选）</Label>

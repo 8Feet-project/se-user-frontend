@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getReportDetail, getResearchHistory } from '../api/client';
+import {
+  getResearchHistory,
+  getResearchHistoryDetail,
+  reloadResearchHistory,
+} from '../api/client';
+import { Button } from '../components/ui/button';
 import { PageShell } from '../components/common/PageShell';
 import { Card } from '../components/ui/card';
-import type { HistoryTaskItem, ReportDetail } from '../types';
+import type { HistoryTaskItem, ResearchHistoryDetail, ResearchHistoryReloadResponse } from '../types';
 
 function objectTypeLabel(type: HistoryTaskItem['object_type']) {
   if (type === 'company') return '公司对象';
@@ -12,18 +17,16 @@ function objectTypeLabel(type: HistoryTaskItem['object_type']) {
 
 export function HistoryFavoritesPage() {
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
-  const [report, setReport] = useState<ReportDetail | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<ResearchHistoryDetail | null>(null);
+  const [reloadResult, setReloadResult] = useState<ResearchHistoryReloadResponse | null>(null);
   const [message, setMessage] = useState('');
+  const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const history = await getResearchHistory({ page: 1, page_size: 10 });
         setTasks(history.list);
-        if (history.list[0]?.report_id) {
-          const reportDetail = await getReportDetail(history.list[0].report_id);
-          setReport(reportDetail);
-        }
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载历史失败';
         setMessage(reason);
@@ -33,9 +36,37 @@ export function HistoryFavoritesPage() {
     void loadData();
   }, []);
 
+  const handleLoadDetail = async (taskId: string) => {
+    try {
+      setSubmittingTaskId(taskId);
+      const detail = await getResearchHistoryDetail(taskId);
+      setSelectedDetail(detail);
+      setMessage('');
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '加载历史详情失败';
+      setMessage(reason);
+    } finally {
+      setSubmittingTaskId(null);
+    }
+  };
+
+  const handleReloadTask = async (taskId: string) => {
+    try {
+      setSubmittingTaskId(taskId);
+      const result = await reloadResearchHistory(taskId);
+      setReloadResult(result);
+      setMessage(`重载成功：${result.task_id}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '重载历史失败';
+      setMessage(reason);
+    } finally {
+      setSubmittingTaskId(null);
+    }
+  };
+
   return (
-    <PageShell title="历史与收藏" subtitle="对齐 /api/v1/research/history 与 /api/v1/reports/{report_id} 数据结构。">
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.95fr]">
+    <PageShell title="历史与收藏" subtitle="对齐 /api/v1/research/history 历史任务数据结构。">
+      <div className="grid gap-8">
         <Card className="space-y-6">
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold text-slate-950">调研历史</h2>
@@ -56,37 +87,45 @@ export function HistoryFavoritesPage() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-slate-600">提交时间：{task.created_at}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleLoadDetail(task.task_id)}
+                    disabled={submittingTaskId === task.task_id}
+                  >
+                    历史详情
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleReloadTask(task.task_id)}
+                    disabled={submittingTaskId === task.task_id}
+                  >
+                    重载结果
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
-        </Card>
 
-        <Card className="space-y-6 bg-slate-950 text-white">
-          <div>
-            <h3 className="text-xl font-semibold">报告收藏</h3>
-            <p className="mt-2 text-sm text-slate-300">展示 /api/v1/reports/{'{report_id}'} 返回内容与引用摘要。</p>
-          </div>
-          {report ? (
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-                <p className="font-semibold text-white">{report.title}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{report.content}</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.24em] text-slate-500">{report.created_at}</p>
-              </div>
-              <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-                <p className="font-semibold text-white">引用来源</p>
-                <div className="mt-3 space-y-2">
-                  {report.citations.map((citation) => (
-                    <p key={citation.citation_id} className="text-sm text-slate-300">
-                      {citation.source_title}
-                    </p>
-                  ))}
-                </div>
-              </div>
+          {selectedDetail ? (
+            <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5">
+              <p className="text-sm font-semibold text-slate-950">历史详情（/research/history/{'{task_id}'})</p>
+              <p className="mt-2 text-sm text-slate-700">object_name: {selectedDetail.object_name}</p>
+              <p className="text-sm text-slate-700">status: {selectedDetail.status}</p>
+              <p className="text-sm text-slate-700">fact_dataset: {selectedDetail.fact_dataset}</p>
             </div>
-          ) : (
-            <p className="text-sm text-slate-300">{message || '暂无报告数据'}</p>
-          )}
+          ) : null}
+
+          {reloadResult ? (
+            <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5">
+              <p className="text-sm font-semibold text-slate-950">重载结果（/research/history/{'{task_id}'}/reload）</p>
+              <p className="mt-2 text-sm text-slate-700">task_id: {reloadResult.task_id}</p>
+              <p className="text-sm text-slate-700">report_id: {reloadResult.report_id ?? '-'}</p>
+              <p className="text-sm text-slate-700">redirect_url: {reloadResult.redirect_url}</p>
+            </div>
+          ) : null}
         </Card>
       </div>
     </PageShell>

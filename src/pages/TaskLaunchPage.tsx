@@ -1,11 +1,20 @@
-import { useState } from 'react';
-import { createResearchTask } from '../api/client';
+import { useEffect, useState } from 'react';
+import {
+  createFavoriteItem,
+  getFavoriteItems,
+  createResearchTask,
+  getModelRoutingRecommendation,
+  getModelsAvailable,
+  getResearchTasks,
+} from '../api/client';
 import { PageShell } from '../components/common/PageShell';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { MultiSelect } from '../components/ui/multi-select';
 import { Select } from '../components/ui/select';
+import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '../types';
 
 const objectTypes = ['', 'company', 'stock', 'commodity'] as const;
 
@@ -17,9 +26,60 @@ export function TaskLaunchPage() {
   const [sourceTypesText, setSourceTypesText] = useState('news,report');
   const [modelId, setModelId] = useState('');
   const [enableCrossValidation, setEnableCrossValidation] = useState(false);
-  const [multiModelText, setMultiModelText] = useState('');
+  const [multiModelIds, setMultiModelIds] = useState<string[]>([]);
+  const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<ModelAvailableItem[]>([]);
+  const [recommendedModelId, setRecommendedModelId] = useState('');
+  const [researchTasks, setResearchTasks] = useState<ResearchTaskListItem[]>([]);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadBaseData = async () => {
+      const [favoritesResult, modelsResult, tasksResult] = await Promise.allSettled([
+        getFavoriteItems({ favorite_type: 'model', page: 1, page_size: 100 }),
+        getModelsAvailable(),
+        getResearchTasks({ page: 1, page_size: 10 }),
+      ]);
+
+      if (favoritesResult.status === 'fulfilled') {
+        setFavoriteModelIds(favoritesResult.value.list.map((item: FavoriteItem) => item.target_id));
+      } else {
+        setFavoriteModelIds([]);
+      }
+
+      if (modelsResult.status === 'fulfilled') {
+        setAvailableModels(modelsResult.value.models);
+        setRecommendedModelId(modelsResult.value.recommended_model_id ?? '');
+      } else {
+        setAvailableModels([]);
+        setRecommendedModelId('');
+      }
+
+      if (tasksResult.status === 'fulfilled') {
+        setResearchTasks(tasksResult.value.list);
+      } else {
+        setResearchTasks([]);
+      }
+    };
+
+    void loadBaseData();
+  }, []);
+
+  useEffect(() => {
+    const loadRecommendation = async () => {
+      if (!objectType) {
+        return;
+      }
+      try {
+        const response = await getModelRoutingRecommendation({ object_type: objectType });
+        setRecommendedModelId(response.recommended_model_id ?? '');
+      } catch {
+        setRecommendedModelId('');
+      }
+    };
+    void loadRecommendation();
+  }, [objectType]);
 
   const handleCreateTask = async () => {
     if (!objectName.trim()) {
@@ -39,13 +99,12 @@ export function TaskLaunchPage() {
           .map((item) => item.trim())
           .filter(Boolean),
         model_id: modelId || undefined,
-        multi_model_ids: multiModelText
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        multi_model_ids: multiModelIds,
         enable_cross_validation: enableCrossValidation,
       });
       setMessage(`任务已创建：${response.task_id}，状态 ${response.status}`);
+      const tasksResponse = await getResearchTasks({ page: 1, page_size: 10 });
+      setResearchTasks(tasksResponse.list);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '创建失败';
       setMessage(reason);
@@ -53,6 +112,39 @@ export function TaskLaunchPage() {
       setSubmitting(false);
     }
   };
+
+  const handleFavoriteModel = async () => {
+    if (!modelId) {
+      setMessage('请先选择 model_id。');
+      return;
+    }
+
+    if (favoriteModelIds.includes(modelId)) {
+      setMessage('该模型已在收藏夹中。');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await createFavoriteItem({
+        favorite_type: 'model',
+        target_id: modelId,
+        remark: '从任务发起页收藏',
+      });
+      setFavoriteModelIds((prev) => [...prev, modelId]);
+      setMessage(`模型已收藏：${response.favorite_id}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '收藏模型失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const multiModelOptions = availableModels.map((model) => ({
+    value: model.model_id,
+    label: `${model.model_name} (${model.provider})`,
+  }));
 
   return (
     <PageShell
@@ -124,21 +216,41 @@ export function TaskLaunchPage() {
             </div>
             <div>
               <Label htmlFor="task-model-id">model_id（可选）</Label>
-              <Input
-                id="task-model-id"
-                value={modelId}
-                onChange={(event) => setModelId(event.target.value)}
-                placeholder="例如：model-deepseek-v3"
-              />
+              <Select id="task-model-id" value={modelId} onChange={(event) => setModelId(event.target.value)}>
+                <option value="">不指定模型（后端默认）</option>
+                {availableModels.map((model) => (
+                  <option key={model.model_id} value={model.model_id}>
+                    {model.model_name} ({model.provider})
+                  </option>
+                ))}
+              </Select>
+              <div className="mt-2 flex items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={handleFavoriteModel} disabled={submitting}>
+                  收藏当前模型
+                </Button>
+                {modelId && favoriteModelIds.includes(modelId) ? (
+                  <span className="text-xs text-slate-600">已收藏</span>
+                ) : null}
+              </div>
+              {recommendedModelId ? (
+                <p className="mt-2 text-xs text-slate-600">推荐模型：{recommendedModelId}</p>
+              ) : null}
             </div>
             <div>
-              <Label htmlFor="task-multi-model-ids">multi_model_ids（逗号分隔）</Label>
-              <Input
-                id="task-multi-model-ids"
-                value={multiModelText}
-                onChange={(event) => setMultiModelText(event.target.value)}
-                placeholder="model-a,model-b"
+              <Label htmlFor="task-multi-model-ids">multi_model_ids (multi-select)</Label>
+              <MultiSelect
+                options={multiModelOptions}
+                defaultValue={multiModelIds}
+                onValueChange={setMultiModelIds}
+                placeholder="Select models"
+                className="w-full border-slate-300 bg-white text-slate-900 hover:bg-white"
+                popoverClassName="border border-slate-200 bg-white text-slate-900 shadow-lg"
+                hideSelectAll
+                maxCount={3}
               />
+              {availableModels.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">No model options loaded.</p>
+              ) : null}
             </div>
             <div className="flex items-center gap-3 pt-8">
               <input
@@ -156,6 +268,17 @@ export function TaskLaunchPage() {
               {submitting ? '提交中...' : '提交到 /api/v1/research/tasks'}
             </Button>
             {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <p className="text-sm font-semibold text-slate-950">任务列表（/api/v1/research/tasks）</p>
+            <div className="mt-3 space-y-2">
+              {researchTasks.map((task) => (
+                <p key={task.task_id} className="text-sm text-slate-700">
+                  {task.task_id} / {task.object_name} / {task.status}
+                </p>
+              ))}
+            </div>
           </div>
         </Card>
       </div>
