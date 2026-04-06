@@ -1,32 +1,58 @@
+import { useEffect, useState } from 'react';
+import { getResearchTaskStatus, getResearchTaskWorkflow } from '../api/client';
 import { PageShell } from '../components/common/PageShell';
 import { Card } from '../components/ui/card';
+import type { ResearchTaskStatusResponse, TaskWorkflowResponse, WorkflowNode } from '../types';
 
-const steps = [
-  { label: '任务接收', status: '已完成' },
-  { label: '数据抓取', status: '进行中' },
-  { label: '结构化分析', status: '待处理' },
-  { label: '生成报告', status: '待处理' },
-];
+function nodeStatusLabel(status: WorkflowNode['node_status']) {
+  if (status === 'completed') return '已完成';
+  if (status === 'running') return '进行中';
+  if (status === 'failed') return '失败';
+  return '待处理';
+}
 
 export function TaskProcessPage() {
+  const [status, setStatus] = useState<ResearchTaskStatusResponse | null>(null);
+  const [workflow, setWorkflow] = useState<TaskWorkflowResponse | null>(null);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const taskId = 'task-002';
+    const loadData = async () => {
+      try {
+        const [statusResult, workflowResult] = await Promise.all([
+          getResearchTaskStatus(taskId),
+          getResearchTaskWorkflow(taskId),
+        ]);
+        setStatus(statusResult);
+        setWorkflow(workflowResult);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : '加载任务流程失败';
+        setMessage(reason);
+      }
+    };
+
+    void loadData();
+  }, []);
+
   return (
-    <PageShell title="调研流程" subtitle="查看当前任务节点与整体进度，保持流程透明可控。">
+    <PageShell title="调研流程" subtitle="对齐 /api/v1/research/tasks/{task_id}/status 与 /workflow 接口。">
       <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="space-y-7">
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-slate-950">当前任务进度</h2>
-            <p className="text-sm leading-7 text-slate-600">调研流程分为四个关键阶段，当前阶段与下一阶段一目了然。</p>
+            <p className="text-sm leading-7 text-slate-600">流程节点字段：node_id、node_name、node_status。</p>
           </section>
 
           <div className="space-y-5">
-            {steps.map((step, index) => (
-              <div key={step.label} className="flex items-center gap-5 rounded-[28px] border border-slate-200/80 bg-slate-50 px-5 py-5">
+            {workflow?.nodes.map((step, index) => (
+              <div key={step.node_id} className="flex items-center gap-5 rounded-[28px] border border-slate-200/80 bg-slate-50 px-5 py-5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-semibold text-slate-900">
                   {index + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-slate-950">{step.label}</p>
-                  <p className="text-sm text-slate-600">{step.status}</p>
+                  <p className="font-semibold text-slate-950">{step.node_name}</p>
+                  <p className="text-sm text-slate-600">{nodeStatusLabel(step.node_status)}</p>
                 </div>
               </div>
             ))}
@@ -35,13 +61,17 @@ export function TaskProcessPage() {
 
         <Card className="space-y-5 bg-slate-950 text-white">
           <h3 className="text-xl font-semibold">任务摘要</h3>
-          <div className="space-y-4 text-sm leading-7 text-slate-300">
-            <p>当前任务正在进行数据抓取与核心信息提取，预计完成时间为 24 小时内。</p>
-            <p>下一步将进入结构化分析和要点整合，生成简明报告摘要。</p>
-          </div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-sm font-medium text-white">建议预留审阅时间，确保报告结论覆盖行业动向与风险要点。</p>
-          </div>
+          {status ? (
+            <div className="space-y-4 text-sm leading-7 text-slate-300">
+              <p>task_id: {status.task_id}</p>
+              <p>status: {status.status}</p>
+              <p>current_stage: {status.current_stage}</p>
+              <p>progress: {status.progress}%</p>
+              <p>hint: {status.hint}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-300">{message || '暂无任务状态数据'}</p>
+          )}
         </Card>
       </div>
     </PageShell>

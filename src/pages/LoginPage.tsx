@@ -4,10 +4,33 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { login } from '../api/client';
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setMessage('请先填写用户名和密码。');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await login({ username, password });
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('refresh_token', response.refresh_token);
+      setMessage(`登录成功：${response.nickname}（${response.role}）`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '登录失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-12 sm:px-10">
@@ -29,13 +52,13 @@ export function LoginPage() {
 
             <div className="grid gap-5">
               <div>
-                <Label htmlFor="login-email">邮箱</Label>
+                <Label htmlFor="login-username">用户名/邮箱</Label>
                 <Input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="请输入邮箱"
+                  id="login-username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="请输入用户名或邮箱"
                 />
               </div>
               <div>
@@ -50,8 +73,12 @@ export function LoginPage() {
               </div>
             </div>
 
+            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <Button className="w-full sm:w-auto">登录</Button>
+              <Button className="w-full sm:w-auto" onClick={handleLogin} disabled={submitting}>
+                {submitting ? '登录中...' : '登录'}
+              </Button>
               <Link to="/register" className="text-sm font-medium text-slate-700 hover:text-slate-950">
                 注册新账号
               </Link>

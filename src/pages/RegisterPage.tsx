@@ -4,11 +4,42 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { register } from '../api/client';
 
 export function RegisterPage() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleRegister = async () => {
+    if (!username || !email || !password) {
+      setMessage('请先填写用户名、邮箱和密码。');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await register({
+        username,
+        email,
+        password,
+        phone: phone || undefined,
+        invite_code: inviteCode || undefined,
+      });
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('refresh_token', response.refresh_token);
+      setMessage(`注册成功：${response.user_id}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '注册失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-12 sm:px-10">
@@ -30,13 +61,13 @@ export function RegisterPage() {
 
             <div className="grid gap-5">
               <div>
-                <Label htmlFor="register-name">姓名</Label>
+                <Label htmlFor="register-username">用户名</Label>
                 <Input
-                  id="register-name"
+                  id="register-username"
                   type="text"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="请输入姓名"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="请输入用户名"
                 />
               </div>
               <div>
@@ -47,6 +78,26 @@ export function RegisterPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="请输入企业邮箱"
+                />
+              </div>
+              <div>
+                <Label htmlFor="register-phone">手机号（可选）</Label>
+                <Input
+                  id="register-phone"
+                  type="text"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="请输入手机号"
+                />
+              </div>
+              <div>
+                <Label htmlFor="register-invite-code">邀请码（可选）</Label>
+                <Input
+                  id="register-invite-code"
+                  type="text"
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value)}
+                  placeholder="请输入邀请码"
                 />
               </div>
               <div>
@@ -61,7 +112,11 @@ export function RegisterPage() {
               </div>
             </div>
 
-            <Button className="w-full">注册并继续</Button>
+            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+
+            <Button className="w-full" onClick={handleRegister} disabled={submitting}>
+              {submitting ? '注册中...' : '注册并继续'}
+            </Button>
             <p className="text-center text-sm text-slate-600">
               已有账号？{' '}
               <Link to="/login" className="font-medium text-slate-950 hover:text-slate-700">
