@@ -11,3 +11,4 @@ scripts/
 *.log
 docs/
 !docs/api-docs/
+example/
