@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import {
   createFavoriteItem,
   getFavoriteItems,
@@ -162,14 +163,25 @@ export function TaskLaunchPage() {
           </section>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div>
+            <div className="lg:col-span-2">
               <Label htmlFor="task-object-name">object_name</Label>
-              <Input
-                id="task-object-name"
-                value={objectName}
-                onChange={(event) => setObjectName(event.target.value)}
-                placeholder="例如：腾讯控股"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="task-object-name"
+                  value={objectName}
+                  onChange={(event) => setObjectName(event.target.value)}
+                  placeholder="例如：腾讯控股"
+                  className="flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateTask}
+                  className="flex items-center justify-center rounded-xl bg-slate-950 px-4 text-white transition hover:bg-slate-700 active:bg-slate-900"
+                  aria-label="搜索"
+                >
+                  <Search size={18} strokeWidth={2} />
+                </button>
+              </div>
             </div>
             <div>
               <Label htmlFor="task-object-type">object_type（可选）</Label>
