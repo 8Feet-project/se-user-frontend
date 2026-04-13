@@ -13,8 +13,20 @@ export type ResearchTaskStatus =
   | 'searching'
   | 'data_ready'
   | 'analyzing'
+  | 'waiting_user'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
+
+export type WorkflowNodeStatus =
+  | 'pending'
+  | 'running'
+  | 'waiting_user'
+  | 'completed'
+  | 'failed'
+  | 'skipped';
+
+export type TaskEventLevel = 'info' | 'warning' | 'error' | 'success';
 
 export interface LoginRequest {
   username: string;
@@ -207,6 +219,13 @@ export interface ResearchTaskStatusResponse {
   progress: number;
   hint: string;
   error_code?: string;
+  object_name?: string;
+  object_type?: ObjectType;
+  current_node_id?: string;
+  current_node_name?: string;
+  waiting_intervention?: boolean;
+  metrics_summary?: Array<{ label: string; value: string | number }>;
+  available_actions?: string[];
 }
 
 export interface CancelResearchTaskResponse {
@@ -266,10 +285,25 @@ export interface CrossValidationResultResponse {
   used_models: string[];
 }
 
+export interface WorkflowNodeMetric {
+  label: string;
+  value: string | number;
+}
+
 export interface WorkflowNode {
   node_id: string;
   node_name: string;
-  node_status: 'pending' | 'running' | 'completed' | 'failed';
+  node_type?: string;
+  node_status: WorkflowNodeStatus;
+  description?: string;
+  summary?: string;
+  started_at?: string;
+  finished_at?: string;
+  updated_at?: string;
+  duration_ms?: number;
+  can_intervene?: boolean;
+  intervention_id?: string;
+  metrics?: WorkflowNodeMetric[];
 }
 
 export interface WorkflowEdge {
@@ -282,29 +316,39 @@ export interface TaskWorkflowResponse {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   current_node: string;
+  waiting_intervention_node_id?: string;
 }
 
 export interface TaskEvent {
+  event_id?: string;
+  task_id?: string;
   node_id: string;
   node_name: string;
-  node_status: 'pending' | 'running' | 'completed' | 'failed';
+  node_status: WorkflowNodeStatus;
+  level?: TaskEventLevel;
+  title?: string;
+  message?: string;
   metrics: Record<string, string | number>;
   timestamp: string;
 }
 
 export interface TaskInterventionDetailResponse {
+  task_id?: string;
   node_id: string;
   node_name: string;
   intervention_type: string;
+  status?: 'waiting_user' | 'resolved' | 'expired';
+  reason?: string;
+  suggested_action?: string;
   current_params: Record<string, string | number | boolean>;
-  preview_data: Record<string, string | number | boolean>;
+  preview_data: Record<string, unknown>;
 }
 
-export type TaskInterventionAction = 'confirm' | 'update_rule' | 'skip';
+export type TaskInterventionAction = 'confirm_continue' | 'update_rules' | 'skip_intervention';
 
 export interface SubmitTaskInterventionRequest {
   action: TaskInterventionAction;
-  rule_changes?: string | Record<string, string | number | boolean>;
+  rule_changes?: string | Record<string, unknown>;
   comment?: string;
 }
 
@@ -313,6 +357,8 @@ export interface SubmitTaskInterventionResponse {
   node_id: string;
   result: string;
   audit_log_id: string;
+  task_status?: ResearchTaskStatus;
+  node_status?: WorkflowNodeStatus;
 }
 
 export interface HistoryTaskItem {

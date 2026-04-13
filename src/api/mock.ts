@@ -224,20 +224,89 @@ const mockReportQaMap: Record<string, ReportQaItem[]> = {
 
 export const mockTaskStatus: ResearchTaskStatusResponse = {
   task_id: 'task-002',
-  status: 'analyzing',
-  current_stage: 'analysis',
+  status: 'waiting_user',
+  current_stage: 'human_review',
   progress: 68,
-  hint: '正在进行结构化分析与结论汇总。',
+  hint: '分析阶段发现低置信度结论，等待人工确认检索范围与分析规则。',
+  object_name: '宁德时代',
+  object_type: 'stock',
+  current_node_id: 'node-analysis',
+  current_node_name: '结构化分析',
+  waiting_intervention: true,
+  metrics_summary: [
+    { label: '已采集事实', value: 128 },
+    { label: '低置信度事实', value: 6 },
+    { label: '待确认冲突簇', value: 2 },
+  ],
+  available_actions: ['confirm_continue', 'update_rules', 'skip_intervention'],
 };
 
 export const mockTaskWorkflow: TaskWorkflowResponse = {
   task_id: 'task-002',
   current_node: 'node-analysis',
+  waiting_intervention_node_id: 'node-analysis',
   nodes: [
-    { node_id: 'node-receive', node_name: '任务接收', node_status: 'completed' },
-    { node_id: 'node-search', node_name: '数据检索', node_status: 'running' },
-    { node_id: 'node-analysis', node_name: '结构化分析', node_status: 'pending' },
-    { node_id: 'node-report', node_name: '报告生成', node_status: 'pending' },
+    {
+      node_id: 'node-receive',
+      node_name: '任务接收',
+      node_type: 'ingest',
+      node_status: 'completed',
+      description: '解析对象类型与任务参数。',
+      summary: '已识别目标为股票，完成初始任务建模。',
+      started_at: '2026-04-06T08:55:00Z',
+      finished_at: '2026-04-06T08:55:08Z',
+      updated_at: '2026-04-06T08:55:08Z',
+      duration_ms: 8000,
+      metrics: [
+        { label: '对象识别', value: 'stock' },
+        { label: '任务优先级', value: 'P1' },
+      ],
+    },
+    {
+      node_id: 'node-search',
+      node_name: '数据检索',
+      node_type: 'retrieval',
+      node_status: 'completed',
+      description: '采集公告、新闻、研报和产业链数据。',
+      summary: '已完成 128 条候选事实采集，并建立来源分组。',
+      started_at: '2026-04-06T08:55:08Z',
+      finished_at: '2026-04-06T08:58:30Z',
+      updated_at: '2026-04-06T08:58:30Z',
+      duration_ms: 202000,
+      can_intervene: true,
+      intervention_id: 'intv-search-001',
+      metrics: [
+        { label: '采集记录', value: 128 },
+        { label: '高权威来源', value: 41 },
+        { label: '平均耗时', value: '320ms' },
+      ],
+    },
+    {
+      node_id: 'node-analysis',
+      node_name: '结构化分析',
+      node_type: 'analysis',
+      node_status: 'waiting_user',
+      description: '聚合事实、识别冲突并形成结论草案。',
+      summary: '检测到 6 条低置信度事实，需要人工确认是否调整规则。',
+      started_at: '2026-04-06T08:58:31Z',
+      updated_at: '2026-04-06T09:04:00Z',
+      can_intervene: true,
+      intervention_id: 'intv-analysis-001',
+      metrics: [
+        { label: '事实簇', value: 18 },
+        { label: '低置信度', value: 6 },
+        { label: '冲突簇', value: 2 },
+      ],
+    },
+    {
+      node_id: 'node-report',
+      node_name: '报告生成',
+      node_type: 'report',
+      node_status: 'pending',
+      description: '输出最终报告与结论摘要。',
+      summary: '等待分析节点完成。',
+      metrics: [{ label: '报告版本', value: 'draft-0' }],
+    },
   ],
   edges: [
     { from: 'node-receive', to: 'node-search' },
@@ -722,18 +791,52 @@ export async function mockGetCrossValidationResult(
 const mockTaskEventsMap: Record<string, TaskEvent[]> = {
   'task-002': [
     {
-      node_id: 'node-search',
-      node_name: '数据检索',
-      node_status: 'running',
-      metrics: { latency_ms: 320, records: 36 },
-      timestamp: '2026-04-06T09:00:00Z',
+      event_id: 'event-001',
+      task_id: 'task-002',
+      node_id: 'node-receive',
+      node_name: '任务接收',
+      node_status: 'completed',
+      level: 'success',
+      title: '任务初始化完成',
+      message: '已识别目标对象类型，并建立调研任务上下文。',
+      metrics: { object_type: 'stock', priority: 'P1' },
+      timestamp: '2026-04-06T08:55:08Z',
     },
     {
+      event_id: 'event-002',
+      task_id: 'task-002',
+      node_id: 'node-search',
+      node_name: '数据检索',
+      node_status: 'completed',
+      level: 'info',
+      title: '候选事实采集完成',
+      message: '完成公告、新闻、研报等多源采集，生成 128 条候选事实。',
+      metrics: { records: 128, high_authority_sources: 41, latency_ms: 320 },
+      timestamp: '2026-04-06T08:58:30Z',
+    },
+    {
+      event_id: 'event-003',
+      task_id: 'task-002',
       node_id: 'node-analysis',
       node_name: '结构化分析',
-      node_status: 'pending',
-      metrics: { queue: 1 },
-      timestamp: '2026-04-06T09:01:00Z',
+      node_status: 'running',
+      level: 'warning',
+      title: '检测到低置信度事实',
+      message: '有 6 条事实可信度不足，且存在 2 个冲突簇，建议人工复核。',
+      metrics: { low_confidence_facts: 6, conflict_clusters: 2 },
+      timestamp: '2026-04-06T09:03:10Z',
+    },
+    {
+      event_id: 'event-004',
+      task_id: 'task-002',
+      node_id: 'node-analysis',
+      node_name: '结构化分析',
+      node_status: 'waiting_user',
+      level: 'warning',
+      title: '等待人工介入',
+      message: '系统暂停于结构化分析节点，等待用户决定继续、更新规则或跳过。',
+      metrics: { available_actions: 3 },
+      timestamp: '2026-04-06T09:04:00Z',
     },
   ],
 };
@@ -745,9 +848,13 @@ export async function mockGetTaskEvents(taskId: string): Promise<TaskEvent[]> {
 const mockTaskInterventionsMap: Record<string, Record<string, TaskInterventionDetailResponse>> = {
   'task-002': {
     'node-search': {
+      task_id: 'task-002',
       node_id: 'node-search',
       node_name: '数据检索',
       intervention_type: 'rule_adjustment',
+      status: 'waiting_user',
+      reason: '部分行业论坛信号噪声较高，可按需调整来源范围。',
+      suggested_action: '如需提高召回率，可开启论坛源；如需提升可信度，保持高权威源优先。',
       current_params: {
         source_authority: 'high',
         max_results: 100,
@@ -756,19 +863,27 @@ const mockTaskInterventionsMap: Record<string, Record<string, TaskInterventionDe
       preview_data: {
         estimated_records: 48,
         estimated_latency_ms: 520,
+        risk: '可能引入低质量噪声信息',
       },
     },
     'node-analysis': {
+      task_id: 'task-002',
       node_id: 'node-analysis',
       node_name: '结构化分析',
       intervention_type: 'manual_review',
+      status: 'waiting_user',
+      reason: '发现 6 条低置信度事实与 2 个冲突簇，需要人工决策。',
+      suggested_action: '建议先查看低置信度事实摘要，再决定继续或更新分析规则。',
       current_params: {
         report_mode: 'full',
         confidence_threshold: 0.8,
+        contradiction_policy: 'hold_for_review',
       },
       preview_data: {
         pending_facts: 12,
-        low_confidence_facts: 3,
+        low_confidence_facts: 6,
+        contradiction_groups: 2,
+        sample_titles: ['动力电池价格战影响毛利率', '海外扩产节奏与订单兑现差异'],
       },
     },
   },
@@ -806,25 +921,95 @@ export async function mockSubmitTaskIntervention(
   }
   if (!mockTaskInterventionsMap[taskId][nodeId]) {
     mockTaskInterventionsMap[taskId][nodeId] = {
+      task_id: taskId,
       node_id: nodeId,
       node_name: nodeId,
       intervention_type: 'manual_review',
+      status: 'waiting_user',
       current_params: {},
       preview_data: {},
     };
   }
+
   const target = mockTaskInterventionsMap[taskId][nodeId];
-  if (payload.action === 'update_rule' && payload.rule_changes !== undefined) {
+  const task = mockResearchTasks.list.find((item) => item.task_id === taskId);
+
+  if (payload.action === 'update_rules' && payload.rule_changes !== undefined) {
     target.current_params = {
       ...target.current_params,
-      rule_changes: typeof payload.rule_changes === 'string' ? payload.rule_changes : JSON.stringify(payload.rule_changes),
+      rule_changes:
+        typeof payload.rule_changes === 'string'
+          ? payload.rule_changes
+          : JSON.stringify(payload.rule_changes),
     };
   }
+
+  target.status = 'resolved';
+
+  if (task) {
+    task.status = 'analyzing';
+  }
+
+  mockTaskEventsMap[taskId] = [
+    {
+      event_id: `event-intervention-${Date.now()}`,
+      task_id: taskId,
+      node_id: nodeId,
+      node_name: target.node_name,
+      node_status: 'completed',
+      level: 'success',
+      title: '人工介入已提交',
+      message: `用户执行操作：${payload.action}`,
+      metrics: {
+        has_rule_changes: payload.rule_changes ? 'yes' : 'no',
+        has_comment: payload.comment ? 'yes' : 'no',
+      },
+      timestamp: new Date().toISOString(),
+    },
+    ...(mockTaskEventsMap[taskId] ?? []),
+  ];
+
+  if (taskId === 'task-002') {
+    mockTaskStatus.status = 'analyzing';
+    mockTaskStatus.current_stage = 'analysis_resume';
+    mockTaskStatus.hint = '已收到人工反馈，系统恢复结构化分析。';
+    mockTaskStatus.waiting_intervention = false;
+    mockTaskStatus.available_actions = ['retry_analysis', 'cancel_task'];
+    mockTaskStatus.current_node_id = 'node-report';
+    mockTaskStatus.current_node_name = '报告生成';
+
+    mockTaskWorkflow.waiting_intervention_node_id = undefined;
+    mockTaskWorkflow.current_node = 'node-report';
+    mockTaskWorkflow.nodes = mockTaskWorkflow.nodes.map((node) => {
+      if (node.node_id === nodeId) {
+        return {
+          ...node,
+          node_status: 'completed',
+          summary: '人工审核完成，分析结果已确认继续执行。',
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (node.node_id === 'node-report') {
+        return {
+          ...node,
+          node_status: 'running',
+          summary: '正在生成报告草稿与结论摘要。',
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return node;
+    });
+  }
+
   return {
     task_id: taskId,
     node_id: nodeId,
     result: `accepted:${payload.action}`,
     audit_log_id: `audit-${Date.now()}`,
+    task_status: 'analyzing',
+    node_status: 'completed',
   };
 }
 

@@ -1,4 +1,4 @@
-﻿import { Activity, Bot, ListChecks, Shield, Sparkles, Workflow } from 'lucide-react';
+import { Activity, Bot, ListChecks, Shield, Sparkles, Workflow } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -37,7 +37,71 @@ import type {
   TaskWorkflowResponse,
   TriggerCrossValidationResponse,
   WorkflowNode,
+  WorkflowNodeStatus,
 } from '@/types';
+
+function statusText(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['status']) {
+  switch (status) {
+    case 'completed':
+      return '已完成';
+    case 'running':
+      return '执行中';
+    case 'waiting_user':
+      return '等待人工';
+    case 'failed':
+      return '失败';
+    case 'skipped':
+      return '已跳过';
+    case 'pending':
+      return '待开始';
+    case 'searching':
+      return '检索中';
+    case 'data_ready':
+      return '数据就绪';
+    case 'analyzing':
+      return '分析中';
+    case 'cancelled':
+      return '已取消';
+    default:
+      return '处理中';
+  }
+}
+
+function statusTone(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['status']) {
+  switch (status) {
+    case 'completed':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'running':
+    case 'searching':
+    case 'analyzing':
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+    case 'waiting_user':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    case 'failed':
+    case 'cancelled':
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+    default:
+      return 'border-slate-200 bg-slate-50 text-slate-600';
+  }
+}
+
+function eventTone(level?: TaskEvent['level']) {
+  switch (level) {
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50';
+    case 'warning':
+      return 'border-amber-200 bg-amber-50';
+    case 'error':
+      return 'border-rose-200 bg-rose-50';
+    default:
+      return 'border-slate-200 bg-white';
+  }
+}
+
+function formatTime(value?: string) {
+  if (!value) return '--';
+  return new Date(value).toLocaleString('zh-CN', { hour12: false });
+}
 
 export function TaskProcessPage() {
   const [taskId, setTaskId] = useState('');
@@ -48,15 +112,20 @@ export function TaskProcessPage() {
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeTaskResponse | null>(null);
   const [retryResult, setRetryResult] = useState<RetryAnalysisResponse | null>(null);
-  const [crossValidationTrigger, setCrossValidationTrigger] = useState<TriggerCrossValidationResponse | null>(null);
-  const [crossValidationResult, setCrossValidationResult] = useState<CrossValidationResultResponse | null>(null);
+  const [crossValidationTrigger, setCrossValidationTrigger] =
+    useState<TriggerCrossValidationResponse | null>(null);
+  const [crossValidationResult, setCrossValidationResult] =
+    useState<CrossValidationResultResponse | null>(null);
   const [loadingCrossValidationResult, setLoadingCrossValidationResult] = useState(false);
   const [interventionNode, setInterventionNode] = useState<WorkflowNode | null>(null);
-  const [interventionDetail, setInterventionDetail] = useState<TaskInterventionDetailResponse | null>(null);
-  const [interventionAction, setInterventionAction] = useState<TaskInterventionAction>('confirm');
+  const [interventionDetail, setInterventionDetail] =
+    useState<TaskInterventionDetailResponse | null>(null);
+  const [interventionAction, setInterventionAction] =
+    useState<TaskInterventionAction>('confirm_continue');
   const [ruleChanges, setRuleChanges] = useState('');
   const [interventionComment, setInterventionComment] = useState('');
-  const [interventionResult, setInterventionResult] = useState<SubmitTaskInterventionResponse | null>(null);
+  const [interventionResult, setInterventionResult] =
+    useState<SubmitTaskInterventionResponse | null>(null);
   const [loadingIntervention, setLoadingIntervention] = useState(false);
   const [submittingIntervention, setSubmittingIntervention] = useState(false);
   const [message, setMessage] = useState('');
@@ -67,11 +136,12 @@ export function TaskProcessPage() {
       try {
         const response = await getResearchTasks({ page: 1, page_size: 20 });
         setTasks(response.list);
-        const runningTask = response.list.find((item) => ['pending', 'searching', 'data_ready', 'analyzing'].includes(item.status));
+        const runningTask = response.list.find((item) =>
+          ['pending', 'searching', 'data_ready', 'analyzing', 'waiting_user'].includes(item.status)
+        );
         setTaskId(runningTask?.task_id ?? response.list[0]?.task_id ?? '');
       } catch (error) {
-        const reason = error instanceof Error ? error.message : '加载任务列表失败';
-        setMessage(reason);
+        setMessage(error instanceof Error ? error.message : '加载任务列表失败');
       }
     };
 
@@ -84,11 +154,11 @@ export function TaskProcessPage() {
       setWorkflow(null);
       setFacts(null);
       setEvents([]);
-      setCrossValidationTrigger(null);
-      setCrossValidationResult(null);
       setInterventionNode(null);
       setInterventionDetail(null);
       setInterventionResult(null);
+      setCrossValidationTrigger(null);
+      setCrossValidationResult(null);
       return;
     }
 
@@ -105,6 +175,7 @@ export function TaskProcessPage() {
         setFacts(factsResult);
         setEvents(eventsResult);
         setMessage('');
+
         try {
           setLoadingCrossValidationResult(true);
           const cvResult = await getCrossValidationResult(taskId);
@@ -115,13 +186,22 @@ export function TaskProcessPage() {
           setLoadingCrossValidationResult(false);
         }
       } catch (error) {
-        const reason = error instanceof Error ? error.message : '加载任务流程失败';
-        setMessage(reason);
+        setMessage(error instanceof Error ? error.message : '加载任务执行态失败');
       }
     };
 
     void loadData();
   }, [taskId]);
+
+  const waitingNode = useMemo(
+    () => workflow?.nodes.find((node) => node.node_id === workflow.waiting_intervention_node_id) ?? null,
+    [workflow]
+  );
+
+  const activeNode = useMemo(
+    () => workflow?.nodes.find((node) => node.node_id === workflow.current_node) ?? null,
+    [workflow]
+  );
 
   const handleCancelTask = async () => {
     if (!taskId) {
@@ -131,11 +211,10 @@ export function TaskProcessPage() {
     try {
       setSubmitting(true);
       const result = await cancelResearchTask(taskId);
-      setMessage(`任务取消结果：${result.status}`);
       setStatus((prev) => (prev ? { ...prev, status: result.status } : prev));
+      setMessage(`任务已更新为${statusText(result.status)}`);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '取消任务失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '取消任务失败');
     } finally {
       setSubmitting(false);
     }
@@ -153,10 +232,9 @@ export function TaskProcessPage() {
         report_mode: 'full',
       });
       setAnalyzeResult(result);
-      setMessage(`分析已启动：${result.status}`);
+      setMessage(`分析任务已启动，当前状态：${statusText(result.status)}`);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '启动分析失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '启动分析失败');
     } finally {
       setSubmitting(false);
     }
@@ -171,10 +249,9 @@ export function TaskProcessPage() {
       setSubmitting(true);
       const result = await retryAnalysis(taskId, { model_id: 'model-gpt-4.1' });
       setRetryResult(result);
-      setMessage(`重试分析状态：${result.status}`);
+      setMessage(`已发起重试，当前状态：${statusText(result.status)}`);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '重试分析失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '重试分析失败');
     } finally {
       setSubmitting(false);
     }
@@ -189,10 +266,9 @@ export function TaskProcessPage() {
       setSubmitting(true);
       const result = await triggerCrossValidation(taskId);
       setCrossValidationTrigger(result);
-      setMessage(`多模型交叉验证已启动：${result.status}`);
+      setMessage(`交叉验证已触发，当前状态：${result.status}`);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '启动多模型交叉验证失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '启动交叉验证失败');
     } finally {
       setSubmitting(false);
     }
@@ -207,10 +283,9 @@ export function TaskProcessPage() {
       setLoadingCrossValidationResult(true);
       const result = await getCrossValidationResult(taskId);
       setCrossValidationResult(result);
-      setMessage('');
+      setMessage('已刷新交叉验证结果。');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '查询交叉验证结果失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '刷新交叉验证结果失败');
     } finally {
       setLoadingCrossValidationResult(false);
     }
@@ -223,7 +298,7 @@ export function TaskProcessPage() {
     }
     try {
       setInterventionNode(node);
-      setInterventionAction('confirm');
+      setInterventionAction('confirm_continue');
       setRuleChanges('');
       setInterventionComment('');
       setInterventionResult(null);
@@ -232,8 +307,7 @@ export function TaskProcessPage() {
       setInterventionDetail(detail);
       setMessage('');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '加载人工介入详情失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '加载人工介入详情失败');
     } finally {
       setLoadingIntervention(false);
     }
@@ -242,7 +316,7 @@ export function TaskProcessPage() {
   const handleCloseIntervention = () => {
     setInterventionNode(null);
     setInterventionDetail(null);
-    setInterventionAction('confirm');
+    setInterventionAction('confirm_continue');
     setRuleChanges('');
     setInterventionComment('');
     setInterventionResult(null);
@@ -263,10 +337,17 @@ export function TaskProcessPage() {
         comment: interventionComment.trim() || undefined,
       });
       setInterventionResult(result);
-      setMessage(`人工介入提交成功：${result.result}`);
+      const [statusResult, workflowResult, eventsResult] = await Promise.all([
+        getResearchTaskStatus(taskId),
+        getResearchTaskWorkflow(taskId),
+        getTaskEvents(taskId),
+      ]);
+      setStatus(statusResult);
+      setWorkflow(workflowResult);
+      setEvents(eventsResult);
+      setMessage(`人工介入已提交，结果：${result.result}`);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '提交人工介入失败';
-      setMessage(reason);
+      setMessage(error instanceof Error ? error.message : '提交人工介入失败');
     } finally {
       setSubmittingIntervention(false);
     }
@@ -310,7 +391,7 @@ export function TaskProcessPage() {
                 <option value="">请选择任务</option>
                 {tasks.map((task) => (
                   <option key={task.task_id} value={task.task_id}>
-                    {task.task_id} / {task.object_name} / {task.status}
+                    {task.object_name} / {task.task_id} / {statusText(task.status)}
                   </option>
                 ))}
               </Select>
@@ -331,6 +412,7 @@ export function TaskProcessPage() {
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
               <span className="data-pill">进度 {progress}%</span>
               {status?.hint ? <span className="data-pill">提示：{status.hint}</span> : null}
+              {status?.status === 'waiting_user' ? <span className="data-pill">等待人工处理</span> : null}
             </div>
           </div>
 
@@ -347,19 +429,27 @@ export function TaskProcessPage() {
             <Button size="sm" variant="secondary" onClick={handleTriggerCrossValidation} disabled={submitting || !taskId}>
               启动交叉验证
             </Button>
+            {waitingNode ? (
+              <Button size="sm" onClick={() => handleOpenIntervention(waitingNode)} disabled={submitting || !taskId}>
+                处理待介入节点
+              </Button>
+            ) : null}
           </div>
 
           <div className="space-y-4">
             {workflowNodes.length > 0 ? (
               workflowNodes.map((step, index) => {
                 const isCurrent = workflow?.current_node === step.node_id;
+                const isWaiting = step.node_id === workflow?.waiting_intervention_node_id;
                 return (
                   <div
                     key={step.node_id}
                     className={`rounded-[28px] border px-5 py-5 transition-all ${
-                      isCurrent
-                        ? 'border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.07)] shadow-[0_0_20px_rgba(99,202,183,0.06)]'
-                        : 'border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.12)]'
+                      isWaiting
+                        ? 'border-amber-300 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.12)]'
+                        : isCurrent
+                          ? 'border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.07)] shadow-[0_0_20px_rgba(99,202,183,0.06)]'
+                          : 'border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.12)]'
                     }`}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -371,12 +461,17 @@ export function TaskProcessPage() {
                           <p className="text-sm font-semibold text-slate-100 sm:text-base">{step.node_name}</p>
                           <StatusBadge status={step.node_status} />
                           {isCurrent ? <span className="data-pill">当前节点</span> : null}
+                          {isWaiting ? <span className="data-pill">等待人工</span> : null}
                         </div>
                         <p className="mt-2 text-sm leading-6 text-slate-400">节点 ID：{step.node_id}</p>
+                        {step.description ? <p className="mt-2 text-sm leading-6 text-slate-400">{step.description}</p> : null}
+                        {step.summary ? <p className="mt-1 text-sm leading-6 text-slate-300">{step.summary}</p> : null}
                       </div>
-                      <Button size="sm" variant="secondary" onClick={() => handleOpenIntervention(step)}>
-                        人工介入
-                      </Button>
+                      {step.can_intervene ? (
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenIntervention(step)}>
+                          人工介入
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -397,19 +492,20 @@ export function TaskProcessPage() {
               <div className="space-y-3 text-sm leading-7 text-slate-300">
                 <div className="panel-subtle p-4">
                   <p><span className="text-slate-500">任务 ID：</span>{status.task_id}</p>
-                  <p><span className="text-slate-500">状态：</span>{status.status}</p>
+                  <p><span className="text-slate-500">状态：</span>{statusText(status.status)}</p>
                   <p><span className="text-slate-500">当前阶段：</span>{status.current_stage}</p>
+                  <p><span className="text-slate-500">当前节点：</span>{status.current_node_name ?? activeNode?.node_name ?? '--'}</p>
                   <p><span className="text-slate-500">进度：</span>{progress}%</p>
                 </div>
                 {analyzeResult ? (
                   <div className="panel-subtle p-4">
-                    <p><span className="text-slate-500">分析已启动：</span>{analyzeResult.status}</p>
+                    <p><span className="text-slate-500">分析已启动：</span>{statusText(analyzeResult.status)}</p>
                     {analyzeResult.report_id ? <p><span className="text-slate-500">关联报告：</span>{analyzeResult.report_id}</p> : null}
                   </div>
                 ) : null}
                 {retryResult ? (
                   <div className="panel-subtle p-4">
-                    <p><span className="text-slate-500">重试状态：</span>{retryResult.status}</p>
+                    <p><span className="text-slate-500">重试状态：</span>{statusText(retryResult.status)}</p>
                   </div>
                 ) : null}
               </div>
@@ -452,11 +548,12 @@ export function TaskProcessPage() {
             <div className="space-y-3">
               {events.length > 0 ? (
                 events.map((event) => (
-                  <div key={`${event.node_id}-${event.timestamp}`} className="panel-subtle p-4">
+                  <div key={event.event_id ?? `${event.node_id}-${event.timestamp}`} className={`panel-subtle p-4 ${eventTone(event.level)}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-100">{event.node_name}</p>
-                        <p className="mt-1 text-xs text-slate-500">{event.timestamp}</p>
+                        <p className="text-sm font-semibold text-slate-100">{event.title ?? event.node_name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{formatTime(event.timestamp)}</p>
+                        {event.message ? <p className="mt-2 text-xs leading-6 text-slate-400">{event.message}</p> : null}
                       </div>
                       <StatusBadge status={event.node_status} />
                     </div>
@@ -548,89 +645,89 @@ export function TaskProcessPage() {
         <div className="fixed inset-0 z-40 overflow-y-auto bg-black/60 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-8">
           <div className="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center">
             <div className="glass-card flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:max-h-[calc(100vh-4rem)] sm:p-8">
-            <div className="flex flex-col gap-4 border-b border-[rgba(99,202,183,0.1)] pb-5 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-100">人工介入</h3>
-                <p className="mt-1 text-sm text-slate-400">任务 {taskId} · 节点 {interventionNode.node_id}</p>
+              <div className="flex flex-col gap-4 border-b border-[rgba(99,202,183,0.1)] pb-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-100">人工介入</h3>
+                  <p className="mt-1 text-sm text-slate-400">任务 {taskId} · 节点 {interventionNode.node_id}</p>
+                </div>
+                <Button size="sm" variant="secondary" onClick={handleCloseIntervention}>
+                  关闭
+                </Button>
               </div>
-              <Button size="sm" variant="secondary" onClick={handleCloseIntervention}>
-                关闭
-              </Button>
+
+              {loadingIntervention ? (
+                <div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1 sm:pr-2">
+                  <p className="text-sm text-slate-400">正在加载人工介入详情...</p>
+                </div>
+              ) : (
+                <div className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label>node_name</Label>
+                      <Input value={interventionDetail?.node_name ?? interventionNode.node_name} readOnly />
+                    </div>
+                    <div>
+                      <Label>intervention_type</Label>
+                      <Input value={interventionDetail?.intervention_type ?? ''} readOnly />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>current_params</Label>
+                    <Textarea value={JSON.stringify(interventionDetail?.current_params ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
+                  </div>
+
+                  <div>
+                    <Label>preview_data</Label>
+                    <Textarea value={JSON.stringify(interventionDetail?.preview_data ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="intervention-action">action</Label>
+                      <Select id="intervention-action" value={interventionAction} onChange={(event) => setInterventionAction(event.target.value as TaskInterventionAction)}>
+                        <option value="confirm_continue">confirm_continue</option>
+                        <option value="update_rules">update_rules</option>
+                        <option value="skip_intervention">skip_intervention</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="intervention-comment">comment（可选）</Label>
+                      <Input id="intervention-comment" value={interventionComment} onChange={(event) => setInterventionComment(event.target.value)} placeholder="填写操作说明" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="intervention-rule-changes">rule_changes（可选）</Label>
+                    <Textarea
+                      id="intervention-rule-changes"
+                      value={ruleChanges}
+                      onChange={(event) => setRuleChanges(event.target.value)}
+                      placeholder="可填写规则调整 JSON 或说明文本"
+                      rows={4}
+                      disabled={interventionAction !== 'update_rules'}
+                      className="font-mono text-xs leading-6"
+                    />
+                  </div>
+
+                  {interventionResult ? (
+                    <div className="panel-subtle p-4 text-sm text-slate-300">
+                      <p>结果：{interventionResult.result}</p>
+                      <p>审计日志：{interventionResult.audit_log_id}</p>
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="secondary" onClick={handleCloseIntervention} disabled={submittingIntervention}>
+                      取消
+                    </Button>
+                    <Button size="sm" onClick={handleSubmitIntervention} disabled={submittingIntervention}>
+                      {submittingIntervention ? '提交中...' : '提交人工介入'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {loadingIntervention ? (
-              <div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1 sm:pr-2">
-                <p className="text-sm text-slate-400">正在加载人工介入详情...</p>
-              </div>
-            ) : (
-              <div className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label>node_name</Label>
-                    <Input value={interventionDetail?.node_name ?? interventionNode.node_name} readOnly />
-                  </div>
-                  <div>
-                    <Label>intervention_type</Label>
-                    <Input value={interventionDetail?.intervention_type ?? ''} readOnly />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>current_params</Label>
-                  <Textarea value={JSON.stringify(interventionDetail?.current_params ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
-                </div>
-
-                <div>
-                  <Label>preview_data</Label>
-                  <Textarea value={JSON.stringify(interventionDetail?.preview_data ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="intervention-action">action</Label>
-                    <Select id="intervention-action" value={interventionAction} onChange={(event) => setInterventionAction(event.target.value as TaskInterventionAction)}>
-                      <option value="confirm">confirm</option>
-                      <option value="update_rule">update_rule</option>
-                      <option value="skip">skip</option>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="intervention-comment">comment（可选）</Label>
-                    <Input id="intervention-comment" value={interventionComment} onChange={(event) => setInterventionComment(event.target.value)} placeholder="填写操作说明" />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="intervention-rule-changes">rule_changes（可选）</Label>
-                  <Textarea
-                    id="intervention-rule-changes"
-                    value={ruleChanges}
-                    onChange={(event) => setRuleChanges(event.target.value)}
-                    placeholder="可填写规则调整 JSON 或说明文本"
-                    rows={4}
-                    disabled={interventionAction !== 'update_rule'}
-                    className="font-mono text-xs leading-6"
-                  />
-                </div>
-
-                {interventionResult ? (
-                  <div className="panel-subtle p-4 text-sm text-slate-300">
-                    <p>结果：{interventionResult.result}</p>
-                    <p>审计日志：{interventionResult.audit_log_id}</p>
-                  </div>
-                ) : null}
-
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="secondary" onClick={handleCloseIntervention} disabled={submittingIntervention}>
-                    取消
-                  </Button>
-                  <Button size="sm" onClick={handleSubmitIntervention} disabled={submittingIntervention}>
-                    {submittingIntervention ? '提交中...' : '提交人工介入'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
           </div>
         </div>
       ) : null}
