@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { appendReportQa, createReportQa, getReportDetail, getReportQa, getReports } from '../api/client';
+import { downloadReport } from '../lib/exportReport';
 import { PageShell } from '../components/common/PageShell';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -19,6 +20,8 @@ export function ReportPreviewPage() {
   const [submittingQa, setSubmittingQa] = useState(false);
   const [appendingQaId, setAppendingQaId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'md' | 'html'>('pdf');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const loadReports = async () => {
@@ -120,6 +123,27 @@ export function ReportPreviewPage() {
     }
   };
 
+  const handleExportReport = () => {
+    if (!report) {
+      setMessage('请先选择报告。');
+      return;
+    }
+
+    setExporting(true);
+    setMessage('');
+    try {
+      downloadReport(report, exportFormat);
+      if (exportFormat !== 'pdf') {
+        setMessage('报告导出成功，已开始下载。');
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '报告导出失败';
+      setMessage(reason);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <PageShell title="报告预览" subtitle="对齐报告、引用与深度追问接口。">
       <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
@@ -147,6 +171,28 @@ export function ReportPreviewPage() {
               <p className="text-sm leading-7 text-slate-600">
                 展示字段：report_id、task_id、title、content、citations、created_at。
               </p>
+
+              {report ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <Select
+                    value={exportFormat}
+                    onChange={(event) => setExportFormat(event.target.value as 'pdf' | 'md' | 'html')}
+                    disabled={exporting}
+                  >
+                    <option value="pdf">PDF</option>
+                    <option value="md">Markdown</option>
+                    <option value="html">HTML</option>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={exporting || !reportId}
+                    onClick={() => handleExportReport()}
+                  >
+                    {exporting ? '导出中...' : '下载报告'}
+                  </Button>
+                </div>
+              ) : null}
             </section>
 
             {report ? (
