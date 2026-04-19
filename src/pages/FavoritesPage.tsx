@@ -133,7 +133,7 @@ export function FavoritesPage() {
 
   const handleCreateItem = async () => {
     if (!targetId.trim()) {
-      setMessage('请输入 target_id。');
+      setMessage('请输入内容 ID。');
       return;
     }
     try {
@@ -191,19 +191,19 @@ export function FavoritesPage() {
   };
 
   return (
-    <PageShell title="收藏夹与收藏" subtitle="对齐 /api/v1/favorites/folders 与 /api/v1/favorites/items 系列接口。">
+    <PageShell title="收藏夹" subtitle="管理收藏夹目录与收藏项，归档重要调研内容与报告。">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">收藏夹目录</h2>
-            <p className="mt-2 text-sm text-slate-600">支持目录查询、创建、修改、删除。</p>
+            <h2 className="text-2xl font-semibold text-slate-100">收藏夹目录</h2>
+            <p className="mt-2 text-sm text-slate-400">支持目录查询、创建、修改、删除。</p>
           </div>
 
           <div className="grid gap-3">
             <Label htmlFor="favorite-folder-select">当前目录</Label>
             <select
               id="favorite-folder-select"
-              className="h-12 rounded-full border border-slate-300 px-4 text-sm"
+              className="h-12 rounded-full border border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 px-4 text-sm text-slate-100 outline-none focus:border-[rgba(99,202,183,0.55)]"
               value={selectedFolderId}
               onChange={(event) => {
                 const nextId = event.target.value;
@@ -253,47 +253,45 @@ export function FavoritesPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm text-slate-700">当前目录：{selectedFolder?.folder_name ?? '全部目录'}</p>
-            <p className="text-sm text-slate-700">目录总数：{folders.length}</p>
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+            <p className="text-sm text-slate-300">当前目录：{selectedFolder?.folder_name ?? '全部目录'}</p>
+            <p className="text-sm text-slate-400">目录总数：{folders.length}</p>
           </div>
         </Card>
 
-        <Card className="space-y-6 bg-slate-950 text-white">
+        <Card className="space-y-6 border-[rgba(99,202,183,0.25)]">
           <div>
-            <h3 className="text-xl font-semibold">收藏项管理</h3>
-            <p className="mt-2 text-sm text-slate-300">支持收藏项查询、新增、移动与取消收藏。</p>
+            <h3 className="text-xl font-semibold text-slate-100">收藏项管理</h3>
+            <p className="mt-2 text-sm text-slate-400">支持收藏项查询、新增、移动与取消收藏。</p>
           </div>
 
           <div className="grid gap-3">
-            <Label htmlFor="favorite-type">favorite_type</Label>
+            <Label htmlFor="favorite-type">收藏类型</Label>
             <select
               id="favorite-type"
-              className="h-12 rounded-full border border-slate-700 bg-slate-900 px-4 text-sm text-white"
+              className="h-12 rounded-full border border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 px-4 text-sm text-slate-100 outline-none focus:border-[rgba(99,202,183,0.55)]"
               value={favoriteType}
               onChange={(event) => setFavoriteType(event.target.value as FavoriteType)}
             >
               {favoriteTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {type === 'insight' ? '洞察' : type === 'report' ? '报告' : '模型'}
                 </option>
               ))}
             </select>
-            <Label htmlFor="favorite-target-id">target_id</Label>
+            <Label htmlFor="favorite-target-id">内容 ID</Label>
             <Input
               id="favorite-target-id"
               value={targetId}
               onChange={(event) => setTargetId(event.target.value)}
               placeholder="例如：report-001"
-              className="bg-slate-900 text-white placeholder:text-slate-500"
             />
-            <Label htmlFor="favorite-remark">remark（可选）</Label>
+            <Label htmlFor="favorite-remark">备注（可选）</Label>
             <Input
               id="favorite-remark"
               value={remark}
               onChange={(event) => setRemark(event.target.value)}
               placeholder="例如：重点参考"
-              className="bg-slate-900 text-white placeholder:text-slate-500"
             />
             <Button onClick={handleCreateItem} disabled={submitting}>
               新增收藏
@@ -304,7 +302,7 @@ export function FavoritesPage() {
             <Label htmlFor="move-target-folder">移动到目录</Label>
             <select
               id="move-target-folder"
-              className="h-10 rounded-full border border-slate-700 bg-slate-900 px-4 text-sm text-white"
+              className="h-10 rounded-full border border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 px-4 text-sm text-slate-100 outline-none focus:border-[rgba(99,202,183,0.55)]"
               value={moveTargetFolderId}
               onChange={(event) => setMoveTargetFolderId(event.target.value)}
             >
@@ -319,10 +317,12 @@ export function FavoritesPage() {
 
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.favorite_id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold">{item.favorite_type} / {item.target_id}</p>
-                <p className="mt-1 text-xs text-slate-400">favorite_id: {item.favorite_id}</p>
-                <p className="text-xs text-slate-400">folder_id: {item.folder_id ?? '-'}</p>
+              <div key={item.favorite_id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                <p className="text-sm font-semibold text-slate-200">
+                  {item.favorite_type === 'insight' ? '洞察' : item.favorite_type === 'report' ? '报告' : '模型'}
+                  <span className="ml-2 font-normal text-slate-500">{item.target_id}</span>
+                </p>
+                <p className="mt-1 text-xs text-slate-600">{item.favorite_id}</p>
                 <div className="mt-3 flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => handleMoveItem(item.favorite_id)} disabled={submitting}>
                     移动
@@ -336,7 +336,7 @@ export function FavoritesPage() {
           </div>
         </Card>
       </div>
-      {message ? <p className="mt-4 text-sm text-slate-600">{message}</p> : null}
+      {message ? <p className="mt-4 text-sm text-slate-400">{message}</p> : null}
     </PageShell>
   );
 }

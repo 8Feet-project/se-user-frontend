@@ -79,20 +79,20 @@ export function ProfilePage() {
   };
 
   return (
-    <PageShell title="个人中心" subtitle="对齐 /api/v1/users/me 与 /api/v1/users/me/password 接口。">
+    <PageShell title="个人中心" subtitle="管理个人资料与账号安全设置。">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">个人资料</h2>
-            <p className="mt-2 text-sm text-slate-600">支持查询与更新昵称、邮箱、手机号、头像地址。</p>
+            <h2 className="text-2xl font-semibold text-slate-100">个人资料</h2>
+            <p className="mt-2 text-sm text-slate-400">支持查询与更新昵称、邮箱、手机号、头像地址。</p>
           </div>
           <div className="grid gap-5">
             <div>
-              <Label htmlFor="profile-nickname">nickname</Label>
+              <Label htmlFor="profile-nickname">昵称</Label>
               <Input id="profile-nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} />
             </div>
             <div>
-              <Label htmlFor="profile-email">email</Label>
+              <Label htmlFor="profile-email">邮箱</Label>
               <Input
                 id="profile-email"
                 type="email"
@@ -101,11 +101,11 @@ export function ProfilePage() {
               />
             </div>
             <div>
-              <Label htmlFor="profile-phone">phone</Label>
+              <Label htmlFor="profile-phone">手机号</Label>
               <Input id="profile-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
             </div>
             <div>
-              <Label htmlFor="profile-avatar-url">avatar_url</Label>
+              <Label htmlFor="profile-avatar-url">头像链接</Label>
               <Input
                 id="profile-avatar-url"
                 value={avatarUrl}
@@ -121,17 +121,17 @@ export function ProfilePage() {
               重新加载
             </Button>
           </div>
-          {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+          {message ? <p className="text-sm text-slate-400">{message}</p> : null}
         </Card>
 
-        <Card className="space-y-6 bg-slate-950 text-white">
+        <Card className="space-y-6 border-[rgba(99,202,183,0.25)]">
           <div>
-            <h3 className="text-xl font-semibold">修改密码</h3>
-            <p className="mt-2 text-sm text-slate-300">调用 `PATCH /api/v1/users/me/password`。</p>
+            <h3 className="text-xl font-semibold text-slate-100">修改密码</h3>
+            <p className="mt-2 text-sm text-slate-400">更新您的账号登录密码。</p>
           </div>
           <div className="grid gap-4">
             <div>
-              <Label htmlFor="profile-old-password">old_password</Label>
+              <Label htmlFor="profile-old-password">当前密码</Label>
               <Input
                 id="profile-old-password"
                 type="password"
@@ -140,7 +140,7 @@ export function ProfilePage() {
               />
             </div>
             <div>
-              <Label htmlFor="profile-new-password">new_password</Label>
+              <Label htmlFor="profile-new-password">新密码</Label>
               <Input
                 id="profile-new-password"
                 type="password"
@@ -152,11 +152,11 @@ export function ProfilePage() {
           <Button variant="secondary" onClick={handleChangePassword} disabled={submitting}>
             提交新密码
           </Button>
-          <div className="text-sm text-slate-300">
-            <p>user_id: {profile?.user_id ?? '-'}</p>
-            <p>username: {profile?.username ?? '-'}</p>
-            <p>role: {profile?.role ?? '-'}</p>
-            <p>email_verified: {profile ? String(profile.email_verified) : '-'}</p>
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300 space-y-1.5">
+            <p><span className="text-slate-500">用户 ID：</span>{profile?.user_id ?? '-'}</p>
+            <p><span className="text-slate-500">用户名：</span>{profile?.username ?? '-'}</p>
+            <p><span className="text-slate-500">账号角色：</span>{profile?.role ?? '-'}</p>
+            <p><span className="text-slate-500">邮箱已验证：</span>{profile?.email_verified ? '是' : '否'}</p>
           </div>
         </Card>
       </div>

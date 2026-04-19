@@ -14,6 +14,7 @@ import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
+import { StatusBadge } from '../components/ui/status-badge';
 import type { AlertItem, AlertStatus, MessageItem, ObjectType } from '../types';
 
 export function AlertsMessagesPage() {
@@ -54,7 +55,7 @@ export function AlertsMessagesPage() {
 
   const handleCreateAlert = async () => {
     if (!objectName.trim()) {
-      setMessage('请先填写 object_name。');
+      setMessage('请先填写监控对象名称。');
       return;
     }
     try {
@@ -134,17 +135,17 @@ export function AlertsMessagesPage() {
   };
 
   return (
-    <PageShell title="动态提醒与消息" subtitle="对齐 /api/v1/alerts 与 /api/v1/messages 接口。">
+    <PageShell title="提醒与消息" subtitle="设置调研对象监控提醒，接收任务完成及重要变化的站内通知。">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">提醒管理</h2>
-            <p className="mt-2 text-sm text-slate-600">支持提醒创建、状态更新与删除。</p>
+            <h2 className="text-2xl font-semibold text-slate-100">提醒管理</h2>
+            <p className="mt-2 text-sm text-slate-400">支持提醒创建、状态更新与删除。</p>
           </div>
 
           <div className="grid gap-4">
             <div>
-              <Label htmlFor="alert-object-name">object_name</Label>
+              <Label htmlFor="alert-object-name">监控对象</Label>
               <Input
                 id="alert-object-name"
                 value={objectName}
@@ -153,45 +154,47 @@ export function AlertsMessagesPage() {
               />
             </div>
             <div>
-              <Label htmlFor="alert-object-type">object_type</Label>
+              <Label htmlFor="alert-object-type">对象类型</Label>
               <Select
                 id="alert-object-type"
                 value={objectType}
                 onChange={(event) => setObjectType(event.target.value as ObjectType)}
               >
-                <option value="company">company</option>
-                <option value="stock">stock</option>
-                <option value="commodity">commodity</option>
+                <option value="company">公司</option>
+                <option value="stock">股票</option>
+                <option value="commodity">商品</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor="alert-schedule-rule">schedule_rule</Label>
+              <Label htmlFor="alert-schedule-rule">推送频率</Label>
               <Select
                 id="alert-schedule-rule"
                 value={scheduleRule}
                 onChange={(event) => setScheduleRule(event.target.value)}
               >
-                <option value="daily">daily</option>
-                <option value="weekly">weekly</option>
-                <option value="realtime">realtime</option>
+                <option value="daily">每日</option>
+                <option value="weekly">每周</option>
+                <option value="realtime">实时</option>
               </Select>
             </div>
             <div className="flex gap-6">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
                 <input
                   type="checkbox"
                   checked={pushInApp}
                   onChange={(event) => setPushInApp(event.target.checked)}
+                  className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
                 />
-                push_in_app
+                站内推送
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
                 <input
                   type="checkbox"
                   checked={pushEmail}
                   onChange={(event) => setPushEmail(event.target.checked)}
+                  className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
                 />
-                push_email
+                邮件推送
               </label>
             </div>
             <Button onClick={handleCreateAlert} disabled={submitting}>
@@ -201,21 +204,26 @@ export function AlertsMessagesPage() {
 
           <div className="space-y-3">
             {alerts.map((alert) => (
-              <div key={alert.alert_id} className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-950">
-                  {alert.object_name} ({alert.object_type})
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  status: {alert.status} / rule: {alert.schedule_rule}
-                </p>
+              <div key={alert.alert_id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">{alert.object_name}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {alert.object_type === 'company' ? '公司' : alert.object_type === 'stock' ? '股票' : '商品'} ·
+                      {alert.schedule_rule === 'daily' ? ' 每日' : alert.schedule_rule === 'weekly' ? ' 每周' : ' 实时'}推送
+                    </p>
+                  </div>
+                  <StatusBadge status={alert.status} />
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Select
                     value={statusToSet}
                     onChange={(event) => setStatusToSet(event.target.value as AlertStatus)}
                     className="max-w-[140px]"
+                    size="sm"
                   >
-                    <option value="enabled">enabled</option>
-                    <option value="disabled">disabled</option>
+                    <option value="enabled">启用</option>
+                    <option value="disabled">禁用</option>
                   </Select>
                   <Button
                     size="sm"
@@ -239,10 +247,10 @@ export function AlertsMessagesPage() {
           </div>
         </Card>
 
-        <Card className="space-y-6 bg-slate-950 text-white">
+        <Card className="space-y-6 border-[rgba(99,202,183,0.25)]">
           <div>
-            <h3 className="text-xl font-semibold">站内消息</h3>
-            <p className="mt-2 text-sm text-slate-300">支持消息列表查询、单条已读与全部已读。</p>
+            <h3 className="text-xl font-semibold text-slate-100">站内消息</h3>
+            <p className="mt-2 text-sm text-slate-400">支持消息列表查询、单条已读与全部已读。</p>
           </div>
 
           <Button variant="secondary" onClick={handleMarkAllMessagesRead} disabled={submitting}>
@@ -251,12 +259,13 @@ export function AlertsMessagesPage() {
 
           <div className="space-y-3">
             {messages.map((item) => (
-              <div key={item.message_id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold text-white">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-300">{item.content}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {item.read_status ? '已读' : '未读'} / {item.created_at}
-                </p>
+              <div key={item.message_id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                <p className="text-sm font-semibold text-slate-100">{item.title}</p>
+                <p className="mt-1 text-sm text-slate-400">{item.content}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <StatusBadge status={item.read_status ? 'read' : 'unread'} />
+                  <span className="text-xs text-slate-500">{item.created_at}</span>
+                </div>
                 {!item.read_status ? (
                   <Button
                     size="sm"
@@ -273,7 +282,7 @@ export function AlertsMessagesPage() {
           </div>
         </Card>
       </div>
-      {message ? <p className="mt-4 text-sm text-slate-600">{message}</p> : null}
+      {message ? <p className="mt-4 text-sm text-slate-400">{message}</p> : null}
     </PageShell>
   );
 }

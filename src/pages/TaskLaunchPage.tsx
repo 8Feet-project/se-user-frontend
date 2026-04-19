@@ -149,22 +149,22 @@ export function TaskLaunchPage() {
 
   return (
     <PageShell
-      title="任务发起"
-      subtitle="对齐 /api/v1/research/tasks 接口参数创建调研任务。"
-      action={<Button variant="secondary" onClick={handleCreateTask}>提交任务</Button>}
+      title="发起调研"
+      subtitle="输入调研对象与参数，启动 AI 驱动的市场情报分析任务。"
+      action={<Button variant="secondary" onClick={handleCreateTask}>创建任务</Button>}
     >
       <div className="grid gap-8">
         <Card className="space-y-8">
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-950">创建调研任务</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              表单字段与接口文档保持一致：object_name、object_type、time_range、source_authority 等。
+            <h2 className="text-2xl font-semibold text-slate-100">创建调研任务</h2>
+            <p className="text-sm leading-6 text-slate-400">
+              填写调研对象信息与偏好参数，系统将自动匹配最优模型并生成深度报告。
             </p>
           </section>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="lg:col-span-2">
-              <Label htmlFor="task-object-name">object_name</Label>
+              <Label htmlFor="task-object-name">调研对象</Label>
               <div className="flex gap-2">
                 <Input
                   id="task-object-name"
@@ -176,7 +176,7 @@ export function TaskLaunchPage() {
                 <button
                   type="button"
                   onClick={handleCreateTask}
-                  className="flex items-center justify-center rounded-xl bg-slate-950 px-4 text-white transition hover:bg-slate-700 active:bg-slate-900"
+                  className="flex items-center justify-center rounded-xl bg-[#63cab7] px-4 text-[#07111f] transition hover:bg-[#7dd8c9]"
                   aria-label="搜索"
                 >
                   <Search size={18} strokeWidth={2} />
@@ -184,41 +184,41 @@ export function TaskLaunchPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="task-object-type">object_type（可选）</Label>
+              <Label htmlFor="task-object-type">对象类型（可选）</Label>
               <Select
                 id="task-object-type"
                 value={objectType}
                 onChange={(event) => setObjectType(event.target.value as (typeof objectTypes)[number])}
               >
                 <option value="">自动识别</option>
-                <option value="company">company</option>
-                <option value="stock">stock</option>
-                <option value="commodity">commodity</option>
+                <option value="company">公司</option>
+                <option value="stock">股票</option>
+                <option value="commodity">商品</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor="task-time-range">time_range</Label>
+              <Label htmlFor="task-time-range">时间范围</Label>
               <Select id="task-time-range" value={timeRange} onChange={(event) => setTimeRange(event.target.value)}>
-                <option value="7d">7d</option>
-                <option value="30d">30d</option>
-                <option value="90d">90d</option>
-                <option value="1y">1y</option>
+                <option value="7d">近 7 天</option>
+                <option value="30d">近 30 天</option>
+                <option value="90d">近 90 天</option>
+                <option value="1y">近 1 年</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor="task-source-authority">source_authority</Label>
+              <Label htmlFor="task-source-authority">信源权威度</Label>
               <Select
                 id="task-source-authority"
                 value={sourceAuthority}
                 onChange={(event) => setSourceAuthority(event.target.value)}
               >
-                <option value="high">high</option>
-                <option value="medium">medium</option>
-                <option value="low">low</option>
+                <option value="high">高权威</option>
+                <option value="medium">中等</option>
+                <option value="low">全量</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor="task-source-types">source_types（逗号分隔）</Label>
+              <Label htmlFor="task-source-types">信源类型（逗号分隔）</Label>
               <Input
                 id="task-source-types"
                 value={sourceTypesText}
@@ -227,7 +227,7 @@ export function TaskLaunchPage() {
               />
             </div>
             <div>
-              <Label htmlFor="task-model-id">model_id（可选）</Label>
+              <Label htmlFor="task-model-id">AI 模型（可选）</Label>
               <Select id="task-model-id" value={modelId} onChange={(event) => setModelId(event.target.value)}>
                 <option value="">不指定模型（后端默认）</option>
                 {availableModels.map((model) => (
@@ -241,27 +241,27 @@ export function TaskLaunchPage() {
                   收藏当前模型
                 </Button>
                 {modelId && favoriteModelIds.includes(modelId) ? (
-                  <span className="text-xs text-slate-600">已收藏</span>
+                  <span className="text-xs text-[#63cab7]">已收藏</span>
                 ) : null}
               </div>
               {recommendedModelId ? (
-                <p className="mt-2 text-xs text-slate-600">推荐模型：{recommendedModelId}</p>
+                <p className="mt-2 text-xs text-slate-500">推荐模型：{recommendedModelId}</p>
               ) : null}
             </div>
             <div>
-              <Label htmlFor="task-multi-model-ids">multi_model_ids (multi-select)</Label>
+              <Label htmlFor="task-multi-model-ids">多模型选择</Label>
               <MultiSelect
                 options={multiModelOptions}
                 defaultValue={multiModelIds}
                 onValueChange={setMultiModelIds}
-                placeholder="Select models"
-                className="w-full border-slate-300 bg-white text-slate-900 hover:bg-white"
-                popoverClassName="border border-slate-200 bg-white text-slate-900 shadow-lg"
+                placeholder="选择模型"
+                className="w-full border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 text-slate-100 hover:bg-[#07111f]"
+                popoverClassName="border border-[rgba(99,202,183,0.2)] bg-[#0f1f35] text-slate-100 shadow-xl"
                 hideSelectAll
                 maxCount={3}
               />
               {availableModels.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">No model options loaded.</p>
+                <p className="mt-2 text-xs text-slate-500">暂无可用模型</p>
               ) : null}
             </div>
             <div className="flex items-center gap-3 pt-8">
@@ -270,25 +270,27 @@ export function TaskLaunchPage() {
                 type="checkbox"
                 checked={enableCrossValidation}
                 onChange={(event) => setEnableCrossValidation(event.target.checked)}
+                className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
               />
-              <Label htmlFor="task-enable-cross-validation">enable_cross_validation</Label>
+              <Label htmlFor="task-enable-cross-validation">启用多模型交叉验证</Label>
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <Button onClick={handleCreateTask} disabled={submitting}>
-              {submitting ? '提交中...' : '提交到 /api/v1/research/tasks'}
+              {submitting ? '创建中...' : '创建调研任务'}
             </Button>
-            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+            {message ? <p className="text-sm text-slate-400">{message}</p> : null}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-950">任务列表（/api/v1/research/tasks）</p>
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+            <p className="text-sm font-semibold text-slate-200">近期任务</p>
             <div className="mt-3 space-y-2">
               {researchTasks.map((task) => (
-                <p key={task.task_id} className="text-sm text-slate-700">
-                  {task.task_id} / {task.object_name} / {task.status}
-                </p>
+                <div key={task.task_id} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-300">{task.object_name}</span>
+                  <span className="text-xs text-slate-500">{task.status}</span>
+                </div>
               ))}
             </div>
           </div>

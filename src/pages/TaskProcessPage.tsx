@@ -20,6 +20,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { StatusBadge } from '../components/ui/status-badge';
 import type {
   AnalyzeTaskResponse,
   CrossValidationResultResponse,
@@ -279,14 +280,14 @@ export function TaskProcessPage() {
   };
 
   return (
-    <PageShell title="调研流程" subtitle="对齐 /api/v1/research/tasks 执行链路接口（status/workflow/facts/analyze/retry/events/cancel）。">
+    <PageShell title="调研流程" subtitle="实时监控分析进度，查看工作流节点状态，支持人工介入与交叉验证。">
       <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="space-y-7">
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-950">当前任务进度</h2>
-            <p className="text-sm leading-7 text-slate-600">流程节点字段：node_id、node_name、node_status。</p>
+            <h2 className="text-2xl font-semibold text-slate-100">当前任务进度</h2>
+            <p className="text-sm leading-7 text-slate-400">选择任务后自动加载分析流程各节点的实时状态。</p>
             <div className="max-w-sm">
-              <Label htmlFor="process-task-id">并行任务选择</Label>
+              <Label htmlFor="process-task-id">选择任务</Label>
               <Select id="process-task-id" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
                 <option value="">请选择任务</option>
                 {tasks.map((task) => (
@@ -300,13 +301,15 @@ export function TaskProcessPage() {
 
           <div className="space-y-5">
             {workflow?.nodes.map((step, index) => (
-              <div key={step.node_id} className="flex items-center gap-5 rounded-[28px] border border-slate-200/80 bg-slate-50 px-5 py-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-semibold text-slate-900">
+              <div key={step.node_id} className="flex items-center gap-5 rounded-[28px] border border-white/8 bg-white/4 px-5 py-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(99,202,183,0.25)] bg-[rgba(99,202,183,0.07)] text-sm font-semibold text-[#63cab7]">
                   {index + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-slate-950">{step.node_name}</p>
-                  <p className="text-sm text-slate-600">{nodeStatusLabel(step.node_status)}</p>
+                  <p className="font-semibold text-slate-200">{step.node_name}</p>
+                  <div className="mt-1">
+                    <StatusBadge status={step.node_status} />
+                  </div>
                 </div>
                 <Button size="sm" variant="secondary" onClick={() => handleOpenIntervention(step)}>
                   人工介入
@@ -339,28 +342,28 @@ export function TaskProcessPage() {
           </div>
         </Card>
 
-        <Card className="space-y-5 bg-slate-950 text-white">
-          <h3 className="text-xl font-semibold">任务摘要</h3>
+        <Card className="space-y-5 border-[rgba(99,202,183,0.25)]">
+          <h3 className="text-xl font-semibold text-slate-100">任务摘要</h3>
           {status ? (
-            <div className="space-y-4 text-sm leading-7 text-slate-300">
-              <p>task_id: {status.task_id}</p>
-              <p>status: {status.status}</p>
-              <p>current_stage: {status.current_stage}</p>
-              <p>progress: {status.progress}%</p>
-              <p>hint: {status.hint}</p>
+            <div className="space-y-2 text-sm leading-7 text-slate-300">
+              <p><span className="text-slate-500">任务 ID：</span>{status.task_id}</p>
+              <p><span className="text-slate-500">状态：</span>{status.status}</p>
+              <p><span className="text-slate-500">当前阶段：</span>{status.current_stage}</p>
+              <p><span className="text-slate-500">分析进度：</span>{status.progress}%</p>
+              {status.hint ? <p><span className="text-slate-500">进度提示：</span>{status.hint}</p> : null}
             </div>
           ) : (
-            <p className="text-sm text-slate-300">{message || '暂无任务状态数据'}</p>
+            <p className="text-sm text-slate-400">{message || '暂无任务状态数据'}</p>
           )}
           {facts ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-              <p>facts: {facts.fact_count}</p>
-              <p>dataset_version: {facts.dataset_version}</p>
-              <p>top_entities: {facts.top_entities.join(', ')}</p>
+            <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
+              <p><span className="text-slate-500">数据条目：</span>{facts.fact_count}</p>
+              <p><span className="text-slate-500">数据版本：</span>{facts.dataset_version}</p>
+              <p><span className="text-slate-500">关键实体：</span>{facts.top_entities.join('、')}</p>
             </div>
           ) : null}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-            <p className="font-semibold text-white">实时事件（events）</p>
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
+            <p className="font-semibold text-[#63cab7]">实时事件流</p>
             <div className="mt-2 space-y-1">
               {events.map((event) => (
                 <p key={`${event.node_id}-${event.timestamp}`}>
@@ -371,51 +374,55 @@ export function TaskProcessPage() {
           </div>
           {analyzeResult ? (
             <p className="text-sm text-slate-300">
-              analyze: {analyzeResult.task_id} / {analyzeResult.status} / {analyzeResult.report_id ?? '-'}
+              <span className="text-slate-500">分析已启动：</span>{analyzeResult.status}{analyzeResult.report_id ? ` · 报告 ${analyzeResult.report_id}` : ''}
             </p>
           ) : null}
           {retryResult ? (
-            <p className="text-sm text-slate-300">retry-analysis: {retryResult.task_id} / {retryResult.status}</p>
+            <p className="text-sm text-slate-300">
+              <span className="text-slate-500">重试分析：</span>{retryResult.status}
+            </p>
           ) : null}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-            <p className="font-semibold text-white">多模型交叉验证</p>
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
+            <p className="font-semibold text-[#63cab7]">多模型交叉验证</p>
             {crossValidationTrigger ? (
-              <p className="mt-2">
-                trigger: {crossValidationTrigger.task_id} / {crossValidationTrigger.status} /{' '}
-                {crossValidationTrigger.result_id ?? '-'}
+              <p className="mt-2 text-slate-400">
+                已触发 · {crossValidationTrigger.status}
               </p>
             ) : null}
-            {loadingCrossValidationResult ? <p className="mt-2">加载中...</p> : null}
+            {loadingCrossValidationResult ? <p className="mt-2 text-slate-400">加载中...</p> : null}
             {crossValidationResult ? (
-              <div className="mt-2 space-y-1">
-                <p>
-                  status: {crossValidationResult.status} / consensus_score:{' '}
-                  {crossValidationResult.consensus_score ?? '-'}
-                </p>
-                <p>summary: {crossValidationResult.consensus_summary ?? '-'}</p>
-                <p>updated_at: {crossValidationResult.updated_at ?? '-'}</p>
-                {crossValidationResult.results.map((item) => (
-                  <p key={item.model_id}>
-                    {item.model_id}: {item.conclusion} / confidence: {item.confidence ?? '-'} / evidence:{' '}
-                    {item.evidence_count ?? '-'}
-                  </p>
-                ))}
+              <div className="mt-2 space-y-1.5">
+                <p><span className="text-slate-500">验证状态：</span>{crossValidationResult.status}</p>
+                {crossValidationResult.consensus_score != null && (
+                  <p><span className="text-slate-500">共识评分：</span>{crossValidationResult.consensus_score}</p>
+                )}
+                {crossValidationResult.consensus_summary && (
+                  <p><span className="text-slate-500">结论摘要：</span>{crossValidationResult.consensus_summary}</p>
+                )}
+                <div className="mt-2 space-y-1 border-t border-white/8 pt-2">
+                  {crossValidationResult.results.map((item) => (
+                    <p key={item.model_id} className="text-xs">
+                      <span className="text-slate-400">{item.model_id}：</span>{item.conclusion}
+                      {item.confidence != null ? `（置信度 ${item.confidence}）` : ''}
+                    </p>
+                  ))}
+                </div>
               </div>
             ) : (
-              <p className="mt-2">暂无交叉验证结果</p>
+              <p className="mt-2 text-slate-500">暂无交叉验证结果</p>
             )}
           </div>
-          {message ? <p className="text-sm text-slate-300">{message}</p> : null}
+          {message ? <p className="text-sm text-slate-400">{message}</p> : null}
         </Card>
       </div>
       {interventionNode ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-4">
-          <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[28px] border border-[rgba(99,202,183,0.25)] bg-[#0f1f35] p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold text-slate-950">人工介入</h3>
-                <p className="mt-1 text-sm text-slate-600">
-                  task_id: {taskId} / node_id: {interventionNode.node_id}
+                <h3 className="text-xl font-semibold text-slate-100">人工介入</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  任务 {taskId} · 节点 {interventionNode.node_id}
                 </p>
               </div>
               <Button size="sm" variant="secondary" onClick={handleCloseIntervention}>
@@ -424,7 +431,7 @@ export function TaskProcessPage() {
             </div>
 
             {loadingIntervention ? (
-              <p className="mt-6 text-sm text-slate-600">加载人工介入详情中...</p>
+              <p className="mt-6 text-sm text-slate-400">加载人工介入详情中...</p>
             ) : (
               <div className="mt-6 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -481,9 +488,9 @@ export function TaskProcessPage() {
                 </div>
 
                 {interventionResult ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                    <p>result: {interventionResult.result}</p>
-                    <p>audit_log_id: {interventionResult.audit_log_id}</p>
+                  <div className="rounded-2xl border border-[rgba(99,202,183,0.2)] bg-white/4 p-4 text-sm text-slate-300">
+                    <p>结果：{interventionResult.result}</p>
+                    <p>审计日志：{interventionResult.audit_log_id}</p>
                   </div>
                 ) : null}
 

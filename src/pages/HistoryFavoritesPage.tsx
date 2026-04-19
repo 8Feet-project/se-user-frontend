@@ -7,12 +7,13 @@ import {
 import { Button } from '../components/ui/button';
 import { PageShell } from '../components/common/PageShell';
 import { Card } from '../components/ui/card';
+import { StatusBadge } from '../components/ui/status-badge';
 import type { HistoryTaskItem, ResearchHistoryDetail, ResearchHistoryReloadResponse } from '../types';
 
 function objectTypeLabel(type: HistoryTaskItem['object_type']) {
-  if (type === 'company') return '公司对象';
-  if (type === 'stock') return '股票对象';
-  return '商品对象';
+  if (type === 'company') return '公司';
+  if (type === 'stock') return '股票';
+  return '商品';
 }
 
 export function HistoryFavoritesPage() {
@@ -65,28 +66,26 @@ export function HistoryFavoritesPage() {
   };
 
   return (
-    <PageShell title="历史与收藏" subtitle="对齐 /api/v1/research/history 历史任务数据结构。">
+    <PageShell title="历史记录" subtitle="回溯历史调研任务，重载已完成任务的分析结果。">
       <div className="grid gap-8">
         <Card className="space-y-6">
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-950">调研历史</h2>
-            <p className="text-sm leading-7 text-slate-600">展示字段：task_id、object_name、object_type、status、created_at。</p>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold text-slate-100">调研历史</h2>
+            <p className="text-sm text-slate-500">共 {tasks.length} 条记录</p>
           </div>
 
           <div className="grid gap-4">
             {tasks.map((task) => (
-              <div key={task.task_id} className="rounded-[28px] border border-slate-200/80 bg-slate-50 px-5 py-5">
-                <div className="flex items-center justify-between gap-4">
+              <div key={task.task_id} className="rounded-[28px] border border-white/8 bg-white/4 px-5 py-5">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-slate-950">{task.object_name}</p>
-                    <p className="text-sm text-slate-600">{objectTypeLabel(task.object_type)}</p>
-                    <p className="text-xs text-slate-500">task_id: {task.task_id}</p>
+                    <p className="font-semibold text-slate-200">{task.object_name}</p>
+                    <p className="mt-0.5 text-sm text-slate-400">{objectTypeLabel(task.object_type)}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">{task.task_id}</p>
                   </div>
-                  <span className="rounded-full border border-slate-300 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-600">
-                    {task.status}
-                  </span>
+                  <StatusBadge status={task.status} />
                 </div>
-                <p className="mt-3 text-sm text-slate-600">提交时间：{task.created_at}</p>
+                <p className="mt-3 text-xs text-slate-500">提交时间：{task.created_at}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
                     size="sm"
@@ -94,7 +93,7 @@ export function HistoryFavoritesPage() {
                     onClick={() => handleLoadDetail(task.task_id)}
                     disabled={submittingTaskId === task.task_id}
                   >
-                    历史详情
+                    查看详情
                   </Button>
                   <Button
                     size="sm"
@@ -110,22 +109,30 @@ export function HistoryFavoritesPage() {
           </div>
 
           {selectedDetail ? (
-            <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5">
-              <p className="text-sm font-semibold text-slate-950">历史详情（/research/history/{'{task_id}'})</p>
-              <p className="mt-2 text-sm text-slate-700">object_name: {selectedDetail.object_name}</p>
-              <p className="text-sm text-slate-700">status: {selectedDetail.status}</p>
-              <p className="text-sm text-slate-700">fact_dataset: {selectedDetail.fact_dataset}</p>
+            <div className="rounded-[28px] border border-[rgba(99,202,183,0.2)] bg-white/4 px-5 py-5">
+              <p className="text-sm font-semibold text-slate-200">任务详情</p>
+              <div className="mt-3 space-y-1.5 text-sm text-slate-300">
+                <p><span className="text-slate-500">调研对象：</span>{selectedDetail.object_name}</p>
+                <p className="flex items-center gap-2"><span className="text-slate-500">状态：</span><StatusBadge status={selectedDetail.status} /></p>
+                <p><span className="text-slate-500">数据集：</span>{selectedDetail.fact_dataset}</p>
+              </div>
             </div>
           ) : null}
 
           {reloadResult ? (
-            <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5">
-              <p className="text-sm font-semibold text-slate-950">重载结果（/research/history/{'{task_id}'}/reload）</p>
-              <p className="mt-2 text-sm text-slate-700">task_id: {reloadResult.task_id}</p>
-              <p className="text-sm text-slate-700">report_id: {reloadResult.report_id ?? '-'}</p>
-              <p className="text-sm text-slate-700">redirect_url: {reloadResult.redirect_url}</p>
+            <div className="rounded-[28px] border border-[rgba(99,202,183,0.2)] bg-white/4 px-5 py-5">
+              <p className="text-sm font-semibold text-slate-200">重载完成</p>
+              <div className="mt-3 space-y-1.5 text-sm text-slate-300">
+                <p><span className="text-slate-500">任务 ID：</span>{reloadResult.task_id}</p>
+                <p><span className="text-slate-500">报告 ID：</span>{reloadResult.report_id ?? '待生成'}</p>
+                {reloadResult.redirect_url ? (
+                  <p><span className="text-slate-500">跳转链接：</span>{reloadResult.redirect_url}</p>
+                ) : null}
+              </div>
             </div>
           ) : null}
+
+          {message ? <p className="text-sm text-slate-400">{message}</p> : null}
         </Card>
       </div>
     </PageShell>

@@ -12,3 +12,4 @@ scripts/
 docs/
 !docs/api-docs/
 example/
+AGENTS.md
