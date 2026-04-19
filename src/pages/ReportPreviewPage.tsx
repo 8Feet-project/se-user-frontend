@@ -1,13 +1,17 @@
+﻿import { Download, FileText, MessageSquareMore, Quote, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { appendReportQa, createReportQa, getReportDetail, getReportQa, getReports } from '../api/client';
-import { downloadReport } from '../lib/exportReport';
-import { PageShell } from '../components/common/PageShell';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Select } from '../components/ui/select';
-import { Textarea } from '../components/ui/textarea';
-import type { ReportDetail, ReportListItem, ReportQaItem } from '../types';
+
+import { appendReportQa, createReportQa, getReportDetail, getReportQa, getReports } from '@/api/client';
+import { PageShell } from '@/components/common/PageShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Textarea } from '@/components/ui/textarea';
+import { downloadReport } from '@/lib/exportReport';
+import type { ReportDetail, ReportListItem, ReportQaItem } from '@/types';
 
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -134,7 +138,7 @@ export function ReportPreviewPage() {
     try {
       downloadReport(report, exportFormat);
       if (exportFormat !== 'pdf') {
-        setMessage('报告导出成功，已开始下载。');
+        setMessage('报告导出成功，下载已开始。');
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : '报告导出失败';
@@ -145,18 +149,23 @@ export function ReportPreviewPage() {
   };
 
   return (
-    <PageShell title="调研报告" subtitle="查看、导出 AI 生成的调研报告，支持深度追问与引用溯源。">
-      <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+    <PageShell
+      title="调研报告"
+      subtitle="查看、导出和继续追问 AI 生成的调研报告，引用区与追问流全部按 8Feet 的卡片层级重新组织。"
+      action={
+        <Button variant="secondary" disabled={exporting || !reportId} onClick={handleExportReport}>
+          <Download size={16} />
+          {exporting ? '导出中...' : '导出当前报告'}
+        </Button>
+      }
+    >
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
         <div className="space-y-8">
-          <Card className="space-y-7">
-            <section className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[80px_1fr] md:items-center">
-                <p className="text-sm font-medium text-slate-400">切换报告</p>
-                <Select
-                  value={reportId}
-                  onChange={(event) => handleChangeReport(event.target.value)}
-                  disabled={reports.length === 0}
-                >
+          <Card className="space-y-6">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_140px_auto] lg:items-end">
+              <div>
+                <Label htmlFor="report-selector">切换报告</Label>
+                <Select id="report-selector" value={reportId} onChange={(event) => handleChangeReport(event.target.value)} disabled={reports.length === 0}>
                   {reports.length === 0 ? <option value="">暂无报告</option> : null}
                   {reports.map((item) => (
                     <option key={item.report_id} value={item.report_id}>
@@ -165,118 +174,129 @@ export function ReportPreviewPage() {
                   ))}
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="report-export-format">导出格式</Label>
+                <Select id="report-export-format" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as 'pdf' | 'md' | 'html')} size="sm" disabled={exporting}>
+                  <option value="pdf">PDF</option>
+                  <option value="md">Markdown</option>
+                  <option value="html">HTML</option>
+                </Select>
+              </div>
+              <Button type="button" variant="secondary" onClick={handleExportReport} disabled={exporting || !reportId}>
+                {exporting ? '导出中...' : '下载报告'}
+              </Button>
+            </div>
 
-              <h2 className="text-2xl font-semibold text-slate-100">{report?.title ?? '调研报告'}</h2>
-
+            <div className="space-y-3">
+              <p className="page-kicker">Report Preview</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-100">{report?.title ?? '调研报告'}</h2>
               {report ? (
-                <div className="flex items-center gap-3 pt-1">
-                  <Select
-                    value={exportFormat}
-                    onChange={(event) => setExportFormat(event.target.value as 'pdf' | 'md' | 'html')}
-                    disabled={exporting}
-                    size="sm"
-                    className="w-36"
-                  >
-                    <option value="pdf">PDF</option>
-                    <option value="md">Markdown</option>
-                    <option value="html">HTML</option>
-                  </Select>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={exporting || !reportId}
-                    onClick={() => handleExportReport()}
-                  >
-                    {exporting ? '导出中...' : '下载报告'}
-                  </Button>
+                <div className="flex flex-wrap gap-2">
+                  <span className="data-pill">报告 ID：{report.report_id}</span>
+                  <span className="data-pill">来源任务：{report.task_id}</span>
+                  <span className="data-pill">创建时间：{report.created_at}</span>
                 </div>
               ) : null}
-            </section>
+            </div>
 
             {report ? (
-              <div className="rounded-[28px] border border-white/8 bg-white/4 px-6 py-5">
-                <div className="mb-3 flex gap-3 text-xs text-slate-500">
-                  <span>报告 ID：{report.report_id}</span>
-                  <span>·</span>
-                  <span>来源任务：{report.task_id}</span>
+              <div className="panel-subtle px-6 py-5">
+                <div className="mb-3 flex items-center gap-2 text-sm text-slate-400">
+                  <FileText size={16} className="text-[#63cab7]" />
+                  正文内容
                 </div>
-                <p className="text-sm leading-7 text-slate-300">{report.content}</p>
+                <div className="whitespace-pre-wrap text-sm leading-7 text-slate-300">{report.content}</div>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">{message || '暂无报告内容'}</p>
+              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂时没有报告内容。'}</div>
             )}
           </Card>
 
           <Card className="space-y-5">
-            <h3 className="text-xl font-semibold text-slate-100">报告深度追问</h3>
+            <div className="flex items-center gap-2">
+              <MessageSquareMore size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">报告深度追问</h3>
+            </div>
+
             <div className="space-y-3">
-              <Textarea
-                value={qaQuestion}
-                onChange={(event) => setQaQuestion(event.target.value)}
-                placeholder="请输入你希望进一步追问的问题"
-                className="min-h-[96px] border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 text-slate-100 placeholder:text-slate-600 focus-visible:border-[rgba(99,202,183,0.55)]"
-              />
+              <Textarea value={qaQuestion} onChange={(event) => setQaQuestion(event.target.value)} placeholder="请输入你希望继续追问的内容，例如：请拆解该公司下一阶段的增长驱动因素。" className="min-h-[110px]" />
               <div className="flex justify-end">
-                <Button type="button" size="sm" disabled={submittingQa || !reportId} onClick={() => void handleCreateQa()}>
+                <Button type="button" onClick={() => void handleCreateQa()} disabled={submittingQa || !reportId}>
                   {submittingQa ? '提交中...' : '提交追问'}
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              {qaList.map((qa) => (
-                <div key={qa.qa_id} className="rounded-3xl border border-white/8 bg-white/4 p-4">
-                  <p className="text-sm font-semibold text-slate-200">Q: {qa.question}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">A: {qa.answer}</p>
-                  <p className="mt-2 text-xs text-slate-600">
-                    {qa.status} | {qa.updated_at}
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    <Textarea
-                      value={appendInputs[qa.qa_id] ?? ''}
-                      onChange={(event) =>
-                        setAppendInputs((prev) => ({
-                          ...prev,
-                          [qa.qa_id]: event.target.value,
-                        }))
-                      }
-                      placeholder="对这个问答继续追问"
-                      className="min-h-[72px] border-[rgba(99,202,183,0.15)] bg-[#07111f]/80 text-slate-100 placeholder:text-slate-600 focus-visible:border-[rgba(99,202,183,0.55)]"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={appendingQaId === qa.qa_id || !reportId}
-                        onClick={() => void handleAppendQa(qa.qa_id)}
-                      >
-                        {appendingQaId === qa.qa_id ? '追加中...' : '追加追问'}
-                      </Button>
+            {qaList.length > 0 ? (
+              <div className="space-y-4">
+                {qaList.map((qa) => (
+                  <div key={qa.qa_id} className="panel-subtle p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-sm font-semibold text-slate-100">Q: {qa.question}</p>
+                      <StatusBadge status={qa.status} />
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-300">A: {qa.answer}</p>
+                    <p className="mt-3 text-xs text-slate-500">更新时间：{qa.updated_at}</p>
+                    <div className="mt-4 space-y-2">
+                      <Textarea
+                        value={appendInputs[qa.qa_id] ?? ''}
+                        onChange={(event) =>
+                          setAppendInputs((prev) => ({
+                            ...prev,
+                            [qa.qa_id]: event.target.value,
+                          }))
+                        }
+                        placeholder="继续补充这个问题的范围、约束或你最关心的视角。"
+                        className="min-h-[88px]"
+                      />
+                      <div className="flex justify-end">
+                        <Button type="button" size="sm" variant="secondary" disabled={appendingQaId === qa.qa_id || !reportId} onClick={() => void handleAppendQa(qa.qa_id)}>
+                          {appendingQaId === qa.qa_id ? '追加中...' : '追加追问'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              {qaList.length === 0 ? <p className="text-sm text-slate-500">暂无追问记录。</p> : null}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="panel-subtle p-5 text-sm text-slate-500">暂时没有追问记录。</div>
+            )}
           </Card>
         </div>
 
-        <Card className="space-y-5 border-[rgba(99,202,183,0.25)]">
-          <h3 className="text-xl font-semibold text-slate-100">引用信息</h3>
-          <div className="space-y-4 text-sm leading-7 text-slate-400">
-            {report?.citations.map((citation) => (
-              <div key={citation.citation_id} className="rounded-3xl border border-white/8 bg-white/4 p-4">
-                <p className="text-slate-200">{citation.source_title}</p>
-                <p className="mt-1 text-xs text-[#63cab7]/70">{citation.source_url}</p>
-              </div>
-            ))}
-          </div>
-          {report ? <p className="text-xs text-slate-600">{report.created_at}</p> : null}
-        </Card>
+        <div className="space-y-6">
+          <Card variant="glow" className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Quote size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">引用信息</h3>
+            </div>
+            <div className="space-y-4 text-sm leading-7 text-slate-400">
+              {report?.citations.length ? (
+                report.citations.map((citation) => (
+                  <div key={citation.citation_id} className="panel-subtle p-4">
+                    <p className="font-medium text-slate-100">{citation.source_title}</p>
+                    <p className="mt-2 break-all text-xs text-[#63cab7]/80">{citation.source_url}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="panel-subtle p-4 text-sm text-slate-500">当前报告暂无引用信息。</div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
+            </div>
+            <p className="text-sm leading-7 text-slate-400">
+              这一版报告页采用了“正文主区 + 引用侧栏 + 追问卡片流”的结构，保持了设计系统文档里强调的卡片分层、深色输入与 teal 状态提示。
+            </p>
+          </Card>
+        </div>
       </div>
 
-      {message ? <p className="mt-4 text-sm text-red-400">{message}</p> : null}
+      {message ? <div className="message-strip mt-6">{message}</div> : null}
     </PageShell>
   );
 }

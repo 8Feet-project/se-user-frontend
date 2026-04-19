@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
 	CheckIcon,
@@ -801,7 +801,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								getAllOptions().length
 							} options selected. ${placeholder}`}
 							className={cn(
-								"flex p-1 rounded-md border border-slate-300 min-h-10 h-auto items-center justify-between bg-white text-slate-900 hover:bg-white [&_svg]:pointer-events-auto",
+								"flex min-h-12 h-auto items-center justify-between rounded-2xl border border-[rgba(99,202,183,0.2)] bg-[#07111f] p-1 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] hover:bg-[#07111f] [&_svg]:pointer-events-auto",
 								autoSize ? "w-auto" : "w-full",
 								responsiveSettings.compactMode && "min-h-8 text-sm",
 								screenSize === "mobile" && "min-h-12 text-base",
@@ -907,7 +907,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 																}
 															}}
 															aria-label={`Remove ${option.label} from selection`}
-															className="ml-2 h-4 w-4 cursor-pointer hover:bg-white/20 rounded-sm p-0.5 -m-0.5 focus:outline-none focus:ring-1 focus:ring-white/50">
+															className="-m-0.5 ml-2 h-4 w-4 cursor-pointer rounded-sm p-0.5 text-slate-400 hover:bg-white/[0.08] hover:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[rgba(99,202,183,0.2)]">
 															<XCircle
 																className={cn(
 																	"h-3 w-3",
@@ -969,7 +969,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 												}
 											}}
 											aria-label={`Clear all ${selectedValues.length} selected options`}
-											className="flex items-center justify-center h-4 w-4 mx-2 cursor-pointer text-slate-500 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-sm">
+											className="mx-2 flex h-4 w-4 items-center justify-center rounded-sm text-slate-500 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[rgba(99,202,183,0.16)]">
 											<XIcon className="h-4 w-4" />
 										</div>
 										<Separator
@@ -1203,3 +1203,4 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 
 MultiSelect.displayName = "MultiSelect";
 export type { MultiSelectOption, MultiSelectGroup, MultiSelectProps };
+

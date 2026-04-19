@@ -1,10 +1,31 @@
+﻿import { Bot, MailCheck, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { register, sendEmailCode, verifyEmail } from '../api/client';
+
+import { register, sendEmailCode, verifyEmail } from '@/api/client';
+import { AuthShell } from '@/components/common/AuthShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+const steps = [
+  {
+    icon: MailCheck,
+    title: '企业邮箱校验',
+    desc: '支持发送注册验证码并在注册前完成邮箱验证。',
+  },
+  {
+    icon: Bot,
+    title: '默认进入 AI 调研工作流',
+    desc: '注册完成后即可开始发起任务、查看流程与管理报告。',
+  },
+  {
+    icon: ShieldCheck,
+    title: '邀请制与手机号兼容',
+    desc: '邀请码、手机号都是可选项，便于兼顾不同团队的接入方式。',
+  },
+];
 
 export function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -33,7 +54,7 @@ export function RegisterPage() {
       });
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
-      setMessage(`注册成功：${response.user_id}`);
+      setMessage(`注册成功，用户 ID：${response.user_id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '注册失败';
       setMessage(reason);
@@ -47,10 +68,11 @@ export function RegisterPage() {
       setMessage('请先填写邮箱。');
       return;
     }
+
     try {
       setSubmitting(true);
       const response = await sendEmailCode({ email: email.trim(), scene: 'register' });
-      setMessage(`验证码发送结果：${response.result}，有效期 ${response.expire_in}s`);
+      setMessage(`验证码已发送，结果：${response.result}，有效期 ${response.expire_in}s。`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发送验证码失败';
       setMessage(reason);
@@ -64,6 +86,7 @@ export function RegisterPage() {
       setMessage('请填写邮箱和验证码。');
       return;
     }
+
     try {
       setSubmitting(true);
       const response = await verifyEmail({ email: email.trim(), code: emailCode.trim() });
@@ -77,120 +100,98 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-12 sm:px-10">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
-        <header className="space-y-4 text-center">
-          <p className="text-sm uppercase tracking-[0.28em] text-slate-500">创建账号</p>
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-950">开始使用 8Feet 调研平台</h1>
-          <p className="max-w-2xl mx-auto text-base leading-7 text-slate-600">
-            注册后即可体验任务发起、流程管理、报告生成与历史数据回溯。
-          </p>
-        </header>
-
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-950">账号注册</h2>
-              <p className="mt-2 text-sm text-slate-600">填写基本信息，快速开始业务对象深度调研。</p>
-            </div>
-
-            <div className="grid gap-5">
-              <div>
-                <Label htmlFor="register-username">用户名</Label>
-                <Input
-                  id="register-username"
-                  type="text"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="请输入用户名"
-                />
-              </div>
-              <div>
-                <Label htmlFor="register-email">邮箱</Label>
-                <Input
-                  id="register-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="请输入企业邮箱"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="secondary" onClick={handleSendEmailCode} disabled={submitting}>
-                  发送邮箱验证码
-                </Button>
-                <Input
-                  id="register-email-code"
-                  type="text"
-                  value={emailCode}
-                  onChange={(event) => setEmailCode(event.target.value)}
-                  placeholder="请输入验证码"
-                  className="sm:max-w-[220px]"
-                />
-                <Button size="sm" variant="secondary" onClick={handleVerifyEmail} disabled={submitting}>
-                  验证邮箱
-                </Button>
-              </div>
-              <div>
-                <Label htmlFor="register-phone">手机号（可选）</Label>
-                <Input
-                  id="register-phone"
-                  type="text"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="请输入手机号"
-                />
-              </div>
-              <div>
-                <Label htmlFor="register-invite-code">邀请码（可选）</Label>
-                <Input
-                  id="register-invite-code"
-                  type="text"
-                  value={inviteCode}
-                  onChange={(event) => setInviteCode(event.target.value)}
-                  placeholder="请输入邀请码"
-                />
-              </div>
-              <div>
-                <Label htmlFor="register-password">密码</Label>
-                <Input
-                  id="register-password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="设置安全密码"
-                />
-              </div>
-            </div>
-
-            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
-
-            <Button className="w-full" onClick={handleRegister} disabled={submitting}>
-              {submitting ? '注册中...' : '注册并继续'}
-            </Button>
-            <p className="text-center text-sm text-slate-600">
-              已有账号？{' '}
-              <Link to="/login" className="font-medium text-slate-950 hover:text-slate-700">
-                立即登录
-              </Link>
+    <AuthShell
+      topActions={
+        <Link className="text-slate-400 transition hover:text-slate-200" to="/login">
+          已有账号，去登录
+        </Link>
+      }
+      aside={
+        <Card variant="glow" className="p-8 sm:p-10">
+          <div className="space-y-3">
+            <p className="page-kicker">Create Account</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">把调研团队带进统一平台。</h2>
+            <p className="text-sm leading-7 text-slate-400">
+              注册完成后，你可以直接进入 8Feet 的深色工作台，使用同一套设计语言管理任务、流程、报告与收藏资产。
             </p>
-          </Card>
+          </div>
 
-          <Card className="space-y-5 bg-slate-950 text-white">
-            <div>
-              <h3 className="text-xl font-semibold">核心价值</h3>
-              <p className="mt-3 text-sm text-slate-300">
-                统一调研流程、任务高效复用、报告可视化输出，让每次分析更具决策价值。
-              </p>
-            </div>
-            <div className="space-y-3 text-sm leading-6 text-slate-300">
-              <p className="border-t border-slate-800 pt-3">- 简洁界面，快速上手</p>
-              <p className="border-t border-slate-800 pt-3">- 结构化调研任务管理</p>
-              <p className="border-t border-slate-800 pt-3">- 可复用的调研与报告输出</p>
-            </div>
-          </Card>
+          <div className="mt-8 space-y-4">
+            {steps.map((item) => (
+              <div key={item.title} className="panel-subtle p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.2)] bg-[rgba(99,202,183,0.08)] text-[#63cab7]">
+                    <item.icon size={16} strokeWidth={1.9} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">{item.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-400">{item.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      }
+    >
+      <Card variant="glass" className="p-8 sm:p-10">
+        <div className="space-y-2">
+          <p className="page-kicker">新建账号</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-100">开始使用 8Feet 调研平台</h1>
+          <p className="text-sm leading-7 text-slate-400">
+            完成账号注册后，你就可以体验任务发起、流程跟踪、报告追问与历史资产沉淀等完整功能。
+          </p>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="register-username">用户名</Label>
+            <Input id="register-username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="请输入用户名" />
+          </div>
+          <div>
+            <Label htmlFor="register-email">邮箱</Label>
+            <Input id="register-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="请输入企业邮箱" />
+          </div>
+          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+            <div>
+              <Label htmlFor="register-email-code">邮箱验证码</Label>
+              <Input id="register-email-code" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} placeholder="请输入验证码" />
+            </div>
+            <Button type="button" variant="secondary" onClick={handleSendEmailCode} disabled={submitting}>
+              发送验证码
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleVerifyEmail} disabled={submitting}>
+              验证邮箱
+            </Button>
+          </div>
+          <div>
+            <Label htmlFor="register-phone">手机号（可选）</Label>
+            <Input id="register-phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="请输入手机号" />
+          </div>
+          <div>
+            <Label htmlFor="register-invite-code">邀请码（可选）</Label>
+            <Input id="register-invite-code" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="请输入邀请码" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="register-password">密码</Label>
+            <Input id="register-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="请设置安全密码" />
+          </div>
+        </div>
+
+        {message ? <div className="message-strip mt-6">{message}</div> : null}
+
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Button className="w-full sm:w-auto" size="lg" onClick={handleRegister} disabled={submitting}>
+            {submitting ? '注册中...' : '注册并继续'}
+          </Button>
+          <p className="text-sm text-slate-400">
+            已有账号？
+            <Link className="ml-2 text-[#63cab7] transition hover:text-[#7dd8c9]" to="/login">
+              立即登录
+            </Link>
+          </p>
+        </div>
+      </Card>
+    </AuthShell>
   );
 }

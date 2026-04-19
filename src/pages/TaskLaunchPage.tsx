@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+﻿import { BookmarkPlus, Bot, Clock3, Search, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   createFavoriteItem,
-  getFavoriteItems,
   createResearchTask,
+  getFavoriteItems,
   getModelRoutingRecommendation,
   getModelsAvailable,
   getResearchTasks,
-} from '../api/client';
-import { PageShell } from '../components/common/PageShell';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { MultiSelect } from '../components/ui/multi-select';
-import { Select } from '../components/ui/select';
-import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '../types';
+} from '@/api/client';
+import { PageShell } from '@/components/common/PageShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '@/types';
 
 const objectTypes = ['', 'company', 'stock', 'commodity'] as const;
 
@@ -31,6 +33,7 @@ export function TaskLaunchPage() {
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<ModelAvailableItem[]>([]);
   const [recommendedModelId, setRecommendedModelId] = useState('');
+  const [recommendationReason, setRecommendationReason] = useState('');
   const [researchTasks, setResearchTasks] = useState<ResearchTaskListItem[]>([]);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -70,15 +73,20 @@ export function TaskLaunchPage() {
   useEffect(() => {
     const loadRecommendation = async () => {
       if (!objectType) {
+        setRecommendationReason('');
         return;
       }
+
       try {
         const response = await getModelRoutingRecommendation({ object_type: objectType });
         setRecommendedModelId(response.recommended_model_id ?? '');
+        setRecommendationReason(response.reason ?? '');
       } catch {
         setRecommendedModelId('');
+        setRecommendationReason('');
       }
     };
+
     void loadRecommendation();
   }, [objectType]);
 
@@ -103,7 +111,7 @@ export function TaskLaunchPage() {
         multi_model_ids: multiModelIds,
         enable_cross_validation: enableCrossValidation,
       });
-      setMessage(`任务已创建：${response.task_id}，状态 ${response.status}`);
+      setMessage(`任务已创建：${response.task_id}，当前状态：${response.status}`);
       const tasksResponse = await getResearchTasks({ page: 1, page_size: 10 });
       setResearchTasks(tasksResponse.list);
     } catch (error) {
@@ -116,12 +124,12 @@ export function TaskLaunchPage() {
 
   const handleFavoriteModel = async () => {
     if (!modelId) {
-      setMessage('请先选择 model_id。');
+      setMessage('请先选择一个模型再收藏。');
       return;
     }
 
     if (favoriteModelIds.includes(modelId)) {
-      setMessage('该模型已在收藏夹中。');
+      setMessage('这个模型已经在收藏夹里了。');
       return;
     }
 
@@ -147,18 +155,54 @@ export function TaskLaunchPage() {
     label: `${model.model_name} (${model.provider})`,
   }));
 
+  const recommendedModel = useMemo(
+    () => availableModels.find((model) => model.model_id === recommendedModelId),
+    [availableModels, recommendedModelId]
+  );
+
+  const activeSourceTypes = useMemo(
+    () =>
+      sourceTypesText
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [sourceTypesText]
+  );
+
   return (
     <PageShell
       title="发起调研"
-      subtitle="输入调研对象与参数，启动 AI 驱动的市场情报分析任务。"
-      action={<Button variant="secondary" onClick={handleCreateTask}>创建任务</Button>}
+      subtitle="输入调研对象与分析偏好，启动 AI 驱动的商业情报研究任务。整页视觉和交互均对齐 8Feet Design System。"
+      action={
+        <Button variant="secondary" onClick={handleCreateTask} disabled={submitting}>
+          {submitting ? '创建中...' : '快速创建'}
+        </Button>
+      }
     >
-      <div className="grid gap-8">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <Card className="space-y-8">
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-100">创建调研任务</h2>
-            <p className="text-sm leading-6 text-slate-400">
-              填写调研对象信息与偏好参数，系统将自动匹配最优模型并生成深度报告。
+          <div className="flex flex-wrap gap-2">
+            <span className="data-pill">
+              <Bot size={14} className="text-[#63cab7]" />
+              可用模型 {availableModels.length}
+            </span>
+            <span className="data-pill">
+              <Star size={14} className="text-[#63cab7]" />
+              收藏模型 {favoriteModelIds.length}
+            </span>
+            {recommendedModel ? (
+              <span className="data-pill">
+                <Sparkles size={14} className="text-[#63cab7]" />
+                推荐 {recommendedModel.model_name}
+              </span>
+            ) : null}
+          </div>
+
+          <section className="space-y-3">
+            <p className="page-kicker">Research Launch</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-100">创建调研任务</h2>
+            <p className="text-sm leading-7 text-slate-400">
+              通过对象类型、时间范围、信源要求与模型策略，把一次临时查询整理成标准化调研任务。
             </p>
           </section>
 
@@ -170,32 +214,25 @@ export function TaskLaunchPage() {
                   id="task-object-name"
                   value={objectName}
                   onChange={(event) => setObjectName(event.target.value)}
-                  placeholder="例如：腾讯控股"
+                  placeholder="例如：腾讯控股、比亚迪、原油期货"
                   className="flex-1"
                 />
-                <button
-                  type="button"
-                  onClick={handleCreateTask}
-                  className="flex items-center justify-center rounded-xl bg-[#63cab7] px-4 text-[#07111f] transition hover:bg-[#7dd8c9]"
-                  aria-label="搜索"
-                >
+                <Button type="button" size="icon" onClick={handleCreateTask} aria-label="创建任务" disabled={submitting}>
                   <Search size={18} strokeWidth={2} />
-                </button>
+                </Button>
               </div>
             </div>
+
             <div>
-              <Label htmlFor="task-object-type">对象类型（可选）</Label>
-              <Select
-                id="task-object-type"
-                value={objectType}
-                onChange={(event) => setObjectType(event.target.value as (typeof objectTypes)[number])}
-              >
+              <Label htmlFor="task-object-type">对象类型</Label>
+              <Select id="task-object-type" value={objectType} onChange={(event) => setObjectType(event.target.value as (typeof objectTypes)[number])}>
                 <option value="">自动识别</option>
                 <option value="company">公司</option>
                 <option value="stock">股票</option>
                 <option value="commodity">商品</option>
               </Select>
             </div>
+
             <div>
               <Label htmlFor="task-time-range">时间范围</Label>
               <Select id="task-time-range" value={timeRange} onChange={(event) => setTimeRange(event.target.value)}>
@@ -205,18 +242,16 @@ export function TaskLaunchPage() {
                 <option value="1y">近 1 年</option>
               </Select>
             </div>
+
             <div>
               <Label htmlFor="task-source-authority">信源权威度</Label>
-              <Select
-                id="task-source-authority"
-                value={sourceAuthority}
-                onChange={(event) => setSourceAuthority(event.target.value)}
-              >
+              <Select id="task-source-authority" value={sourceAuthority} onChange={(event) => setSourceAuthority(event.target.value)}>
                 <option value="high">高权威</option>
-                <option value="medium">中等</option>
-                <option value="low">全量</option>
+                <option value="medium">平衡</option>
+                <option value="low">广覆盖</option>
               </Select>
             </div>
+
             <div>
               <Label htmlFor="task-source-types">信源类型（逗号分隔）</Label>
               <Input
@@ -226,45 +261,48 @@ export function TaskLaunchPage() {
                 placeholder="news,report,filing"
               />
             </div>
+
             <div>
-              <Label htmlFor="task-model-id">AI 模型（可选）</Label>
+              <Label htmlFor="task-model-id">主模型（可选）</Label>
               <Select id="task-model-id" value={modelId} onChange={(event) => setModelId(event.target.value)}>
-                <option value="">不指定模型（后端默认）</option>
+                <option value="">不指定模型，使用系统路由</option>
                 {availableModels.map((model) => (
                   <option key={model.model_id} value={model.model_id}>
                     {model.model_name} ({model.provider})
                   </option>
                 ))}
               </Select>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" onClick={handleFavoriteModel} disabled={submitting}>
+                  <BookmarkPlus size={14} />
                   收藏当前模型
                 </Button>
-                {modelId && favoriteModelIds.includes(modelId) ? (
-                  <span className="text-xs text-[#63cab7]">已收藏</span>
-                ) : null}
+                {modelId && favoriteModelIds.includes(modelId) ? <span className="text-xs text-[#63cab7]">已收藏</span> : null}
               </div>
-              {recommendedModelId ? (
-                <p className="mt-2 text-xs text-slate-500">推荐模型：{recommendedModelId}</p>
-              ) : null}
             </div>
+
             <div>
-              <Label htmlFor="task-multi-model-ids">多模型选择</Label>
+              <Label htmlFor="task-multi-model-ids">多模型交叉</Label>
               <MultiSelect
                 options={multiModelOptions}
                 defaultValue={multiModelIds}
                 onValueChange={setMultiModelIds}
-                placeholder="选择模型"
-                className="w-full border-[rgba(99,202,183,0.2)] bg-[#07111f]/80 text-slate-100 hover:bg-[#07111f]"
-                popoverClassName="border border-[rgba(99,202,183,0.2)] bg-[#0f1f35] text-slate-100 shadow-xl"
+                placeholder="选择辅助模型"
+                className="w-full"
+                popoverClassName="border border-[rgba(99,202,183,0.18)] bg-[#0f1f35] text-slate-100 shadow-xl"
                 hideSelectAll
                 maxCount={3}
               />
-              {availableModels.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">暂无可用模型</p>
-              ) : null}
+              {availableModels.length === 0 ? <p className="mt-2 text-xs text-slate-500">暂无可用模型</p> : null}
             </div>
-            <div className="flex items-center gap-3 pt-8">
+          </div>
+
+          <div className="panel-subtle flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-100">启用多模型交叉验证</p>
+              <p className="mt-1 text-sm leading-6 text-slate-400">在主模型之外增加候选模型，用于交叉比对结论与关键证据。</p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-3 text-sm text-slate-300">
               <input
                 id="task-enable-cross-validation"
                 type="checkbox"
@@ -272,29 +310,80 @@ export function TaskLaunchPage() {
                 onChange={(event) => setEnableCrossValidation(event.target.checked)}
                 className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
               />
-              <Label htmlFor="task-enable-cross-validation">启用多模型交叉验证</Label>
-            </div>
+              交叉验证
+            </label>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Button onClick={handleCreateTask} disabled={submitting}>
+          {message ? <div className="message-strip">{message}</div> : null}
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button onClick={handleCreateTask} size="lg" disabled={submitting}>
               {submitting ? '创建中...' : '创建调研任务'}
             </Button>
-            {message ? <p className="text-sm text-slate-400">{message}</p> : null}
-          </div>
-
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-            <p className="text-sm font-semibold text-slate-200">近期任务</p>
-            <div className="mt-3 space-y-2">
-              {researchTasks.map((task) => (
-                <div key={task.task_id} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-300">{task.object_name}</span>
-                  <span className="text-xs text-slate-500">{task.status}</span>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-slate-500">当前会使用严格深色表单、teal 强调色与圆角分层卡片，和设计系统保持一致。</p>
           </div>
         </Card>
+
+        <div className="space-y-6">
+          <Card variant="glow" className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">模型路由建议</h3>
+            </div>
+            <div className="panel-subtle p-4">
+              <p className="text-sm font-semibold text-slate-100">推荐模型</p>
+              <p className="mt-2 text-sm text-[#63cab7]">
+                {recommendedModel ? `${recommendedModel.model_name} (${recommendedModel.provider})` : recommendedModelId || '等待对象类型选择'}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{recommendationReason || '选择对象类型后，系统会根据研究场景提供模型路由建议。'}</p>
+            </div>
+            <div className="panel-subtle p-4">
+              <p className="text-sm font-semibold text-slate-100">当前信源策略</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {activeSourceTypes.length > 0 ? (
+                  activeSourceTypes.map((type) => <span key={type} className="data-pill">{type}</span>)
+                ) : (
+                  <span className="text-sm text-slate-500">暂无信源类型</span>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Clock3 size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">近期任务</h3>
+            </div>
+            <div className="space-y-3">
+              {researchTasks.length > 0 ? (
+                researchTasks.slice(0, 5).map((task) => (
+                  <div key={task.task_id} className="panel-subtle p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{task.object_name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{task.task_id}</p>
+                      </div>
+                      <StatusBadge status={task.status} />
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500">创建时间：{task.created_at}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="panel-subtle p-4 text-sm text-slate-500">暂时没有任务记录。</div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
+            </div>
+            <p className="text-sm leading-7 text-slate-400">
+              这一版任务发起页已经按设计系统落地为深海军蓝底色、teal 重点动作、24px 级卡片圆角，以及“主表单 + 侧栏信息卡”的信息结构。
+            </p>
+          </Card>
+        </div>
       </div>
     </PageShell>
   );

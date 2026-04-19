@@ -1,48 +1,43 @@
-import { useEffect, useState } from 'react';
+﻿import { Activity, Bot, ListChecks, Shield, Sparkles, Workflow } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   analyzeTask,
   cancelResearchTask,
   getCrossValidationResult,
-  getResearchTasks,
   getResearchTaskStatus,
   getResearchTaskWorkflow,
-  getTaskIntervention,
+  getResearchTasks,
   getTaskEvents,
   getTaskFacts,
+  getTaskIntervention,
   retryAnalysis,
   submitTaskIntervention,
   triggerCrossValidation,
-} from '../api/client';
-import { Button } from '../components/ui/button';
-import { PageShell } from '../components/common/PageShell';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
-import { Textarea } from '../components/ui/textarea';
-import { StatusBadge } from '../components/ui/status-badge';
+} from '@/api/client';
+import { PageShell } from '@/components/common/PageShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Textarea } from '@/components/ui/textarea';
 import type {
   AnalyzeTaskResponse,
   CrossValidationResultResponse,
   ResearchTaskListItem,
-  RetryAnalysisResponse,
   ResearchTaskStatusResponse,
+  RetryAnalysisResponse,
   SubmitTaskInterventionResponse,
   TaskEvent,
   TaskFactsResponse,
   TaskInterventionAction,
   TaskInterventionDetailResponse,
-  TriggerCrossValidationResponse,
   TaskWorkflowResponse,
+  TriggerCrossValidationResponse,
   WorkflowNode,
-} from '../types';
-
-function nodeStatusLabel(status: WorkflowNode['node_status']) {
-  if (status === 'completed') return '已完成';
-  if (status === 'running') return '进行中';
-  if (status === 'failed') return '失败';
-  return '待处理';
-}
+} from '@/types';
 
 export function TaskProcessPage() {
   const [taskId, setTaskId] = useState('');
@@ -72,9 +67,7 @@ export function TaskProcessPage() {
       try {
         const response = await getResearchTasks({ page: 1, page_size: 20 });
         setTasks(response.list);
-        const runningTask = response.list.find((item) =>
-          ['pending', 'searching', 'data_ready', 'analyzing'].includes(item.status)
-        );
+        const runningTask = response.list.find((item) => ['pending', 'searching', 'data_ready', 'analyzing'].includes(item.status));
         setTaskId(runningTask?.task_id ?? response.list[0]?.task_id ?? '');
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载任务列表失败';
@@ -216,7 +209,7 @@ export function TaskProcessPage() {
       setCrossValidationResult(result);
       setMessage('');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '查询多模型交叉验证结果失败';
+      const reason = error instanceof Error ? error.message : '查询交叉验证结果失败';
       setMessage(reason);
     } finally {
       setLoadingCrossValidationResult(false);
@@ -279,14 +272,32 @@ export function TaskProcessPage() {
     }
   };
 
+  const currentTask = useMemo(() => tasks.find((item) => item.task_id === taskId) ?? null, [tasks, taskId]);
+  const workflowNodes = workflow?.nodes ?? [];
+  const progress = Math.max(0, Math.min(100, status?.progress ?? 0));
+
   return (
-    <PageShell title="调研流程" subtitle="实时监控分析进度，查看工作流节点状态，支持人工介入与交叉验证。">
-      <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+    <PageShell
+      title="调研流程"
+      subtitle="实时监控任务节点、事件流与交叉验证结果。页面结构参考 8Feet UI Kit，并把摘要、事件、介入入口拆成了更清晰的层级。"
+      action={
+        <Button variant="secondary" onClick={handleRefreshCrossValidationResult} disabled={loadingCrossValidationResult || !taskId}>
+          {loadingCrossValidationResult ? '刷新中...' : '刷新结果'}
+        </Button>
+      }
+    >
+      {message ? <div className="message-strip mb-6">{message}</div> : null}
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
         <Card className="space-y-7">
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-100">当前任务进度</h2>
-            <p className="text-sm leading-7 text-slate-400">选择任务后自动加载分析流程各节点的实时状态。</p>
-            <div className="max-w-sm">
+            <div className="flex items-center gap-2">
+              <Workflow size={16} className="text-[#63cab7]" />
+              <p className="page-kicker">Workflow Monitor</p>
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-100">当前任务进度</h2>
+            <p className="text-sm leading-7 text-slate-400">选择任务后自动加载节点进度、任务摘要和实时事件流，确保流程可见、可追踪、可介入。</p>
+            <div className="max-w-xl">
               <Label htmlFor="process-task-id">选择任务</Label>
               <Select id="process-task-id" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
                 <option value="">请选择任务</option>
@@ -299,131 +310,222 @@ export function TaskProcessPage() {
             </div>
           </section>
 
-          <div className="space-y-5">
-            {workflow?.nodes.map((step, index) => (
-              <div key={step.node_id} className="flex items-center gap-5 rounded-[28px] border border-white/8 bg-white/4 px-5 py-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(99,202,183,0.25)] bg-[rgba(99,202,183,0.07)] text-sm font-semibold text-[#63cab7]">
-                  {index + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-200">{step.node_name}</p>
-                  <div className="mt-1">
-                    <StatusBadge status={step.node_status} />
-                  </div>
-                </div>
-                <Button size="sm" variant="secondary" onClick={() => handleOpenIntervention(step)}>
-                  人工介入
-                </Button>
+          <div className="panel-subtle p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-100">{currentTask?.object_name ?? '未选择任务'}</p>
+                <p className="mt-1 text-sm text-slate-400">{status?.current_stage ?? '等待任务加载'}</p>
               </div>
-            ))}
+              {status ? <StatusBadge status={status.status} /> : null}
+            </div>
+            <div className="mt-4 h-2 rounded-full bg-white/[0.06]">
+              <div className="h-2 rounded-full bg-[#63cab7] shadow-[0_0_16px_rgba(99,202,183,0.24)]" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="data-pill">进度 {progress}%</span>
+              {status?.hint ? <span className="data-pill">提示：{status.hint}</span> : null}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={handleCancelTask} disabled={submitting}>
+            <Button size="sm" variant="secondary" onClick={handleCancelTask} disabled={submitting || !taskId}>
               取消任务
             </Button>
-            <Button size="sm" variant="secondary" onClick={handleAnalyzeTask} disabled={submitting}>
+            <Button size="sm" variant="secondary" onClick={handleAnalyzeTask} disabled={submitting || !taskId}>
               启动分析
             </Button>
-            <Button size="sm" variant="secondary" onClick={handleRetryAnalysis} disabled={submitting}>
+            <Button size="sm" variant="secondary" onClick={handleRetryAnalysis} disabled={submitting || !taskId}>
               重试分析
             </Button>
-            <Button size="sm" variant="secondary" onClick={handleTriggerCrossValidation} disabled={submitting}>
+            <Button size="sm" variant="secondary" onClick={handleTriggerCrossValidation} disabled={submitting || !taskId}>
               启动交叉验证
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleRefreshCrossValidationResult}
-              disabled={loadingCrossValidationResult}
-            >
-              查询交叉验证结果
-            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {workflowNodes.length > 0 ? (
+              workflowNodes.map((step, index) => {
+                const isCurrent = workflow?.current_node === step.node_id;
+                return (
+                  <div
+                    key={step.node_id}
+                    className={`rounded-[28px] border px-5 py-5 transition-all ${
+                      isCurrent
+                        ? 'border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.07)] shadow-[0_0_20px_rgba(99,202,183,0.06)]'
+                        : 'border-white/8 bg-white/4'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(99,202,183,0.25)] bg-[rgba(99,202,183,0.08)] text-sm font-semibold text-[#63cab7]">
+                        {index + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-sm font-semibold text-slate-100 sm:text-base">{step.node_name}</p>
+                          <StatusBadge status={step.node_status} />
+                          {isCurrent ? <span className="data-pill">当前节点</span> : null}
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">节点 ID：{step.node_id}</p>
+                      </div>
+                      <Button size="sm" variant="secondary" onClick={() => handleOpenIntervention(step)}>
+                        人工介入
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="panel-subtle p-5 text-sm text-slate-500">当前没有可展示的流程节点。</div>
+            )}
           </div>
         </Card>
 
-        <Card className="space-y-5 border-[rgba(99,202,183,0.25)]">
-          <h3 className="text-xl font-semibold text-slate-100">任务摘要</h3>
-          {status ? (
-            <div className="space-y-2 text-sm leading-7 text-slate-300">
-              <p><span className="text-slate-500">任务 ID：</span>{status.task_id}</p>
-              <p><span className="text-slate-500">状态：</span>{status.status}</p>
-              <p><span className="text-slate-500">当前阶段：</span>{status.current_stage}</p>
-              <p><span className="text-slate-500">分析进度：</span>{status.progress}%</p>
-              {status.hint ? <p><span className="text-slate-500">进度提示：</span>{status.hint}</p> : null}
+        <div className="space-y-6">
+          <Card variant="glow" className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Activity size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">任务摘要</h3>
             </div>
-          ) : (
-            <p className="text-sm text-slate-400">{message || '暂无任务状态数据'}</p>
-          )}
-          {facts ? (
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
-              <p><span className="text-slate-500">数据条目：</span>{facts.fact_count}</p>
-              <p><span className="text-slate-500">数据版本：</span>{facts.dataset_version}</p>
-              <p><span className="text-slate-500">关键实体：</span>{facts.top_entities.join('、')}</p>
+            {status ? (
+              <div className="space-y-3 text-sm leading-7 text-slate-300">
+                <div className="panel-subtle p-4">
+                  <p><span className="text-slate-500">任务 ID：</span>{status.task_id}</p>
+                  <p><span className="text-slate-500">状态：</span>{status.status}</p>
+                  <p><span className="text-slate-500">当前阶段：</span>{status.current_stage}</p>
+                  <p><span className="text-slate-500">进度：</span>{progress}%</p>
+                </div>
+                {analyzeResult ? (
+                  <div className="panel-subtle p-4">
+                    <p><span className="text-slate-500">分析已启动：</span>{analyzeResult.status}</p>
+                    {analyzeResult.report_id ? <p><span className="text-slate-500">关联报告：</span>{analyzeResult.report_id}</p> : null}
+                  </div>
+                ) : null}
+                {retryResult ? (
+                  <div className="panel-subtle p-4">
+                    <p><span className="text-slate-500">重试状态：</span>{retryResult.status}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="panel-subtle p-4 text-sm text-slate-500">暂无任务状态数据。</div>
+            )}
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Bot size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">数据事实层</h3>
             </div>
-          ) : null}
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
-            <p className="font-semibold text-[#63cab7]">实时事件流</p>
-            <div className="mt-2 space-y-1">
-              {events.map((event) => (
-                <p key={`${event.node_id}-${event.timestamp}`}>
-                  {event.timestamp} / {event.node_name} / {event.node_status}
-                </p>
-              ))}
-            </div>
-          </div>
-          {analyzeResult ? (
-            <p className="text-sm text-slate-300">
-              <span className="text-slate-500">分析已启动：</span>{analyzeResult.status}{analyzeResult.report_id ? ` · 报告 ${analyzeResult.report_id}` : ''}
-            </p>
-          ) : null}
-          {retryResult ? (
-            <p className="text-sm text-slate-300">
-              <span className="text-slate-500">重试分析：</span>{retryResult.status}
-            </p>
-          ) : null}
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
-            <p className="font-semibold text-[#63cab7]">多模型交叉验证</p>
-            {crossValidationTrigger ? (
-              <p className="mt-2 text-slate-400">
-                已触发 · {crossValidationTrigger.status}
-              </p>
-            ) : null}
-            {loadingCrossValidationResult ? <p className="mt-2 text-slate-400">加载中...</p> : null}
-            {crossValidationResult ? (
-              <div className="mt-2 space-y-1.5">
-                <p><span className="text-slate-500">验证状态：</span>{crossValidationResult.status}</p>
-                {crossValidationResult.consensus_score != null && (
-                  <p><span className="text-slate-500">共识评分：</span>{crossValidationResult.consensus_score}</p>
-                )}
-                {crossValidationResult.consensus_summary && (
-                  <p><span className="text-slate-500">结论摘要：</span>{crossValidationResult.consensus_summary}</p>
-                )}
-                <div className="mt-2 space-y-1 border-t border-white/8 pt-2">
-                  {crossValidationResult.results.map((item) => (
-                    <p key={item.model_id} className="text-xs">
-                      <span className="text-slate-400">{item.model_id}：</span>{item.conclusion}
-                      {item.confidence != null ? `（置信度 ${item.confidence}）` : ''}
-                    </p>
+            {facts ? (
+              <div className="space-y-4">
+                <div className="panel-subtle p-4 text-sm text-slate-300">
+                  <p><span className="text-slate-500">数据条目：</span>{facts.fact_count}</p>
+                  <p><span className="text-slate-500">数据版本：</span>{facts.dataset_version}</p>
+                  <p><span className="text-slate-500">关键实体：</span>{facts.top_entities.join('、') || '暂无'}</p>
+                </div>
+                <div className="space-y-2">
+                  {facts.sources.map((source) => (
+                    <div key={source.source_name} className="panel-subtle flex items-center justify-between p-3 text-sm text-slate-300">
+                      <span>{source.source_name}</span>
+                      <span className="text-slate-500">{source.count}</span>
+                    </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="mt-2 text-slate-500">暂无交叉验证结果</p>
+              <div className="panel-subtle p-4 text-sm text-slate-500">暂无事实层数据。</div>
             )}
-          </div>
-          {message ? <p className="text-sm text-slate-400">{message}</p> : null}
-        </Card>
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-2">
+              <ListChecks size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">实时事件流</h3>
+            </div>
+            <div className="space-y-3">
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <div key={`${event.node_id}-${event.timestamp}`} className="panel-subtle p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{event.node_name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{event.timestamp}</p>
+                      </div>
+                      <StatusBadge status={event.node_status} />
+                    </div>
+                    <div className="mt-3 text-xs leading-6 text-slate-400">
+                      {Object.entries(event.metrics).length > 0
+                        ? Object.entries(event.metrics)
+                            .map(([key, value]) => `${key}: ${String(value)}`)
+                            .join(' · ')
+                        : '当前事件暂无附加指标'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="panel-subtle p-4 text-sm text-slate-500">当前没有事件日志。</div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Shield size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">多模型交叉验证</h3>
+            </div>
+            <div className="panel-subtle p-4 text-sm text-slate-300">
+              {crossValidationTrigger ? <p><span className="text-slate-500">触发状态：</span>{crossValidationTrigger.status}</p> : null}
+              {loadingCrossValidationResult ? <p className="text-slate-400">正在刷新交叉验证结果...</p> : null}
+              {crossValidationResult ? (
+                <div className="space-y-3">
+                  <p><span className="text-slate-500">验证状态：</span>{crossValidationResult.status}</p>
+                  {crossValidationResult.consensus_score != null ? <p><span className="text-slate-500">共识评分：</span>{crossValidationResult.consensus_score}</p> : null}
+                  {crossValidationResult.consensus_summary ? <p><span className="text-slate-500">结论摘要：</span>{crossValidationResult.consensus_summary}</p> : null}
+                  {crossValidationResult.disagreements?.length ? (
+                    <div>
+                      <p className="text-slate-500">分歧点：</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {crossValidationResult.disagreements.map((item) => (
+                          <span key={item} className="data-pill">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="space-y-2 border-t border-white/8 pt-3">
+                    {crossValidationResult.results.map((item) => (
+                      <div key={item.model_id} className="panel-solid p-3 text-xs leading-6 text-slate-300">
+                        <p className="font-medium text-slate-100">{item.model_id}</p>
+                        <p className="mt-1">{item.conclusion}</p>
+                        {item.confidence != null ? <p className="mt-1 text-slate-500">置信度：{item.confidence}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                !loadingCrossValidationResult && <p className="text-slate-500">暂无交叉验证结果。</p>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
+            </div>
+            <p className="text-sm leading-7 text-slate-400">
+              这里把流程节点、事实层、事件流、交叉验证结果拆成四张独立卡片，符合设计系统强调的“深色分层 + teal 边界 + 状态清晰”的信息结构。
+            </p>
+          </Card>
+        </div>
       </div>
+
       {interventionNode ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[28px] border border-[rgba(99,202,183,0.25)] bg-[#0f1f35] p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
+          <div className="glass-card w-full max-w-3xl p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-8">
+            <div className="flex flex-col gap-4 border-b border-[rgba(99,202,183,0.1)] pb-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-slate-100">人工介入</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  任务 {taskId} · 节点 {interventionNode.node_id}
-                </p>
+                <p className="mt-1 text-sm text-slate-400">任务 {taskId} · 节点 {interventionNode.node_id}</p>
               </div>
               <Button size="sm" variant="secondary" onClick={handleCloseIntervention}>
                 关闭
@@ -431,7 +533,7 @@ export function TaskProcessPage() {
             </div>
 
             {loadingIntervention ? (
-              <p className="mt-6 text-sm text-slate-400">加载人工介入详情中...</p>
+              <p className="mt-6 text-sm text-slate-400">正在加载人工介入详情...</p>
             ) : (
               <div className="mt-6 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -444,22 +546,21 @@ export function TaskProcessPage() {
                     <Input value={interventionDetail?.intervention_type ?? ''} readOnly />
                   </div>
                 </div>
+
                 <div>
                   <Label>current_params</Label>
-                  <Textarea value={JSON.stringify(interventionDetail?.current_params ?? {}, null, 2)} readOnly rows={4} />
+                  <Textarea value={JSON.stringify(interventionDetail?.current_params ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
                 </div>
+
                 <div>
                   <Label>preview_data</Label>
-                  <Textarea value={JSON.stringify(interventionDetail?.preview_data ?? {}, null, 2)} readOnly rows={4} />
+                  <Textarea value={JSON.stringify(interventionDetail?.preview_data ?? {}, null, 2)} readOnly rows={4} className="font-mono text-xs leading-6" />
                 </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label htmlFor="intervention-action">action</Label>
-                    <Select
-                      id="intervention-action"
-                      value={interventionAction}
-                      onChange={(event) => setInterventionAction(event.target.value as TaskInterventionAction)}
-                    >
+                    <Select id="intervention-action" value={interventionAction} onChange={(event) => setInterventionAction(event.target.value as TaskInterventionAction)}>
                       <option value="confirm">confirm</option>
                       <option value="update_rule">update_rule</option>
                       <option value="skip">skip</option>
@@ -467,28 +568,25 @@ export function TaskProcessPage() {
                   </div>
                   <div>
                     <Label htmlFor="intervention-comment">comment（可选）</Label>
-                    <Input
-                      id="intervention-comment"
-                      value={interventionComment}
-                      onChange={(event) => setInterventionComment(event.target.value)}
-                      placeholder="填写操作说明"
-                    />
+                    <Input id="intervention-comment" value={interventionComment} onChange={(event) => setInterventionComment(event.target.value)} placeholder="填写操作说明" />
                   </div>
                 </div>
+
                 <div>
                   <Label htmlFor="intervention-rule-changes">rule_changes（可选）</Label>
                   <Textarea
                     id="intervention-rule-changes"
                     value={ruleChanges}
                     onChange={(event) => setRuleChanges(event.target.value)}
-                    placeholder="可填写规则调整 JSON 或文本说明"
+                    placeholder="可填写规则调整 JSON 或说明文本"
                     rows={4}
                     disabled={interventionAction !== 'update_rule'}
+                    className="font-mono text-xs leading-6"
                   />
                 </div>
 
                 {interventionResult ? (
-                  <div className="rounded-2xl border border-[rgba(99,202,183,0.2)] bg-white/4 p-4 text-sm text-slate-300">
+                  <div className="panel-subtle p-4 text-sm text-slate-300">
                     <p>结果：{interventionResult.result}</p>
                     <p>审计日志：{interventionResult.audit_log_id}</p>
                   </div>

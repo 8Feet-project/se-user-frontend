@@ -1,10 +1,13 @@
+﻿import { KeyRound, LifeBuoy, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { passwordResetConfirm, passwordResetRequest } from '../api/client';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+
+import { passwordResetConfirm, passwordResetRequest } from '@/api/client';
+import { AuthShell } from '@/components/common/AuthShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function ResetPasswordPage() {
   const [username, setUsername] = useState('');
@@ -53,84 +56,92 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-12 sm:px-10">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
-        <header className="space-y-4 text-center">
-          <p className="text-sm uppercase tracking-[0.28em] text-slate-500">密码重置</p>
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-950">重置 8Feet 账户密码</h1>
-          <p className="max-w-2xl mx-auto text-base leading-7 text-slate-600">
-            先发起密码重置，再输入重置令牌与新密码完成确认。
+    <AuthShell
+      topActions={
+        <Link className="text-slate-400 transition hover:text-slate-200" to="/login">
+          返回登录
+        </Link>
+      }
+      aside={
+        <Card variant="glow" className="p-8 sm:p-10">
+          <div className="space-y-3">
+            <p className="page-kicker">Password Recovery</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">重置流程也应该清晰可追踪。</h2>
+            <p className="text-sm leading-7 text-slate-400">
+              我们沿用设计系统里的深色表单、清晰分层和动作型文案，让恢复账号这件事足够明确、也足够稳妥。
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-4">
+            <div className="panel-subtle p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.2)] bg-[rgba(99,202,183,0.08)] text-[#63cab7]">
+                  <LifeBuoy size={16} strokeWidth={1.9} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">第一步：发起重置</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">填写用户名或邮箱，请求后端创建密码重置流程。</p>
+                </div>
+              </div>
+            </div>
+            <div className="panel-subtle p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.2)] bg-[rgba(99,202,183,0.08)] text-[#63cab7]">
+                  <KeyRound size={16} strokeWidth={1.9} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">第二步：提交令牌</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">拿到 reset_token 后，再输入新密码完成最终确认。</p>
+                </div>
+              </div>
+            </div>
+            <div className="panel-subtle p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.2)] bg-[rgba(99,202,183,0.08)] text-[#63cab7]">
+                  <ShieldAlert size={16} strokeWidth={1.9} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">第三步：回到登录</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">密码更新后，建议立即返回登录页并验证账号状态。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      }
+    >
+      <Card variant="glass" className="p-8 sm:p-10">
+        <div className="space-y-2">
+          <p className="page-kicker">密码恢复</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-100">重置 8Feet 账户密码</h1>
+          <p className="text-sm leading-7 text-slate-400">
+            先发起重置请求，再填写 reset_token 与新密码完成确认。整个流程沿用 8Feet 的深色表单规范与动作型提示文案。
           </p>
-        </header>
-
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-950">重置流程</h2>
-              <p className="mt-2 text-sm text-slate-600">接口：`/api/v1/auth/password/reset-request` 与 `/reset-confirm`。</p>
-            </div>
-
-            <div className="grid gap-5">
-              <div>
-                <Label htmlFor="reset-username">用户名/邮箱</Label>
-                <Input
-                  id="reset-username"
-                  type="text"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="请输入用户名或邮箱"
-                />
-              </div>
-              <Button onClick={handleRequestReset} disabled={submitting}>
-                {submitting ? '提交中...' : '发起密码重置'}
-              </Button>
-
-              <div>
-                <Label htmlFor="reset-token">reset_token</Label>
-                <Input
-                  id="reset-token"
-                  type="text"
-                  value={resetToken}
-                  onChange={(event) => setResetToken(event.target.value)}
-                  placeholder="请输入重置令牌"
-                />
-              </div>
-              <div>
-                <Label htmlFor="reset-new-password">新密码</Label>
-                <Input
-                  id="reset-new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="请输入新密码"
-                />
-              </div>
-              <Button variant="secondary" onClick={handleConfirmReset} disabled={submitting}>
-                {submitting ? '提交中...' : '确认密码重置'}
-              </Button>
-            </div>
-
-            {message ? <p className="text-sm text-slate-600">{message}</p> : null}
-          </Card>
-
-          <Card className="space-y-5 bg-slate-950 text-white">
-            <div>
-              <h3 className="text-xl font-semibold">操作说明</h3>
-              <p className="mt-3 text-sm text-slate-300">
-                发起重置后，根据后端返回的流程获取 `reset_token`，再完成新密码提交。
-              </p>
-            </div>
-            <div className="space-y-3 text-sm leading-6 text-slate-300">
-              <p className="border-t border-slate-800 pt-3">- 第一步：填写用户名/邮箱</p>
-              <p className="border-t border-slate-800 pt-3">- 第二步：输入 reset_token 与新密码</p>
-              <p className="border-t border-slate-800 pt-3">- 第三步：返回登录页验证</p>
-            </div>
-            <Link to="/login" className="inline-flex text-sm font-semibold text-white underline underline-offset-4">
-              返回登录
-            </Link>
-          </Card>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-8 grid gap-5">
+          <div>
+            <Label htmlFor="reset-username">用户名 / 邮箱</Label>
+            <Input id="reset-username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="请输入用户名或邮箱" />
+          </div>
+          <Button variant="secondary" onClick={handleRequestReset} disabled={submitting}>
+            {submitting ? '提交中...' : '发起密码重置'}
+          </Button>
+          <div>
+            <Label htmlFor="reset-token">reset_token</Label>
+            <Input id="reset-token" value={resetToken} onChange={(event) => setResetToken(event.target.value)} placeholder="请输入重置令牌" />
+          </div>
+          <div>
+            <Label htmlFor="reset-new-password">新密码</Label>
+            <Input id="reset-new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="请输入新密码" />
+          </div>
+          <Button onClick={handleConfirmReset} disabled={submitting}>
+            {submitting ? '提交中...' : '确认密码重置'}
+          </Button>
+        </div>
+
+        {message ? <div className="message-strip mt-6">{message}</div> : null}
+      </Card>
+    </AuthShell>
   );
 }

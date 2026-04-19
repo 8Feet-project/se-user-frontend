@@ -1,4 +1,6 @@
+﻿import { BellRing, MailOpen, Radar, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
 import {
   createAlert,
   deleteAlert,
@@ -7,15 +9,15 @@ import {
   markAllMessagesRead,
   markMessageRead,
   updateAlert,
-} from '../api/client';
-import { PageShell } from '../components/common/PageShell';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
-import { StatusBadge } from '../components/ui/status-badge';
-import type { AlertItem, AlertStatus, MessageItem, ObjectType } from '../types';
+} from '@/api/client';
+import { PageShell } from '@/components/common/PageShell';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import type { AlertItem, AlertStatus, MessageItem, ObjectType } from '@/types';
 
 export function AlertsMessagesPage() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -25,13 +27,22 @@ export function AlertsMessagesPage() {
   const [pushInApp, setPushInApp] = useState(true);
   const [pushEmail, setPushEmail] = useState(false);
   const [scheduleRule, setScheduleRule] = useState('daily');
-  const [statusToSet, setStatusToSet] = useState<AlertStatus>('enabled');
+  const [alertStatusDrafts, setAlertStatusDrafts] = useState<Record<string, AlertStatus>>({});
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const loadAlerts = async () => {
     const response = await getAlerts({ page: 1, page_size: 20 });
     setAlerts(response.list);
+    setAlertStatusDrafts((prev) => {
+      const next = { ...prev };
+      response.list.forEach((item) => {
+        if (!next[item.alert_id]) {
+          next[item.alert_id] = item.status;
+        }
+      });
+      return next;
+    });
   };
 
   const loadMessages = async () => {
@@ -82,7 +93,7 @@ export function AlertsMessagesPage() {
     try {
       setSubmitting(true);
       const response = await updateAlert(alertId, { status: nextStatus });
-      setMessage(`提醒更新字段：${response.updated_fields.join(', ') || '无变化'}`);
+      setMessage(`提醒已更新：${response.updated_fields.join(', ') || '无字段变化'}`);
       await loadAlerts();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '更新提醒失败';
@@ -113,7 +124,7 @@ export function AlertsMessagesPage() {
       setMessage(`消息已读：${response.message_id}`);
       await loadMessages();
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '消息标记已读失败';
+      const reason = error instanceof Error ? error.message : '标记消息已读失败';
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -135,154 +146,139 @@ export function AlertsMessagesPage() {
   };
 
   return (
-    <PageShell title="提醒与消息" subtitle="设置调研对象监控提醒，接收任务完成及重要变化的站内通知。">
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <PageShell
+      title="提醒消息"
+      subtitle="把监控对象、推送频率和已读状态拆成更清晰的双栏结构，让提醒配置和消息流彼此独立但风格统一。"
+    >
+      {message ? <div className="message-strip mb-6">{message}</div> : null}
+
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
         <Card className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-100">提醒管理</h2>
-            <p className="mt-2 text-sm text-slate-400">支持提醒创建、状态更新与删除。</p>
+          <div className="flex items-center gap-2">
+            <Radar size={16} className="text-[#63cab7]" />
+            <h2 className="text-2xl font-semibold text-slate-100">提醒配置</h2>
           </div>
+          <p className="text-sm text-slate-400">支持对象监控、推送频率、站内通知和邮件通知，保持深色表单与显式操作按钮的统一规范。</p>
 
           <div className="grid gap-4">
             <div>
               <Label htmlFor="alert-object-name">监控对象</Label>
-              <Input
-                id="alert-object-name"
-                value={objectName}
-                onChange={(event) => setObjectName(event.target.value)}
-                placeholder="例如：腾讯控股"
-              />
+              <Input id="alert-object-name" value={objectName} onChange={(event) => setObjectName(event.target.value)} placeholder="例如：腾讯控股" />
             </div>
-            <div>
-              <Label htmlFor="alert-object-type">对象类型</Label>
-              <Select
-                id="alert-object-type"
-                value={objectType}
-                onChange={(event) => setObjectType(event.target.value as ObjectType)}
-              >
-                <option value="company">公司</option>
-                <option value="stock">股票</option>
-                <option value="commodity">商品</option>
-              </Select>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="alert-object-type">对象类型</Label>
+                <Select id="alert-object-type" value={objectType} onChange={(event) => setObjectType(event.target.value as ObjectType)}>
+                  <option value="company">公司</option>
+                  <option value="stock">股票</option>
+                  <option value="commodity">商品</option>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="alert-schedule-rule">推送频率</Label>
+                <Select id="alert-schedule-rule" value={scheduleRule} onChange={(event) => setScheduleRule(event.target.value)}>
+                  <option value="daily">每日</option>
+                  <option value="weekly">每周</option>
+                  <option value="realtime">实时</option>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="alert-schedule-rule">推送频率</Label>
-              <Select
-                id="alert-schedule-rule"
-                value={scheduleRule}
-                onChange={(event) => setScheduleRule(event.target.value)}
-              >
-                <option value="daily">每日</option>
-                <option value="weekly">每周</option>
-                <option value="realtime">实时</option>
-              </Select>
-            </div>
-            <div className="flex gap-6">
+            <div className="panel-subtle flex flex-wrap gap-6 p-4">
               <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={pushInApp}
-                  onChange={(event) => setPushInApp(event.target.checked)}
-                  className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
-                />
+                <input type="checkbox" checked={pushInApp} onChange={(event) => setPushInApp(event.target.checked)} className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]" />
                 站内推送
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={pushEmail}
-                  onChange={(event) => setPushEmail(event.target.checked)}
-                  className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
-                />
+                <input type="checkbox" checked={pushEmail} onChange={(event) => setPushEmail(event.target.checked)} className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]" />
                 邮件推送
               </label>
             </div>
-            <Button onClick={handleCreateAlert} disabled={submitting}>
-              创建提醒
-            </Button>
+            <Button onClick={handleCreateAlert} disabled={submitting}>创建提醒</Button>
           </div>
 
           <div className="space-y-3">
-            {alerts.map((alert) => (
-              <div key={alert.alert_id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-100">{alert.object_name}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {alert.object_type === 'company' ? '公司' : alert.object_type === 'stock' ? '股票' : '商品'} ·
-                      {alert.schedule_rule === 'daily' ? ' 每日' : alert.schedule_rule === 'weekly' ? ' 每周' : ' 实时'}推送
-                    </p>
+            {alerts.length > 0 ? (
+              alerts.map((alert) => {
+                const nextStatus = alertStatusDrafts[alert.alert_id] ?? alert.status;
+                return (
+                  <div key={alert.alert_id} className="panel-subtle p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{alert.object_name}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {alert.object_type === 'company' ? '公司' : alert.object_type === 'stock' ? '股票' : '商品'} ·
+                          {alert.schedule_rule === 'daily' ? ' 每日' : alert.schedule_rule === 'weekly' ? ' 每周' : ' 实时'} 推送
+                        </p>
+                      </div>
+                      <StatusBadge status={alert.status} />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Select value={nextStatus} onChange={(event) => setAlertStatusDrafts((prev) => ({ ...prev, [alert.alert_id]: event.target.value as AlertStatus }))} className="max-w-[150px]" size="sm">
+                        <option value="enabled">启用</option>
+                        <option value="disabled">禁用</option>
+                      </Select>
+                      <Button size="sm" variant="secondary" onClick={() => handleToggleAlertStatus(alert.alert_id, nextStatus)} disabled={submitting}>更新状态</Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleDeleteAlert(alert.alert_id)} disabled={submitting}>删除</Button>
+                    </div>
                   </div>
-                  <StatusBadge status={alert.status} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Select
-                    value={statusToSet}
-                    onChange={(event) => setStatusToSet(event.target.value as AlertStatus)}
-                    className="max-w-[140px]"
-                    size="sm"
-                  >
-                    <option value="enabled">启用</option>
-                    <option value="disabled">禁用</option>
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleToggleAlertStatus(alert.alert_id, statusToSet)}
-                    disabled={submitting}
-                  >
-                    更新状态
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleDeleteAlert(alert.alert_id)}
-                    disabled={submitting}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </div>
-            ))}
+                );
+              })
+            ) : (
+              <div className="panel-subtle p-4 text-sm text-slate-500">还没有提醒策略。</div>
+            )}
           </div>
         </Card>
 
-        <Card className="space-y-6 border-[rgba(99,202,183,0.25)]">
-          <div>
-            <h3 className="text-xl font-semibold text-slate-100">站内消息</h3>
-            <p className="mt-2 text-sm text-slate-400">支持消息列表查询、单条已读与全部已读。</p>
-          </div>
+        <div className="space-y-6">
+          <Card variant="glow" className="space-y-5">
+            <div className="flex items-center gap-2">
+              <BellRing size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">站内消息</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="data-pill">消息总数 {messages.length}</span>
+              <span className="data-pill">未读 {messages.filter((item) => !item.read_status).length}</span>
+            </div>
+            <Button variant="secondary" onClick={handleMarkAllMessagesRead} disabled={submitting}>
+              <MailOpen size={14} />
+              全部标记已读
+            </Button>
+            <div className="space-y-3">
+              {messages.length > 0 ? (
+                messages.map((item) => (
+                  <div key={item.message_id} className="panel-subtle p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{item.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">{item.content}</p>
+                      </div>
+                      <StatusBadge status={item.read_status ? 'read' : 'unread'} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="text-xs text-slate-500">{item.created_at}</span>
+                      {!item.read_status ? (
+                        <Button size="sm" variant="secondary" onClick={() => handleMarkMessageRead(item.message_id)} disabled={submitting}>
+                          标记已读
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="panel-subtle p-4 text-sm text-slate-500">当前没有站内消息。</div>
+              )}
+            </div>
+          </Card>
 
-          <Button variant="secondary" onClick={handleMarkAllMessagesRead} disabled={submitting}>
-            全部标记已读
-          </Button>
-
-          <div className="space-y-3">
-            {messages.map((item) => (
-              <div key={item.message_id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
-                <p className="text-sm font-semibold text-slate-100">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-400">{item.content}</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <StatusBadge status={item.read_status ? 'read' : 'unread'} />
-                  <span className="text-xs text-slate-500">{item.created_at}</span>
-                </div>
-                {!item.read_status ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="mt-3"
-                    onClick={() => handleMarkMessageRead(item.message_id)}
-                    disabled={submitting}
-                  >
-                    标记已读
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </Card>
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings2 size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
+            </div>
+            <p className="text-sm leading-7 text-slate-400">提醒页现在把“策略配置”和“通知流”拆开了：左侧偏表单和管理，右侧偏状态和阅读流，符合设计系统里强调的职责分区。</p>
+          </Card>
+        </div>
       </div>
-      {message ? <p className="mt-4 text-sm text-slate-400">{message}</p> : null}
     </PageShell>
   );
 }
