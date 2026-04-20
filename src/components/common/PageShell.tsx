@@ -1,4 +1,4 @@
-﻿import { type ReactNode, useState } from 'react';
+﻿import { type CSSProperties, type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bell, Bookmark, ClipboardList, FileText, GitBranch, History, LogIn, User } from 'lucide-react';
 
@@ -31,6 +31,7 @@ export function PageShell({
   const location = useLocation();
   const [hovered, setHovered] = useState(false);
   const expanded = hovered;
+  const contentOffset = expanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.09),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#0a1628_0%,#0c1c36_60%,#0a1628_100%)]">
@@ -115,7 +116,10 @@ export function PageShell({
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-col px-5 py-5 sm:px-6 lg:pl-[68px] lg:pr-8 lg:py-8 xl:pr-10">
+        <div
+          className="flex min-h-screen flex-col px-5 py-5 transition-[padding-left] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] sm:px-6 lg:pl-[var(--page-offset)] lg:pr-8 lg:py-8 xl:pr-10"
+          style={{ '--page-offset': `${contentOffset}px` } as CSSProperties}
+        >
           <div className="mb-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/75 p-4 backdrop-blur-xl lg:hidden">
             <div className="flex items-center justify-between gap-4">
               <Link to="/welcome" className="flex items-center gap-3">
@@ -174,3 +178,4 @@ export function PageShell({
     </div>
   );
 }
+

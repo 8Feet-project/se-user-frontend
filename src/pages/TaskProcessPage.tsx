@@ -352,7 +352,7 @@ export function TaskProcessPage() {
                     className={`rounded-[28px] border px-5 py-5 transition-all ${
                       isCurrent
                         ? 'border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.07)] shadow-[0_0_20px_rgba(99,202,183,0.06)]'
-                        : 'border-white/8 bg-white/4'
+                        : 'border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.12)]'
                     }`}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

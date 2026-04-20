@@ -94,7 +94,7 @@ export function HistoryFavoritesPage() {
           <div className="space-y-4">
             {tasks.length > 0 ? (
               tasks.map((task) => (
-                <div key={task.task_id} className="rounded-[28px] border border-white/8 bg-white/4 px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]">
+                <div key={task.task_id} className="panel-subtle rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-base font-semibold text-slate-100">{task.object_name}</p>

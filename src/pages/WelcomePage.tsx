@@ -98,8 +98,8 @@ export function WelcomePage() {
               </div>
             </section>
 
-            <section className="rounded-[32px] border border-[rgba(99,202,183,0.14)] bg-[#0f1f35]/82 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-8">
-              <div className="rounded-2xl border border-[rgba(99,202,183,0.12)] bg-[#07111f]/85 p-5">
+            <section className="glass-card p-6 sm:p-8">
+              <div className="panel-solid p-5">
                 <p className="page-kicker">Workstation Preview</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-100">一个更连续的研究工作台</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-400">
@@ -109,7 +109,7 @@ export function WelcomePage() {
 
               <div className="mt-5 space-y-4">
                 {features.map((feat) => (
-                  <div key={feat.title} className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                  <div key={feat.title} className="panel-subtle p-4">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.18)] bg-[rgba(99,202,183,0.08)] text-[#63cab7]">
                         <feat.icon size={16} strokeWidth={1.9} />
