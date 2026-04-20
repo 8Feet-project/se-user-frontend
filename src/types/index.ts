@@ -33,6 +33,7 @@ export interface LoginResponse {
 
 export interface RegisterRequest {
   username: string;
+  nickname: string;
   password: string;
   email: string;
   phone?: string;

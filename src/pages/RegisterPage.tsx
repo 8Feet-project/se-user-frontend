@@ -29,6 +29,7 @@ const steps = [
 
 export function RegisterPage() {
   const [username, setUsername] = useState('');
+  const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -38,19 +39,24 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleRegister = async () => {
-    if (!username || !email || !password) {
-      setMessage('请先填写用户名、邮箱和密码。');
+    const trimmedUsername = username.trim();
+    const trimmedNickname = nickname.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedUsername || !trimmedNickname || !trimmedEmail || !password) {
+      setMessage('请先填写用户名、昵称、邮箱和密码。');
       return;
     }
 
     try {
       setSubmitting(true);
       const response = await register({
-        username,
-        email,
+        username: trimmedUsername,
+        nickname: trimmedNickname,
+        email: trimmedEmail,
         password,
-        phone: phone || undefined,
-        invite_code: inviteCode || undefined,
+        phone: phone.trim() || undefined,
+        invite_code: inviteCode.trim() || undefined,
       });
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
@@ -149,6 +155,10 @@ export function RegisterPage() {
             <Input id="register-username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="请输入用户名" />
           </div>
           <div>
+            <Label htmlFor="register-nickname">昵称</Label>
+            <Input id="register-nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="请输入昵称" />
+          </div>
+          <div className="sm:col-span-2">
             <Label htmlFor="register-email">邮箱</Label>
             <Input id="register-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="请输入企业邮箱" />
           </div>

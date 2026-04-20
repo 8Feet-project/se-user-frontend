@@ -380,7 +380,7 @@ export async function mockLogin(payload: LoginRequest): Promise<LoginResponse> {
   };
 }
 
-export async function mockRegister(payload: RegisterRequest): Promise<RegisterResponse> {
+export async function mockRegister(_payload: RegisterRequest): Promise<RegisterResponse> {
   return {
     user_id: 'user-002',
     role: 'user',
