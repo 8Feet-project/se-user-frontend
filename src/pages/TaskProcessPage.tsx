@@ -275,6 +275,13 @@ export function TaskProcessPage() {
   const currentTask = useMemo(() => tasks.find((item) => item.task_id === taskId) ?? null, [tasks, taskId]);
   const workflowNodes = workflow?.nodes ?? [];
   const progress = Math.max(0, Math.min(100, status?.progress ?? 0));
+  const hasCrossValidationResult = Boolean(
+    crossValidationResult &&
+      (crossValidationResult.consensus_points.length > 0 ||
+        crossValidationResult.difference_points.length > 0 ||
+        crossValidationResult.model_outputs.length > 0 ||
+        crossValidationResult.used_models.length > 0)
+  );
 
   return (
     <PageShell
@@ -476,27 +483,45 @@ export function TaskProcessPage() {
             <div className="panel-subtle p-4 text-sm text-slate-300">
               {crossValidationTrigger ? <p><span className="text-slate-500">触发状态：</span>{crossValidationTrigger.status}</p> : null}
               {loadingCrossValidationResult ? <p className="text-slate-400">正在刷新交叉验证结果...</p> : null}
-              {crossValidationResult ? (
+              {hasCrossValidationResult && crossValidationResult ? (
                 <div className="space-y-3">
-                  <p><span className="text-slate-500">验证状态：</span>{crossValidationResult.status}</p>
-                  {crossValidationResult.consensus_score != null ? <p><span className="text-slate-500">共识评分：</span>{crossValidationResult.consensus_score}</p> : null}
-                  {crossValidationResult.consensus_summary ? <p><span className="text-slate-500">结论摘要：</span>{crossValidationResult.consensus_summary}</p> : null}
-                  {crossValidationResult.disagreements?.length ? (
+                  {crossValidationResult.used_models.length > 0 ? (
                     <div>
-                      <p className="text-slate-500">分歧点：</p>
+                      <p className="text-slate-500">有效模型：</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {crossValidationResult.disagreements.map((item) => (
+                        {crossValidationResult.used_models.map((item) => (
+                          <span key={item} className="data-pill">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {crossValidationResult.consensus_points.length > 0 ? (
+                    <div>
+                      <p className="text-slate-500">共识观点：</p>
+                      <div className="mt-2 space-y-2">
+                        {crossValidationResult.consensus_points.map((item) => (
+                          <div key={item} className="panel-solid p-3 text-xs leading-6 text-slate-300">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {crossValidationResult.difference_points.length > 0 ? (
+                    <div>
+                      <p className="text-slate-500">差异观点：</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {crossValidationResult.difference_points.map((item) => (
                           <span key={item} className="data-pill">{item}</span>
                         ))}
                       </div>
                     </div>
                   ) : null}
                   <div className="space-y-2 border-t border-white/8 pt-3">
-                    {crossValidationResult.results.map((item) => (
+                    {crossValidationResult.model_outputs.map((item) => (
                       <div key={item.model_id} className="panel-solid p-3 text-xs leading-6 text-slate-300">
                         <p className="font-medium text-slate-100">{item.model_id}</p>
-                        <p className="mt-1">{item.conclusion}</p>
-                        {item.confidence != null ? <p className="mt-1 text-slate-500">置信度：{item.confidence}</p> : null}
+                        <p className="mt-1">{item.summary}</p>
                       </div>
                     ))}
                   </div>

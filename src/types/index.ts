@@ -254,21 +254,16 @@ export interface TriggerCrossValidationResponse {
   result_id?: string;
 }
 
-export interface CrossValidationModelResult {
+export interface CrossValidationModelOutput {
   model_id: string;
-  conclusion: string;
-  confidence?: number;
-  evidence_count?: number;
+  summary: string;
 }
 
 export interface CrossValidationResultResponse {
-  task_id: string;
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  consensus_summary?: string;
-  consensus_score?: number;
-  disagreements?: string[];
-  results: CrossValidationModelResult[];
-  updated_at?: string;
+  consensus_points: string[];
+  difference_points: string[];
+  model_outputs: CrossValidationModelOutput[];
+  used_models: string[];
 }
 
 export interface WorkflowNode {

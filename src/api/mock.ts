@@ -584,7 +584,48 @@ export async function mockRetryAnalysis(
   };
 }
 
-const mockCrossValidationResultMap: Record<string, CrossValidationResultResponse> = {
+interface MockCrossValidationResultRecord {
+  task_id?: string;
+  status?: 'queued' | 'running' | 'completed' | 'failed';
+  consensus_points?: string[];
+  difference_points?: string[];
+  model_outputs?: Array<{
+    model_id: string;
+    summary: string;
+  }>;
+  used_models?: string[];
+  consensus_summary?: string;
+  consensus_score?: number;
+  disagreements?: string[];
+  updated_at?: string;
+  results?: Array<{
+    model_id: string;
+    conclusion: string;
+    confidence?: number;
+    evidence_count?: number;
+  }>;
+}
+
+function normalizeCrossValidationResult(
+  record?: MockCrossValidationResultRecord
+): CrossValidationResultResponse {
+  const modelOutputs =
+    record?.model_outputs ??
+    record?.results?.map((item) => ({
+      model_id: item.model_id,
+      summary: item.conclusion,
+    })) ??
+    [];
+
+  return {
+    consensus_points: record?.consensus_points ?? (record?.consensus_summary ? [record.consensus_summary] : []),
+    difference_points: record?.difference_points ?? record?.disagreements ?? [],
+    model_outputs: modelOutputs.map((item) => ({ ...item })),
+    used_models: record?.used_models ?? modelOutputs.map((item) => item.model_id),
+  };
+}
+
+const mockCrossValidationResultMap: Record<string, MockCrossValidationResultRecord> = {
   'task-002': {
     task_id: 'task-002',
     status: 'completed',
@@ -643,7 +684,7 @@ export async function mockTriggerCrossValidation(
       consensus_summary: '交叉验证完成，主结论一致。',
       consensus_score: 0.88,
       disagreements: ['估值弹性判断有差异'],
-      results: current.results.map((item, index) => ({
+      results: (current.results ?? []).map((item, index) => ({
         ...item,
         conclusion: index % 2 === 0 ? '维持偏积极判断。' : '维持中性偏积极判断。',
         confidence: 0.8 + index * 0.03,
@@ -665,13 +706,9 @@ export async function mockGetCrossValidationResult(
 ): Promise<CrossValidationResultResponse> {
   const existing = mockCrossValidationResultMap[taskId];
   if (existing) {
-    return {
-      ...existing,
-      disagreements: [...(existing.disagreements ?? [])],
-      results: existing.results.map((item) => ({ ...item })),
-    };
+    return normalizeCrossValidationResult(existing);
   }
-  return {
+  return normalizeCrossValidationResult({
     task_id: taskId,
     status: 'queued',
     consensus_summary: '尚未触发交叉验证',
@@ -679,7 +716,7 @@ export async function mockGetCrossValidationResult(
     disagreements: [],
     results: [],
     updated_at: new Date().toISOString(),
-  };
+  } as MockCrossValidationResultRecord);
 }
 
 const mockTaskEventsMap: Record<string, TaskEvent[]> = {
