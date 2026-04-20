@@ -2,8 +2,8 @@
   const config = {
     remoteApi: {
       enabled: false,
-      functionsBaseUrl: '',
-      anonKey: '',
+      functionsBaseUrl: 'https://sb.meteor041.com/functions/v1',
+      anonKey: 'REPLACE_WITH_SUPABASE_PUBLISHABLE_KEY',
       requestTimeoutMs: 8000,
       cacheTtlMs: 24 * 60 * 60 * 1000,
       analysisCooldownMs: 10 * 60 * 1000,

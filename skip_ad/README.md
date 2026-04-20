@@ -2,6 +2,8 @@
 
 This folder now contains the M1 extension skeleton for shared sponsor skipping on Bilibili.
 
+For Ubuntu server deployment with a dedicated `sb.meteor041.com` subdomain, see [DEPLOYMENT_UBUNTU_METEOR041.md](/E:/code/SE-frontend/skip_ad/DEPLOYMENT_UBUNTU_METEOR041.md).
+
 ## What Changed
 
 - Keeps the original local hardcoded segment fallback

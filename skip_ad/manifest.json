@@ -15,6 +15,7 @@
   "host_permissions": [
     "https://www.bilibili.com/*",
     "https://*.bilibili.com/*",
+    "https://sb.meteor041.com/*",
     "https://*.supabase.co/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
