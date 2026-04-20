@@ -92,8 +92,9 @@ select optgroup {
 
 @layer components {
   .card {
-    @apply rounded-3xl border bg-[#10243d]/72 shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-2xl;
+    @apply rounded-3xl border backdrop-blur-2xl;
     border-color: rgba(99, 202, 183, 0.16);
+    background-color: rgb(16 36 61 / 72%);
     background-image:
       linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.015) 28%, rgba(255, 255, 255, 0.01) 100%),
       radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 42%);
@@ -104,8 +105,9 @@ select optgroup {
   }
 
   .card-glow {
-    @apply rounded-3xl border bg-[#10243d]/76 shadow-[0_0_28px_rgba(99,202,183,0.09)] backdrop-blur-2xl;
+    @apply rounded-3xl border backdrop-blur-2xl;
     border-color: rgba(99, 202, 183, 0.28);
+    background-color: rgb(16 36 61 / 76%);
     background-image:
       linear-gradient(180deg, rgba(99, 202, 183, 0.1), rgba(255, 255, 255, 0.02) 34%, rgba(255, 255, 255, 0.01) 100%),
       radial-gradient(circle at top left, rgba(125, 216, 201, 0.12), transparent 44%);
@@ -116,8 +118,10 @@ select optgroup {
   }
 
   .glass-card {
-    @apply rounded-[32px] border bg-[#10243d]/68 backdrop-blur-[24px];
+    @apply rounded-[32px] border;
     border-color: rgba(99, 202, 183, 0.18);
+    background-color: rgb(16 36 61 / 68%);
+    backdrop-filter: blur(24px);
     background-image:
       linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.018) 34%, rgba(255, 255, 255, 0.012) 100%),
       radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 45%);
@@ -127,8 +131,9 @@ select optgroup {
   }
 
   .panel-subtle {
-    @apply rounded-2xl border bg-white/[0.05] backdrop-blur-xl;
+    @apply rounded-2xl border backdrop-blur-xl;
     border-color: rgba(255, 255, 255, 0.1);
+    background-color: rgb(255 255 255 / 5%);
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -136,8 +141,9 @@ select optgroup {
   }
 
   .panel-solid {
-    @apply rounded-2xl border bg-[#081827]/72 backdrop-blur-xl;
+    @apply rounded-2xl border backdrop-blur-xl;
     border-color: rgba(99, 202, 183, 0.16);
+    background-color: rgb(8 24 39 / 72%);
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.07),
@@ -177,8 +183,9 @@ select optgroup {
   }
 
   .field-input {
-    @apply w-full rounded-2xl border bg-[#07111f] px-4 py-3 text-sm text-slate-100 outline-none transition-all;
+    @apply w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition-all;
     border-color: rgba(99, 202, 183, 0.2);
+    background-color: #07111f;
   }
 
   .field-input::placeholder {
