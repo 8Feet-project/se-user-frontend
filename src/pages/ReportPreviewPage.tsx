@@ -208,7 +208,7 @@ export function ReportPreviewPage() {
                 <div className="whitespace-pre-wrap text-sm leading-7 text-slate-300">{report.content}</div>
               </div>
             ) : (
-              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂时没有报告内容。'}</div>
+              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂无报告内容，请先从任务流程或历史记录进入具体报告。'}</div>
             )}
           </Card>
 

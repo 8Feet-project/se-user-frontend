@@ -56,6 +56,8 @@ export function PlatformInitPage() {
     }
   };
 
+  const initialized = Boolean(initStatus?.initialized);
+
   return (
     <AuthShell
       topActions={
@@ -124,26 +126,51 @@ export function PlatformInitPage() {
           </p>
         </div>
 
+        {initialized ? (
+          <div className="mt-6 rounded-[24px] border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+            平台已完成初始化。为避免重复创建超级管理员与默认配置，当前表单已切换为只读展示。
+          </div>
+        ) : null}
+
         <div className="mt-8 grid gap-5">
           <div>
             <Label htmlFor="platform-site-name">site_name</Label>
-            <Input id="platform-site-name" value={siteName} onChange={(event) => setSiteName(event.target.value)} placeholder="请输入平台名称" />
+            <Input
+              id="platform-site-name"
+              value={siteName}
+              onChange={(event) => setSiteName(event.target.value)}
+              placeholder="请输入平台名称"
+              disabled={initialized || submitting}
+            />
           </div>
           <div>
             <Label htmlFor="platform-default-model-id">default_model_id（可选）</Label>
-            <Input id="platform-default-model-id" value={defaultModelId} onChange={(event) => setDefaultModelId(event.target.value)} placeholder="请输入默认模型 ID" />
+            <Input
+              id="platform-default-model-id"
+              value={defaultModelId}
+              onChange={(event) => setDefaultModelId(event.target.value)}
+              placeholder="请输入默认模型 ID"
+              disabled={initialized || submitting}
+            />
           </div>
           <div>
             <Label htmlFor="platform-admin-email">admin_email</Label>
-            <Input id="platform-admin-email" type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder="请输入管理员邮箱" />
+            <Input
+              id="platform-admin-email"
+              type="email"
+              value={adminEmail}
+              onChange={(event) => setAdminEmail(event.target.value)}
+              placeholder="请输入管理员邮箱"
+              disabled={initialized || submitting}
+            />
           </div>
         </div>
 
         {message ? <div className="message-strip mt-6">{message}</div> : null}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button onClick={handleInitialize} disabled={submitting}>
-            {submitting ? '初始化中...' : '执行平台初始化'}
+          <Button onClick={handleInitialize} disabled={submitting || initialized}>
+            {submitting ? '初始化中...' : initialized ? '平台已初始化' : '执行平台初始化'}
           </Button>
           <Button variant="secondary" onClick={loadStatus} disabled={submitting}>
             刷新初始化状态

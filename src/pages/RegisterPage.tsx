@@ -35,6 +35,8 @@ export function RegisterPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [registerSucceeded, setRegisterSucceeded] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,6 +47,7 @@ export function RegisterPage() {
 
     if (!trimmedUsername || !trimmedNickname || !trimmedEmail || !password) {
       setMessage('请先填写用户名、昵称、邮箱和密码。');
+      setRegisterSucceeded(false);
       return;
     }
 
@@ -60,9 +63,11 @@ export function RegisterPage() {
       });
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
+      setRegisterSucceeded(true);
       setMessage(`注册成功，用户 ID：${response.user_id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '注册失败';
+      setRegisterSucceeded(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -78,6 +83,7 @@ export function RegisterPage() {
     try {
       setSubmitting(true);
       const response = await sendEmailCode({ email: email.trim(), scene: 'register' });
+      setEmailVerified(false);
       setMessage(`验证码已发送，结果：${response.result}，有效期 ${response.expire_in}s。`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发送验证码失败';
@@ -90,15 +96,18 @@ export function RegisterPage() {
   const handleVerifyEmail = async () => {
     if (!email.trim() || !emailCode.trim()) {
       setMessage('请填写邮箱和验证码。');
+      setEmailVerified(false);
       return;
     }
 
     try {
       setSubmitting(true);
       const response = await verifyEmail({ email: email.trim(), code: emailCode.trim() });
+      setEmailVerified(response.verified);
       setMessage(`邮箱验证结果：${response.verified ? '已通过' : '未通过'}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '验证邮箱失败';
+      setEmailVerified(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -137,6 +146,11 @@ export function RegisterPage() {
               </div>
             ))}
           </div>
+
+          <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-300">
+            <p className="font-medium text-slate-100">推荐路径</p>
+            <p className="mt-2 text-slate-400">发送验证码 → 验证邮箱 → 提交注册 → 进入任务发起页。</p>
+          </div>
         </Card>
       }
     >
@@ -174,6 +188,9 @@ export function RegisterPage() {
               验证邮箱
             </Button>
           </div>
+          <div className="sm:col-span-2 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
+            邮箱状态：{emailVerified ? '已验证，可直接注册' : '未验证，建议先完成邮箱验证'}
+          </div>
           <div>
             <Label htmlFor="register-phone">手机号（可选）</Label>
             <Input id="register-phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="请输入手机号" />
@@ -188,12 +205,36 @@ export function RegisterPage() {
           </div>
         </div>
 
-        {message ? <div className="message-strip mt-6">{message}</div> : null}
+        {message ? (
+          <div
+            className={`mt-6 rounded-[24px] border px-4 py-3 text-sm ${
+              registerSucceeded
+                ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                : 'message-strip'
+            }`}
+          >
+            <p>{message}</p>
+            {registerSucceeded ? (
+              <p className="mt-2 text-xs text-emerald-200/90">
+                当前账号已完成注册并写入登录令牌，可直接进入任务发起页继续体验主业务链路。
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button className="w-full sm:w-auto" size="lg" onClick={handleRegister} disabled={submitting}>
-            {submitting ? '注册中...' : '注册并继续'}
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button className="w-full sm:w-auto" size="lg" onClick={handleRegister} disabled={submitting}>
+              {submitting ? '注册中...' : '注册并继续'}
+            </Button>
+            {registerSucceeded ? (
+              <Link to="/" className="w-full sm:w-auto">
+                <Button variant="secondary" className="w-full sm:w-auto">
+                  进入任务发起页
+                </Button>
+              </Link>
+            ) : null}
+          </div>
           <p className="text-sm text-slate-400">
             已有账号？
             <Link className="ml-2 text-[#63cab7] transition hover:text-[#7dd8c9]" to="/login">

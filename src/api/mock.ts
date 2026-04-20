@@ -1,35 +1,52 @@
 import type {
   AlertItem,
   AlertsResponse,
+  AdminDashboardOverviewResponse,
+  AdminLogDetail,
+  AdminLogExportResponse,
+  AdminLogExportStatusResponse,
+  AdminLogsResponse,
+  AdminModelListResponse,
+  AdminModelPermissionRequest,
+  AdminModelPermissionResponse,
+  AdminModelUsageResponse,
+  AdminObjectDistributionResponse,
+  AdminPermissionTreeNode,
+  AdminUserActivityResponse,
+  AdminUserDetail,
+  AdminUserListItem,
+  AdminUsersResponse,
+  AnalyzeTaskRequest,
+  AnalyzeTaskResponse,
+  AppendReportQaRequest,
+  AppendReportQaResponse,
+  CancelResearchTaskResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
+  CreateAdminModelRequest,
+  CreateAdminModelResponse,
+  CreateAdminUserRequest,
+  CreateAdminUserResponse,
   CreateAlertRequest,
   CreateAlertResponse,
   CreateFavoriteFolderRequest,
   CreateFavoriteFolderResponse,
   CreateFavoriteItemRequest,
   CreateFavoriteItemResponse,
+  CreateReportQaRequest,
+  CreateReportQaResponse,
   CreateResearchTaskRequest,
   CreateResearchTaskResponse,
-  ModelsAvailableResponse,
-  ModelRoutingRecommendationResponse,
-  ResearchTasksResponse,
-  CancelResearchTaskResponse,
-  TaskFactsResponse,
-  AnalyzeTaskRequest,
-  AnalyzeTaskResponse,
   CrossValidationResultResponse,
-  RetryAnalysisRequest,
-  RetryAnalysisResponse,
-  TriggerCrossValidationRequest,
-  TriggerCrossValidationResponse,
-  TaskEvent,
-  TaskInterventionDetailResponse,
-  SubmitTaskInterventionRequest,
-  SubmitTaskInterventionResponse,
+  CurrentUserPermissionsResponse,
+  DeleteAdminModelResponse,
   DeleteAlertResponse,
   DeleteFavoriteFolderResponse,
   DeleteFavoriteItemResponse,
+  DeleteReportShareResponse,
+  ExportAdminLogsRequest,
+  ExportReportRequest,
+  ExportReportResponse,
   FavoriteFoldersResponse,
   FavoriteItemsResponse,
   HistoryTaskItem,
@@ -41,6 +58,10 @@ import type {
   MarkMessageReadResponse,
   MessageItem,
   MessagesResponse,
+  ModelsAvailableResponse,
+  ModelRoutingRecommendationResponse,
+  MoveFavoriteItemRequest,
+  MoveFavoriteItemResponse,
   PasswordResetConfirmRequest,
   PasswordResetConfirmResponse,
   PasswordResetRequest,
@@ -48,35 +69,44 @@ import type {
   PlatformInitializeRequest,
   PlatformInitializeResponse,
   PlatformInitStatusResponse,
+  PublicSharedReportResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
-  ReportsResponse,
-  ReportListItem,
-  ReportCitationsResponse,
   ReportCitationDetail,
-  ReportVersionsResponse,
-  ExportReportRequest,
-  ExportReportResponse,
-  ReportExportStatusResponse,
-  ShareReportRequest,
-  ShareReportResponse,
-  DeleteReportShareResponse,
-  PublicSharedReportResponse,
-  CreateReportQaRequest,
-  CreateReportQaResponse,
-  ReportQaListResponse,
-  AppendReportQaRequest,
-  AppendReportQaResponse,
-  ReportQaItem,
+  ReportCitationsResponse,
   ReportDetail,
+  ReportExportStatusResponse,
+  ReportListItem,
+  ReportQaItem,
+  ReportQaListResponse,
+  ReportsResponse,
+  ReportVersionsResponse,
   ResearchHistoryDetail,
   ResearchHistoryReloadResponse,
   ResearchTaskStatusResponse,
+  ResearchTasksResponse,
+  ResetAdminUserPasswordResponse,
+  RetryAnalysisRequest,
+  RetryAnalysisResponse,
   SendEmailCodeRequest,
   SendEmailCodeResponse,
+  ShareReportRequest,
+  ShareReportResponse,
+  SubmitTaskInterventionRequest,
+  SubmitTaskInterventionResponse,
+  TaskEvent,
+  TaskFactsResponse,
+  TaskInterventionDetailResponse,
+  TestAdminModelConnectionResponse,
   TaskWorkflowResponse,
+  TriggerCrossValidationRequest,
+  TriggerCrossValidationResponse,
+  UpdateAdminModelRequest,
+  UpdateAdminModelResponse,
+  UpdateAdminUserRequest,
+  UpdateAdminUserResponse,
   UpdateAlertRequest,
   UpdateAlertResponse,
   UpdateFavoriteFolderRequest,
@@ -86,8 +116,6 @@ import type {
   UserProfile,
   VerifyEmailRequest,
   VerifyEmailResponse,
-  MoveFavoriteItemRequest,
-  MoveFavoriteItemResponse,
 } from '../types';
 
 export const mockHistoryTasks: HistoryTaskItem[] = [
@@ -342,6 +370,335 @@ export const mockUserProfile: UserProfile = {
   last_login_at: '2026-04-06T10:00:00Z',
 };
 
+const adminPermissionTree: AdminPermissionTreeNode[] = [
+  {
+    key: 'research',
+    label: '调研任务',
+    children: [
+      { key: 'research:task:read', label: '查看调研任务', checked: true },
+      { key: 'research:task:create', label: '创建调研任务', checked: true },
+      { key: 'research:task:manage', label: '管理调研任务', checked: false },
+    ],
+  },
+  {
+    key: 'admin:models',
+    label: '模型管理',
+    children: [
+      { key: 'admin:model:read', label: '查看模型配置', checked: true },
+      { key: 'admin:model:write', label: '编辑模型配置', checked: true },
+      { key: 'admin:model:permission', label: '分配模型权限', checked: true },
+    ],
+  },
+  {
+    key: 'admin:users',
+    label: '用户与权限',
+    children: [
+      { key: 'admin:user:read', label: '查看用户', checked: true },
+      { key: 'admin:user:write', label: '编辑用户', checked: false },
+      { key: 'admin:user:reset-password', label: '重置密码', checked: false },
+    ],
+  },
+  {
+    key: 'admin:dashboard',
+    label: '统计看板',
+    children: [
+      { key: 'admin:dashboard:read', label: '查看统计看板', checked: true },
+      { key: 'admin:logs:read', label: '查看系统日志', checked: true },
+      { key: 'admin:logs:export', label: '导出系统日志', checked: true },
+    ],
+  },
+];
+
+let mockAdminModels: AdminModelListResponse['list'] = [
+  {
+    model_id: 'model-deepseek-v3',
+    model_name: 'DeepSeek V3',
+    provider: 'DeepSeek',
+    api_base_url: 'https://api.deepseek.com/v1',
+    context_window: 128000,
+    temperature: 0.2,
+    enabled: true,
+    connectivity_status: 'connected',
+    updated_at: '2026-04-18T08:30:00Z',
+    granted_scope_summary: '产品部、研究部可用',
+  },
+  {
+    model_id: 'model-gpt-4.1',
+    model_name: 'GPT-4.1',
+    provider: 'OpenAI',
+    api_base_url: 'https://api.openai.com/v1',
+    context_window: 128000,
+    temperature: 0.1,
+    enabled: true,
+    connectivity_status: 'connected',
+    updated_at: '2026-04-19T03:20:00Z',
+    granted_scope_summary: '仅管理员可用',
+  },
+  {
+    model_id: 'model-qwen-max',
+    model_name: 'Qwen Max',
+    provider: 'Alibaba Cloud',
+    api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    context_window: 32000,
+    temperature: 0.3,
+    enabled: false,
+    connectivity_status: 'failed',
+    updated_at: '2026-04-17T12:10:00Z',
+    granted_scope_summary: '停用中',
+  },
+];
+
+const mockAdminModelPermissions: Record<string, AdminModelPermissionRequest> = {
+  'model-deepseek-v3': { user_ids: ['user-ops-001'], group_ids: ['group-research'] },
+  'model-gpt-4.1': { user_ids: ['user-admin-001'], group_ids: ['group-admin'] },
+  'model-qwen-max': { user_ids: [], group_ids: [] },
+};
+
+let mockAdminUsers: AdminUserListItem[] = [
+  {
+    user_id: 'user-admin-001',
+    username: 'ops_admin',
+    nickname: '运营管理员',
+    email: 'ops-admin@8feet.com',
+    phone: '13800000001',
+    role: 'admin',
+    status: 'active',
+    last_login_at: '2026-04-20T09:20:00Z',
+    created_at: '2026-03-01T08:00:00Z',
+  },
+  {
+    user_id: 'user-ops-001',
+    username: 'research_owner',
+    nickname: '研究负责人',
+    email: 'research-owner@8feet.com',
+    phone: '13800000002',
+    role: 'admin',
+    status: 'active',
+    last_login_at: '2026-04-20T08:45:00Z',
+    created_at: '2026-03-02T08:00:00Z',
+  },
+  {
+    user_id: 'user-007',
+    username: 'auditor',
+    nickname: '审计专员',
+    email: 'auditor@8feet.com',
+    phone: '13800000003',
+    role: 'user',
+    status: 'disabled',
+    last_login_at: '2026-04-15T14:18:00Z',
+    created_at: '2026-03-06T09:00:00Z',
+  },
+];
+
+const mockAdminUserDetails: Record<string, AdminUserDetail> = {
+  'user-admin-001': {
+    user_id: 'user-admin-001',
+    basic_info: {
+      username: 'ops_admin',
+      nickname: '运营管理员',
+      email: 'ops-admin@8feet.com',
+      phone: '13800000001',
+      created_at: '2026-03-01T08:00:00Z',
+      last_login_at: '2026-04-20T09:20:00Z',
+    },
+    role: 'admin',
+    status: 'active',
+    permissions: [
+      'admin:model:read',
+      'admin:model:write',
+      'admin:model:permission',
+      'admin:user:read',
+      'admin:dashboard:read',
+      'admin:logs:read',
+      'admin:logs:export',
+    ],
+    permission_tree: adminPermissionTree,
+    model_permissions: [
+      { model_id: 'model-gpt-4.1', model_name: 'GPT-4.1' },
+      { model_id: 'model-deepseek-v3', model_name: 'DeepSeek V3' },
+    ],
+  },
+  'user-ops-001': {
+    user_id: 'user-ops-001',
+    basic_info: {
+      username: 'research_owner',
+      nickname: '研究负责人',
+      email: 'research-owner@8feet.com',
+      phone: '13800000002',
+      created_at: '2026-03-02T08:00:00Z',
+      last_login_at: '2026-04-20T08:45:00Z',
+    },
+    role: 'admin',
+    status: 'active',
+    permissions: ['research:task:read', 'research:task:create', 'admin:model:read', 'admin:dashboard:read'],
+    permission_tree: adminPermissionTree,
+    model_permissions: [{ model_id: 'model-deepseek-v3', model_name: 'DeepSeek V3' }],
+  },
+  'user-007': {
+    user_id: 'user-007',
+    basic_info: {
+      username: 'auditor',
+      nickname: '审计专员',
+      email: 'auditor@8feet.com',
+      phone: '13800000003',
+      created_at: '2026-03-06T09:00:00Z',
+      last_login_at: '2026-04-15T14:18:00Z',
+    },
+    role: 'user',
+    status: 'disabled',
+    permissions: ['admin:logs:read'],
+    permission_tree: adminPermissionTree,
+    model_permissions: [],
+  },
+};
+
+const mockAdminDashboardOverview: AdminDashboardOverviewResponse = {
+  total_research_requests: 1258,
+  dau: 186,
+  mau: 1240,
+  active_users_trend: [
+    { date: '04-14', value: 132 },
+    { date: '04-15', value: 148 },
+    { date: '04-16', value: 156 },
+    { date: '04-17', value: 170 },
+    { date: '04-18', value: 178 },
+    { date: '04-19', value: 181 },
+    { date: '04-20', value: 186 },
+  ],
+};
+
+const mockAdminObjectDistribution: AdminObjectDistributionResponse = {
+  company_ratio: 46,
+  stock_ratio: 38,
+  commodity_ratio: 16,
+};
+
+const mockAdminModelUsage: AdminModelUsageResponse = {
+  model_usage_ranking: [
+    { model_id: 'model-deepseek-v3', model_name: 'DeepSeek V3', provider: 'DeepSeek', call_count: 642 },
+    { model_id: 'model-gpt-4.1', model_name: 'GPT-4.1', provider: 'OpenAI', call_count: 401 },
+    { model_id: 'model-qwen-max', model_name: 'Qwen Max', provider: 'Alibaba Cloud', call_count: 215 },
+  ],
+  trend_series: [
+    {
+      date: '04-18',
+      values: [
+        { model_id: 'model-deepseek-v3', value: 86 },
+        { model_id: 'model-gpt-4.1', value: 58 },
+        { model_id: 'model-qwen-max', value: 20 },
+      ],
+    },
+    {
+      date: '04-19',
+      values: [
+        { model_id: 'model-deepseek-v3', value: 95 },
+        { model_id: 'model-gpt-4.1', value: 61 },
+        { model_id: 'model-qwen-max', value: 17 },
+      ],
+    },
+    {
+      date: '04-20',
+      values: [
+        { model_id: 'model-deepseek-v3', value: 102 },
+        { model_id: 'model-gpt-4.1', value: 66 },
+        { model_id: 'model-qwen-max', value: 13 },
+      ],
+    },
+  ],
+};
+
+const mockAdminUserActivity: AdminUserActivityResponse = {
+  activity_series: [
+    { date: '04-14', active_users: 132 },
+    { date: '04-15', active_users: 148 },
+    { date: '04-16', active_users: 156 },
+    { date: '04-17', active_users: 170 },
+    { date: '04-18', active_users: 178 },
+    { date: '04-19', active_users: 181 },
+    { date: '04-20', active_users: 186 },
+  ],
+  retention_summary: [
+    { label: '次日留存', value: '68%' },
+    { label: '7日留存', value: '44%' },
+    { label: '30日留存', value: '29%' },
+  ],
+};
+
+let mockAdminLogs: AdminLogsResponse = {
+  list: [
+    {
+      log_id: 'log-001',
+      level: 'error',
+      module: 'research.analysis',
+      user_keyword: 'ops_admin',
+      object_type: 'stock',
+      model_id: 'model-gpt-4.1',
+      action_summary: '结构化分析阶段响应解析失败',
+      created_at: '2026-04-20T09:15:12Z',
+    },
+    {
+      log_id: 'log-002',
+      level: 'warning',
+      module: 'research.retrieval',
+      user_keyword: 'research_owner',
+      object_type: 'company',
+      model_id: 'model-deepseek-v3',
+      action_summary: '检索源出现低质量结果，已自动降权',
+      created_at: '2026-04-20T08:55:41Z',
+    },
+    {
+      log_id: 'log-003',
+      level: 'info',
+      module: 'auth.permission',
+      user_keyword: 'ops_admin',
+      model_id: 'model-gpt-4.1',
+      action_summary: '完成模型权限变更审批',
+      created_at: '2026-04-20T08:31:02Z',
+    },
+  ],
+  total: 3,
+};
+
+const mockAdminLogDetails: Record<string, AdminLogDetail> = {
+  'log-001': {
+    log_id: 'log-001',
+    user_action: '发起股票调研任务并进入分析阶段',
+    search_intent: '排查毛利率下行与海外扩产兑现节奏',
+    agent_trace: [
+      { step: '接收任务', detail: '识别对象为宁德时代，设定时间范围 90d。' },
+      { step: '多源检索', detail: '采集公告、新闻、行业研报共 146 条候选记录。' },
+      { step: '分析编排', detail: '调用 GPT-4.1 进行结构化总结，返回 JSON 字段缺失。' },
+    ],
+    prompt_raw: '请基于事实列表输出结构化分析结果，字段包含 summary、risks、outlook。',
+    response_raw: '{"summary":"...","outlook":"..."}',
+    error_stack: 'ValidationError: missing field risks at parser.ts:41:13',
+  },
+  'log-002': {
+    log_id: 'log-002',
+    user_action: '公司调研任务数据检索',
+    search_intent: '跟踪视频号商业化进展与广告恢复情况',
+    agent_trace: [
+      { step: '查询改写', detail: '生成 4 个检索子查询。' },
+      { step: '来源评分', detail: '识别 2 个论坛源置信度偏低，自动降权。' },
+    ],
+    prompt_raw: '生成腾讯控股广告业务与视频号商业化相关检索 query。',
+    response_raw: '["腾讯 视频号 广告 增长", "腾讯 财报 广告 业务"]',
+  },
+  'log-003': {
+    log_id: 'log-003',
+    user_action: '管理员更新模型权限',
+    search_intent: '将 GPT-4.1 使用权限授予运营管理员',
+    agent_trace: [
+      { step: '权限校验', detail: '确认当前账号具备 admin:model:permission 权限。' },
+      { step: '写入授权', detail: '更新模型权限映射并写入审计日志。' },
+    ],
+    prompt_raw: 'N/A',
+    response_raw: 'success',
+  },
+};
+
+const mockAdminLogExports: Record<string, AdminLogExportStatusResponse> = {};
+
 let mockFavoriteFolders: FavoriteFoldersResponse = {
   folders: [
     { folder_id: 'folder-default', folder_name: '默认收藏夹' },
@@ -436,6 +793,337 @@ const mockModelsAvailable: ModelsAvailableResponse = {
   ],
   recommended_model_id: 'model-deepseek-v3',
 };
+
+export async function mockGetAdminModels(): Promise<AdminModelListResponse> {
+  return {
+    list: mockAdminModels.map((item) => ({ ...item })),
+    total: mockAdminModels.length,
+  };
+}
+
+export async function mockCreateAdminModel(
+  payload: CreateAdminModelRequest
+): Promise<CreateAdminModelResponse> {
+  const modelId = `model-${Date.now()}`;
+  mockAdminModels.unshift({
+    model_id: modelId,
+    model_name: payload.model_name,
+    provider: payload.provider,
+    api_base_url: payload.api_base_url,
+    context_window: payload.context_window,
+    temperature: payload.temperature,
+    enabled: payload.enabled,
+    connectivity_status: 'unknown',
+    updated_at: new Date().toISOString(),
+    granted_scope_summary: '未分配',
+  });
+  mockAdminModelPermissions[modelId] = { user_ids: [], group_ids: [] };
+  return {
+    model_id: modelId,
+    connectivity_status: 'unknown',
+  };
+}
+
+export async function mockUpdateAdminModel(
+  modelId: string,
+  payload: UpdateAdminModelRequest
+): Promise<UpdateAdminModelResponse> {
+  const target = mockAdminModels.find((item) => item.model_id === modelId);
+  const updatedFields: string[] = [];
+  if (target) {
+    if (payload.model_name !== undefined) {
+      target.model_name = payload.model_name;
+      updatedFields.push('model_name');
+    }
+    if (payload.provider !== undefined) {
+      target.provider = payload.provider;
+      updatedFields.push('provider');
+    }
+    if (payload.api_base_url !== undefined) {
+      target.api_base_url = payload.api_base_url;
+      updatedFields.push('api_base_url');
+    }
+    if (payload.context_window !== undefined) {
+      target.context_window = payload.context_window;
+      updatedFields.push('context_window');
+    }
+    if (payload.temperature !== undefined) {
+      target.temperature = payload.temperature;
+      updatedFields.push('temperature');
+    }
+    if (payload.enabled !== undefined) {
+      target.enabled = payload.enabled;
+      updatedFields.push('enabled');
+    }
+    if (payload.api_key !== undefined) {
+      updatedFields.push('api_key');
+    }
+    target.updated_at = new Date().toISOString();
+  }
+  return {
+    model_id: modelId,
+    updated_fields: updatedFields,
+  };
+}
+
+export async function mockDeleteAdminModel(modelId: string): Promise<DeleteAdminModelResponse> {
+  mockAdminModels = mockAdminModels.filter((item) => item.model_id !== modelId);
+  delete mockAdminModelPermissions[modelId];
+  Object.values(mockAdminUserDetails).forEach((detail) => {
+    detail.model_permissions = detail.model_permissions.filter((item) => item.model_id !== modelId);
+  });
+  return { result: 'ok' };
+}
+
+export async function mockTestAdminModelConnection(
+  modelId: string
+): Promise<TestAdminModelConnectionResponse> {
+  const target = mockAdminModels.find((item) => item.model_id === modelId);
+  const success = target ? target.enabled && target.provider !== 'Alibaba Cloud' : false;
+  if (target) {
+    target.connectivity_status = success ? 'connected' : 'failed';
+    target.updated_at = new Date().toISOString();
+  }
+  return {
+    model_id: modelId,
+    success,
+    latency_ms: success ? 320 : 1200,
+    message: success ? '连接测试成功' : '连接测试失败，请检查密钥或服务状态',
+  };
+}
+
+export async function mockAssignAdminModelPermissions(
+  modelId: string,
+  payload: AdminModelPermissionRequest
+): Promise<AdminModelPermissionResponse> {
+  mockAdminModelPermissions[modelId] = {
+    user_ids: [...(payload.user_ids ?? [])],
+    group_ids: [...(payload.group_ids ?? [])],
+  };
+
+  const target = mockAdminModels.find((item) => item.model_id === modelId);
+  if (target) {
+    const grantedCount = (payload.user_ids?.length ?? 0) + (payload.group_ids?.length ?? 0);
+    target.granted_scope_summary = grantedCount > 0 ? `已分配 ${grantedCount} 个主体` : '未分配';
+    target.updated_at = new Date().toISOString();
+  }
+
+  return {
+    model_id: modelId,
+    granted_count: (payload.user_ids?.length ?? 0) + (payload.group_ids?.length ?? 0),
+  };
+}
+
+export async function mockGetAdminUsers(): Promise<AdminUsersResponse> {
+  return {
+    list: mockAdminUsers.map((item) => ({ ...item })),
+    total: mockAdminUsers.length,
+  };
+}
+
+export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Promise<CreateAdminUserResponse> {
+  const userId = `user-${Date.now()}`;
+  const now = new Date().toISOString();
+  mockAdminUsers.unshift({
+    user_id: userId,
+    username: payload.username,
+    nickname: payload.username,
+    email: payload.email,
+    phone: payload.phone,
+    role: payload.role,
+    status: 'pending',
+    created_at: now,
+    last_login_at: undefined,
+  });
+  mockAdminUserDetails[userId] = {
+    user_id: userId,
+    basic_info: {
+      username: payload.username,
+      nickname: payload.username,
+      email: payload.email,
+      phone: payload.phone,
+      created_at: now,
+    },
+    role: payload.role,
+    status: 'pending',
+    permissions: [...payload.permissions],
+    permission_tree: adminPermissionTree,
+    model_permissions: [],
+  };
+  return {
+    user_id: userId,
+    temp_password: 'Temp@123456',
+  };
+}
+
+export async function mockGetAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+  const target = mockAdminUserDetails[userId];
+  if (target) {
+    return {
+      ...target,
+      basic_info: { ...target.basic_info },
+      permissions: [...target.permissions],
+      permission_tree: target.permission_tree.map((item) => ({ ...item })),
+      model_permissions: target.model_permissions.map((item) => ({ ...item })),
+    };
+  }
+
+  return {
+    user_id: userId,
+    basic_info: {
+      username: userId,
+      nickname: userId,
+      email: `${userId}@example.com`,
+    },
+    role: 'user',
+    status: 'pending',
+    permissions: [],
+    permission_tree: adminPermissionTree,
+    model_permissions: [],
+  };
+}
+
+export async function mockUpdateAdminUser(
+  userId: string,
+  payload: UpdateAdminUserRequest
+): Promise<UpdateAdminUserResponse> {
+  const listTarget = mockAdminUsers.find((item) => item.user_id === userId);
+  const detailTarget = mockAdminUserDetails[userId];
+  const updatedFields: string[] = [];
+
+  if (payload.role !== undefined) {
+    listTarget && (listTarget.role = payload.role);
+    detailTarget && (detailTarget.role = payload.role);
+    updatedFields.push('role');
+  }
+  if (payload.status !== undefined) {
+    listTarget && (listTarget.status = payload.status);
+    detailTarget && (detailTarget.status = payload.status);
+    updatedFields.push('status');
+  }
+  if (payload.permissions !== undefined) {
+    detailTarget && (detailTarget.permissions = [...payload.permissions]);
+    updatedFields.push('permissions');
+  }
+
+  return {
+    user_id: userId,
+    updated_fields: updatedFields,
+  };
+}
+
+export async function mockResetAdminUserPassword(
+  userId: string
+): Promise<ResetAdminUserPasswordResponse> {
+  return {
+    user_id: userId,
+    temp_password: 'Reset@123456',
+  };
+}
+
+export async function mockGetCurrentUserPermissions(): Promise<CurrentUserPermissionsResponse> {
+  return {
+    role: 'admin',
+    permissions: [
+      'admin:model:read',
+      'admin:model:write',
+      'admin:model:permission',
+      'admin:user:read',
+      'admin:user:write',
+      'admin:dashboard:read',
+      'admin:logs:read',
+      'admin:logs:export',
+    ],
+  };
+}
+
+export async function mockGetAdminDashboardOverview(): Promise<AdminDashboardOverviewResponse> {
+  return {
+    ...mockAdminDashboardOverview,
+    active_users_trend: mockAdminDashboardOverview.active_users_trend.map((item) => ({ ...item })),
+  };
+}
+
+export async function mockGetAdminObjectDistribution(): Promise<AdminObjectDistributionResponse> {
+  return { ...mockAdminObjectDistribution };
+}
+
+export async function mockGetAdminModelUsage(): Promise<AdminModelUsageResponse> {
+  return {
+    model_usage_ranking: mockAdminModelUsage.model_usage_ranking.map((item) => ({ ...item })),
+    trend_series: mockAdminModelUsage.trend_series.map((series) => ({
+      ...series,
+      values: series.values.map((value) => ({ ...value })),
+    })),
+  };
+}
+
+export async function mockGetAdminUserActivity(): Promise<AdminUserActivityResponse> {
+  return {
+    activity_series: mockAdminUserActivity.activity_series.map((item) => ({ ...item })),
+    retention_summary: mockAdminUserActivity.retention_summary.map((item) => ({ ...item })),
+  };
+}
+
+export async function mockGetAdminLogs(): Promise<AdminLogsResponse> {
+  return {
+    list: mockAdminLogs.list.map((item) => ({ ...item })),
+    total: mockAdminLogs.total,
+  };
+}
+
+export async function mockGetAdminLogDetail(logId: string): Promise<AdminLogDetail> {
+  const target = mockAdminLogDetails[logId];
+  if (target) {
+    return {
+      ...target,
+      agent_trace: target.agent_trace.map((item) => ({ ...item })),
+    };
+  }
+  return {
+    log_id: logId,
+    user_action: '未知操作',
+    search_intent: '无',
+    agent_trace: [],
+    prompt_raw: '',
+    response_raw: '',
+  };
+}
+
+export async function mockExportAdminLogs(
+  payload: ExportAdminLogsRequest
+): Promise<AdminLogExportResponse> {
+  const exportId = `admin-log-export-${Date.now()}`;
+  mockAdminLogExports[exportId] = {
+    export_id: exportId,
+    status: 'processing',
+  };
+
+  setTimeout(() => {
+    mockAdminLogExports[exportId] = {
+      export_id: exportId,
+      status: 'completed',
+      download_url: `https://example.com/admin-logs/${exportId}.${payload.format}`,
+    };
+  }, 500);
+
+  return {
+    export_id: exportId,
+    status: 'queued',
+  };
+}
+
+export async function mockGetAdminLogExportStatus(
+  exportId: string
+): Promise<AdminLogExportStatusResponse> {
+  return (
+    mockAdminLogExports[exportId] ?? {
+      export_id: exportId,
+      status: 'failed',
+      error_message: 'export_not_found',
+    }
+  );
+}
 
 export async function mockLogin(payload: LoginRequest): Promise<LoginResponse> {
   return {

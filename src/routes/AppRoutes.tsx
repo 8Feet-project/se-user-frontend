@@ -1,16 +1,22 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from '../pages/LoginPage';
-import { RegisterPage } from '../pages/RegisterPage';
-import { TaskLaunchPage } from '../pages/TaskLaunchPage';
-import { TaskProcessPage } from '../pages/TaskProcessPage';
-import { ReportPreviewPage } from '../pages/ReportPreviewPage';
-import { HistoryFavoritesPage } from '../pages/HistoryFavoritesPage';
-import { ResetPasswordPage } from '../pages/ResetPasswordPage';
-import { PlatformInitPage } from '../pages/PlatformInitPage';
-import { ProfilePage } from '../pages/ProfilePage';
-import { FavoritesPage } from '../pages/FavoritesPage';
-import { AlertsMessagesPage } from '../pages/AlertsMessagesPage';
-import { WelcomePage } from '../pages/WelcomePage';
+
+import { AdminLayout } from '@/layouts/AdminLayout';
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage';
+import { AdminLogsPage } from '@/pages/AdminLogsPage';
+import { AdminModelsPage } from '@/pages/AdminModelsPage';
+import { AdminUsersPage } from '@/pages/AdminUsersPage';
+import { AlertsMessagesPage } from '@/pages/AlertsMessagesPage';
+import { FavoritesPage } from '@/pages/FavoritesPage';
+import { HistoryFavoritesPage } from '@/pages/HistoryFavoritesPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { PlatformInitPage } from '@/pages/PlatformInitPage';
+import { ProfilePage } from '@/pages/ProfilePage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ReportPreviewPage } from '@/pages/ReportPreviewPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { TaskLaunchPage } from '@/pages/TaskLaunchPage';
+import { TaskProcessPage } from '@/pages/TaskProcessPage';
+import { WelcomePage } from '@/pages/WelcomePage';
 
 export function AppRoutes() {
   return (
@@ -23,6 +29,13 @@ export function AppRoutes() {
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/favorites" element={<FavoritesPage />} />
       <Route path="/alerts" element={<AlertsMessagesPage />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
+        <Route path="models" element={<AdminModelsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="logs" element={<AdminLogsPage />} />
+      </Route>
       <Route path="/" element={<TaskLaunchPage />} />
       <Route path="/process" element={<TaskProcessPage />} />
       <Route path="/report" element={<ReportPreviewPage />} />

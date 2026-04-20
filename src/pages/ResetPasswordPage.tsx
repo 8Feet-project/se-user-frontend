@@ -13,21 +13,27 @@ export function ResetPasswordPage() {
   const [username, setUsername] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [requestSucceeded, setRequestSucceeded] = useState(false);
+  const [confirmSucceeded, setConfirmSucceeded] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleRequestReset = async () => {
     if (!username.trim()) {
       setMessage('请填写用户名或邮箱。');
+      setRequestSucceeded(false);
       return;
     }
 
     try {
       setSubmitting(true);
       const response = await passwordResetRequest({ username: username.trim() });
+      setRequestSucceeded(true);
+      setConfirmSucceeded(false);
       setMessage(`重置请求结果：${response.result}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发起重置失败';
+      setRequestSucceeded(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -37,6 +43,7 @@ export function ResetPasswordPage() {
   const handleConfirmReset = async () => {
     if (!resetToken.trim() || !newPassword) {
       setMessage('请填写 reset_token 与新密码。');
+      setConfirmSucceeded(false);
       return;
     }
 
@@ -46,9 +53,11 @@ export function ResetPasswordPage() {
         reset_token: resetToken.trim(),
         new_password: newPassword,
       });
+      setConfirmSucceeded(true);
       setMessage(`重置确认结果：${response.result}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '确认重置失败';
+      setConfirmSucceeded(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -127,6 +136,9 @@ export function ResetPasswordPage() {
           <Button variant="secondary" onClick={handleRequestReset} disabled={submitting}>
             {submitting ? '提交中...' : '发起密码重置'}
           </Button>
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
+            第一步状态：{requestSucceeded ? '已发起重置，请准备 reset_token' : '尚未发起重置'}
+          </div>
           <div>
             <Label htmlFor="reset-token">reset_token</Label>
             <Input id="reset-token" value={resetToken} onChange={(event) => setResetToken(event.target.value)} placeholder="请输入重置令牌" />
@@ -140,7 +152,28 @@ export function ResetPasswordPage() {
           </Button>
         </div>
 
-        {message ? <div className="message-strip mt-6">{message}</div> : null}
+        {message ? (
+          <div
+            className={`mt-6 rounded-[24px] border px-4 py-3 text-sm ${
+              confirmSucceeded
+                ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                : 'message-strip'
+            }`}
+          >
+            <p>{message}</p>
+            {confirmSucceeded ? (
+              <p className="mt-2 text-xs text-emerald-200/90">密码已更新，可立即返回登录页验证新密码是否生效。</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {confirmSucceeded ? (
+          <div className="mt-6">
+            <Link to="/login" className="block">
+              <Button className="w-full">返回登录并验证新密码</Button>
+            </Link>
+          </div>
+        ) : null}
       </Card>
     </AuthShell>
   );

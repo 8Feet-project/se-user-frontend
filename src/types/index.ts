@@ -675,3 +675,232 @@ export interface ReportDetail {
   citations: ReportCitation[];
   created_at: string;
 }
+
+export type AdminUserStatus = 'active' | 'disabled' | 'pending';
+export type AdminModelConnectivityStatus = 'connected' | 'failed' | 'unknown' | 'testing';
+export type AdminLogLevel = 'debug' | 'info' | 'warning' | 'error';
+export type DashboardTimeScope = 'today' | '7d' | '30d' | 'custom';
+
+export interface AdminModelItem {
+  model_id: string;
+  model_name: string;
+  provider: string;
+  api_base_url: string;
+  context_window: number;
+  temperature: number;
+  enabled: boolean;
+  connectivity_status: AdminModelConnectivityStatus;
+  updated_at: string;
+  granted_scope_summary?: string;
+}
+
+export interface AdminModelListResponse {
+  list: AdminModelItem[];
+  total: number;
+}
+
+export interface CreateAdminModelRequest {
+  model_name: string;
+  provider: string;
+  api_base_url: string;
+  api_key: string;
+  context_window: number;
+  temperature: number;
+  enabled: boolean;
+}
+
+export interface CreateAdminModelResponse {
+  model_id: string;
+  connectivity_status: AdminModelConnectivityStatus;
+}
+
+export interface UpdateAdminModelRequest {
+  model_name?: string;
+  provider?: string;
+  api_base_url?: string;
+  api_key?: string;
+  context_window?: number;
+  temperature?: number;
+  enabled?: boolean;
+}
+
+export interface UpdateAdminModelResponse {
+  model_id: string;
+  updated_fields: string[];
+}
+
+export interface DeleteAdminModelResponse {
+  result: string;
+}
+
+export interface TestAdminModelConnectionResponse {
+  model_id: string;
+  success: boolean;
+  latency_ms: number;
+  message: string;
+}
+
+export interface AdminModelPermissionGrant {
+  user_ids?: string[];
+  group_ids?: string[];
+}
+
+export interface AdminModelPermissionRequest extends AdminModelPermissionGrant {}
+
+export interface AdminModelPermissionResponse {
+  model_id: string;
+  granted_count: number;
+}
+
+export interface AdminPermissionTreeNode {
+  key: string;
+  label: string;
+  checked?: boolean;
+  children?: AdminPermissionTreeNode[];
+}
+
+export interface AdminUserListItem {
+  user_id: string;
+  username: string;
+  nickname: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  status: AdminUserStatus;
+  last_login_at?: string;
+  created_at: string;
+}
+
+export interface AdminUsersResponse {
+  list: AdminUserListItem[];
+  total: number;
+}
+
+export interface CreateAdminUserRequest {
+  username: string;
+  email: string;
+  phone?: string;
+  role: Exclude<UserRole, 'super_admin'>;
+  permissions: string[];
+}
+
+export interface CreateAdminUserResponse {
+  user_id: string;
+  temp_password: string;
+}
+
+export interface AdminUserDetail {
+  user_id: string;
+  basic_info: {
+    username: string;
+    nickname: string;
+    email: string;
+    phone?: string;
+    created_at?: string;
+    last_login_at?: string;
+  };
+  role: UserRole;
+  status: AdminUserStatus;
+  permissions: string[];
+  permission_tree: AdminPermissionTreeNode[];
+  model_permissions: Array<{ model_id: string; model_name: string }>;
+}
+
+export interface UpdateAdminUserRequest {
+  role?: UserRole;
+  permissions?: string[];
+  status?: AdminUserStatus;
+}
+
+export interface UpdateAdminUserResponse {
+  user_id: string;
+  updated_fields: string[];
+}
+
+export interface ResetAdminUserPasswordResponse {
+  user_id: string;
+  temp_password: string;
+}
+
+export interface CurrentUserPermissionsResponse {
+  role: UserRole;
+  permissions: string[];
+}
+
+export interface AdminDashboardOverviewResponse {
+  total_research_requests: number;
+  dau: number;
+  mau: number;
+  active_users_trend: Array<{ date: string; value: number }>;
+}
+
+export interface AdminObjectDistributionResponse {
+  company_ratio: number;
+  stock_ratio: number;
+  commodity_ratio: number;
+}
+
+export interface AdminModelUsageResponse {
+  model_usage_ranking: Array<{
+    model_id: string;
+    model_name: string;
+    provider: string;
+    call_count: number;
+  }>;
+  trend_series: Array<{
+    date: string;
+    values: Array<{ model_id: string; value: number }>;
+  }>;
+}
+
+export interface AdminUserActivityResponse {
+  activity_series: Array<{ date: string; active_users: number }>;
+  retention_summary: Array<{ label: string; value: string }>;
+}
+
+export interface AdminLogListItem {
+  log_id: string;
+  level: AdminLogLevel;
+  module: string;
+  user_keyword: string;
+  object_type?: ObjectType;
+  model_id?: string;
+  action_summary: string;
+  created_at: string;
+}
+
+export interface AdminLogsResponse {
+  list: AdminLogListItem[];
+  total: number;
+}
+
+export interface AdminLogDetail {
+  log_id: string;
+  user_action: string;
+  search_intent: string;
+  agent_trace: Array<{ step: string; detail: string }>;
+  prompt_raw: string;
+  response_raw: string;
+  error_stack?: string;
+}
+
+export interface ExportAdminLogsRequest {
+  level?: AdminLogLevel;
+  start_time: string;
+  end_time: string;
+  object_type?: ObjectType;
+  module?: string;
+  format: 'csv' | 'xlsx';
+}
+
+export interface AdminLogExportResponse {
+  export_id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+}
+
+export interface AdminLogExportStatusResponse {
+  export_id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  download_url?: string;
+  error_message?: string;
+}

@@ -27,10 +27,11 @@ export async function request<T>(
   query?: Record<string, string | number | boolean | undefined>
 ): Promise<T> {
   const accessToken = localStorage.getItem('access_token');
+  const hasBody = options.body !== undefined && options.body !== null;
   const response = await fetch(buildUrl(path, query), {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(options.headers ?? {}),
     },

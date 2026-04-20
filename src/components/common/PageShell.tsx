@@ -1,6 +1,18 @@
 ﻿import { type CSSProperties, type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bell, Bookmark, ClipboardList, FileText, GitBranch, History, LogIn, User } from 'lucide-react';
+import {
+  Bell,
+  Bookmark,
+  ClipboardList,
+  FileText,
+  GitBranch,
+  History,
+  LayoutDashboard,
+  LogIn,
+  Settings,
+  ShieldPlus,
+  User,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -15,6 +27,13 @@ const navItems = [
   { label: '收藏夹', path: '/favorites', icon: Bookmark },
   { label: '提醒消息', path: '/alerts', icon: Bell },
   { label: '个人中心', path: '/profile', icon: User },
+];
+
+const adminItems = [
+  { label: '管理总览', path: '/admin/dashboard', icon: LayoutDashboard },
+  { label: '模型配置', path: '/admin/models', icon: Settings },
+  { label: '用户管理', path: '/admin/users', icon: ShieldPlus },
+  { label: '系统日志', path: '/admin/logs', icon: FileText },
 ];
 
 export function PageShell({
@@ -55,15 +74,27 @@ export function PageShell({
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]">
                   <span className="text-[11px] font-extrabold tracking-[0.15em] text-[#63cab7]">8F</span>
                 </div>
-                <div className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
+                <div
+                  className={cn(
+                    'overflow-hidden whitespace-nowrap transition-opacity duration-150',
+                    expanded ? 'opacity-100' : 'opacity-0'
+                  )}
+                >
                   <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-[3px] text-[10px] uppercase tracking-[0.1em] text-slate-500">Intel Research</p>
+                  <p className="mt-[3px] text-[10px] uppercase tracking-[0.1em] text-slate-500">
+                    Intel Research
+                  </p>
                 </div>
               </Link>
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <p className={cn('mb-2 h-[18px] px-[11px] text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600 transition-opacity duration-150', expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}>
+              <p
+                className={cn(
+                  'mb-2 h-[18px] px-[11px] text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600 transition-opacity duration-150',
+                  expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
+                )}
+              >
                 工作台
               </p>
               <nav className="flex flex-col gap-[2px]">
@@ -89,10 +120,64 @@ export function PageShell({
                           className={active ? 'text-[#63cab7]' : 'opacity-50'}
                         />
                       </span>
-                      <span className={cn('min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150',
+                          expanded ? 'opacity-100' : 'opacity-0'
+                        )}
+                      >
                         {item.label}
                       </span>
-                      {active && expanded ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#63cab7] shadow-[0_0_6px_#63cab7]" /> : null}
+                      {active && expanded ? (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#63cab7] shadow-[0_0_6px_#63cab7]" />
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <p
+                className={cn(
+                  'mb-2 mt-6 h-[18px] px-[11px] text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600 transition-opacity duration-150',
+                  expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
+                )}
+              >
+                管理端
+              </p>
+              <nav className="flex flex-col gap-[2px]">
+                {adminItems.map((item) => {
+                  const active = location.pathname === item.path;
+
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      title={!expanded ? item.label : undefined}
+                      className={cn(
+                        'flex items-center gap-[10px] overflow-hidden rounded-[10px] border-l-2 border-transparent px-[11px] py-[9px] text-[13px] font-medium transition-all duration-150',
+                        active
+                          ? 'border-l-[#63cab7] bg-[rgba(99,202,183,0.09)] pl-[9px] text-[#63cab7]'
+                          : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                      )}
+                    >
+                      <span className="flex w-[15px] shrink-0 items-center justify-center">
+                        <item.icon
+                          size={15}
+                          strokeWidth={active ? 2.1 : 1.7}
+                          className={active ? 'text-[#63cab7]' : 'opacity-50'}
+                        />
+                      </span>
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150',
+                          expanded ? 'opacity-100' : 'opacity-0'
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                      {active && expanded ? (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#63cab7] shadow-[0_0_6px_#63cab7]" />
+                      ) : null}
                     </Link>
                   );
                 })}
@@ -108,7 +193,12 @@ export function PageShell({
                 <span className="flex w-[14px] shrink-0 items-center justify-center">
                   <LogIn size={14} strokeWidth={1.6} />
                 </span>
-                <span className={cn('min-w-0 overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
+                <span
+                  className={cn(
+                    'min-w-0 overflow-hidden whitespace-nowrap transition-opacity duration-150',
+                    expanded ? 'opacity-100' : 'opacity-0'
+                  )}
+                >
                   登录 / 切换账号
                 </span>
               </Link>
@@ -158,14 +248,38 @@ export function PageShell({
                 );
               })}
             </nav>
+            <nav className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {adminItems.map((item) => {
+                const active = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-all duration-150',
+                      active
+                        ? 'border-[rgba(99,202,183,0.24)] bg-[rgba(99,202,183,0.09)] text-[#63cab7]'
+                        : 'border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                    )}
+                  >
+                    <item.icon size={15} strokeWidth={active ? 2.1 : 1.7} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
           <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1340px] flex-col gap-7">
             <header className="border-b border-[rgba(99,202,183,0.1)] pb-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">{title}</h1>
-                  {subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{subtitle}</p> : null}
+                  <h1 className="text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
+                    {title}
+                  </h1>
+                  {subtitle ? (
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{subtitle}</p>
+                  ) : null}
                 </div>
                 {action ? <div className="shrink-0">{action}</div> : null}
               </div>
@@ -178,4 +292,3 @@ export function PageShell({
     </div>
   );
 }
-
