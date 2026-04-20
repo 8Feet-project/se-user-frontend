@@ -1,0 +1,53 @@
+#bili-sponsorblock-overlay {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #f8fafc;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(12px);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+#bili-sponsorblock-overlay[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+#bili-sponsorblock-overlay__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#bili-sponsorblock-overlay__undo {
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fb7185;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+#bili-sponsorblock-overlay__undo:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}

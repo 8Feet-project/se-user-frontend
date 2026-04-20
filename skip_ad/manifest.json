@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Bili SponsorBlock MVP",
+  "version": "0.1.0",
+  "description": "Skip sponsor segments on Bilibili video pages with a one-click undo overlay.",
+  "action": {
+    "default_title": "Bili SponsorBlock MVP"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.bilibili.com/video/*",
+        "https://bilibili.com/video/*"
+      ],
+      "js": [
+        "config.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
