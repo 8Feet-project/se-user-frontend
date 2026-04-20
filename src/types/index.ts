@@ -16,10 +16,19 @@ export type ResearchTaskStatus =
   | 'completed'
   | 'failed';
 
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
+export type LoginRequest =
+  | {
+      login_type: 'username';
+      username: string;
+      password: string;
+      email?: never;
+    }
+  | {
+      login_type: 'email';
+      email: string;
+      password: string;
+      username?: never;
+    };
 
 export interface LoginResponse {
   user_id: string;

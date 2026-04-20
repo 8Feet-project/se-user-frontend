@@ -369,9 +369,14 @@ const mockModelsAvailable: ModelsAvailableResponse = {
 };
 
 export async function mockLogin(payload: LoginRequest): Promise<LoginResponse> {
+  const nickname =
+    payload.login_type === 'email'
+      ? payload.email.split('@')[0] || payload.email
+      : payload.username;
+
   return {
     user_id: 'user-001',
-    nickname: payload.username,
+    nickname,
     role: 'user',
     permissions: ['auth:login', 'research:task:create', 'research:task:read', 'report:read'],
     access_token: 'mock-access-token',

@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+
+type LoginMode = 'username' | 'email';
 
 const highlights = [
   {
@@ -27,21 +30,62 @@ const highlights = [
   },
 ];
 
+const loginModes: Array<{
+  value: LoginMode;
+  label: string;
+  description: string;
+  fieldLabel: string;
+  placeholder: string;
+  inputType: 'text' | 'email';
+}> = [
+  {
+    value: 'username',
+    label: '用用户名登录',
+    description: '适合已分配平台用户名的团队成员。',
+    fieldLabel: '用户名',
+    placeholder: '请输入用户名',
+    inputType: 'text',
+  },
+  {
+    value: 'email',
+    label: '用邮箱登录',
+    description: '适合通过企业邮箱统一接入的平台账号。',
+    fieldLabel: '邮箱',
+    placeholder: '请输入企业邮箱',
+    inputType: 'email',
+  },
+];
+
 export function LoginPage() {
+  const [loginMode, setLoginMode] = useState<LoginMode>('username');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const activeLoginMode = loginModes.find((item) => item.value === loginMode) ?? loginModes[0];
+
   const handleLogin = async () => {
-    if (!username || !password) {
-      setMessage('请先填写用户名和密码。');
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
+    const payload =
+      loginMode === 'username'
+        ? trimmedUsername
+          ? { login_type: 'username' as const, username: trimmedUsername, password }
+          : null
+        : trimmedEmail
+          ? { login_type: 'email' as const, email: trimmedEmail, password }
+          : null;
+
+    if (!payload || !password) {
+      setMessage(loginMode === 'username' ? '请先填写用户名和密码。' : '请先填写邮箱和密码。');
       return;
     }
 
     try {
       setSubmitting(true);
-      const response = await login({ username, password });
+      const response = await login(payload);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
       setMessage(`登录成功，欢迎回来：${response.nickname}（${response.role}）。`);
@@ -99,48 +143,95 @@ export function LoginPage() {
           <p className="page-kicker">账户入口</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">登录 8Feet 智能调研平台</h1>
           <p className="text-sm leading-7 text-slate-400">
-            输入您的用户名与密码，继续查看任务流程、报告内容与团队沉淀下来的调研资产。
+            选择用户名登录或邮箱登录，继续查看任务流程、报告内容与团队沉淀下来的调研资产。
           </p>
         </div>
 
-        <div className="mt-8 grid gap-5">
-          <div>
-            <Label htmlFor="login-username">用户名 / 邮箱</Label>
-            <Input
-              id="login-username"
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="请输入用户名或企业邮箱"
-            />
-          </div>
-          <div>
-            <Label htmlFor="login-password">密码</Label>
-            <Input
-              id="login-password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="请输入登录密码"
-            />
-          </div>
-        </div>
+        <div className="mt-8">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/40 p-1">
+            {loginModes.map((item) => {
+              const isActive = item.value === loginMode;
 
-        {message ? <div className="message-strip mt-6">{message}</div> : null}
-
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button className="w-full sm:w-auto" size="lg" onClick={handleLogin} disabled={submitting}>
-            {submitting ? '登录中...' : '登录'}
-            <ArrowRight size={16} />
-          </Button>
-          <div className="flex items-center gap-4 text-sm text-slate-400">
-            <Link className="transition hover:text-slate-200" to="/reset-password">
-              重置密码
-            </Link>
-            <Link className="transition hover:text-[#63cab7]" to="/register">
-              注册新账号
-            </Link>
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => {
+                    setLoginMode(item.value);
+                    setMessage('');
+                  }}
+                  className={cn(
+                    'rounded-xl px-4 py-3 text-left transition',
+                    isActive
+                      ? 'bg-[rgba(99,202,183,0.12)] text-slate-50 shadow-[inset_0_0_0_1px_rgba(99,202,183,0.3)]'
+                      : 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-200',
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{item.label}</span>
+                  <span className={cn('mt-1 block text-xs leading-5', isActive ? 'text-slate-300' : 'text-slate-500')}>
+                    {item.description}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          <form
+            className="mt-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleLogin();
+            }}
+          >
+            <div className="grid gap-5">
+              <div>
+                <Label htmlFor={`login-${loginMode}`}>{activeLoginMode.fieldLabel}</Label>
+                <Input
+                  id={`login-${loginMode}`}
+                  type={activeLoginMode.inputType}
+                  autoComplete={loginMode === 'username' ? 'username' : 'email'}
+                  value={loginMode === 'username' ? username : email}
+                  onChange={(event) => {
+                    if (loginMode === 'username') {
+                      setUsername(event.target.value);
+                      return;
+                    }
+
+                    setEmail(event.target.value);
+                  }}
+                  placeholder={activeLoginMode.placeholder}
+                />
+              </div>
+              <div>
+                <Label htmlFor="login-password">密码</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="请输入登录密码"
+                />
+              </div>
+            </div>
+
+            {message ? <div className="message-strip mt-6">{message}</div> : null}
+
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <Button className="w-full sm:w-auto" size="lg" type="submit" disabled={submitting}>
+                {submitting ? '登录中...' : '登录'}
+                <ArrowRight size={16} />
+              </Button>
+              <div className="flex items-center gap-4 text-sm text-slate-400">
+                <Link className="transition hover:text-slate-200" to="/reset-password">
+                  重置密码
+                </Link>
+                <Link className="transition hover:text-[#63cab7]" to="/register">
+                  注册新账号
+                </Link>
+              </div>
+            </div>
+          </form>
         </div>
       </Card>
     </AuthShell>
