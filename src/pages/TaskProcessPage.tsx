@@ -545,8 +545,9 @@ export function TaskProcessPage() {
       </div>
 
       {interventionNode ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div className="glass-card w-full max-w-3xl p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-8">
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-black/60 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-8">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center">
+            <div className="glass-card flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:max-h-[calc(100vh-4rem)] sm:p-8">
             <div className="flex flex-col gap-4 border-b border-[rgba(99,202,183,0.1)] pb-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-slate-100">人工介入</h3>
@@ -558,9 +559,11 @@ export function TaskProcessPage() {
             </div>
 
             {loadingIntervention ? (
-              <p className="mt-6 text-sm text-slate-400">正在加载人工介入详情...</p>
+              <div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1 sm:pr-2">
+                <p className="text-sm text-slate-400">正在加载人工介入详情...</p>
+              </div>
             ) : (
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label>node_name</Label>
@@ -627,6 +630,7 @@ export function TaskProcessPage() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       ) : null}
