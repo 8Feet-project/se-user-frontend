@@ -1,51 +1,68 @@
 # Bili SponsorBlock MVP
 
-This folder contains a Manifest V3 browser extension prototype for Bilibili video pages.
+This folder now contains the M1 extension skeleton for shared sponsor skipping on Bilibili.
 
-## Features
+## What Changed
 
-- Runs on `https://www.bilibili.com/video/*` and `https://bilibili.com/video/*`
-- Finds the page `<video>` element and listens to playback updates
-- Jumps to the end of configured sponsor segments
-- Shows a small bottom-right overlay with a one-click undo action
-- Rebinds automatically when Bilibili swaps videos in its SPA flow
+- Keeps the original local hardcoded segment fallback
+- Adds a Manifest V3 background service worker
+- Generates a persistent anonymous `device_id`
+- Supports remote shared-segment lookup through Supabase Edge Functions
+- Adds an in-player toolbox for manual marking and lightweight feedback
+- Tries to load Bilibili subtitle tracks so marking can snap to subtitle boundaries
 
 ## Files
 
-- `manifest.json`: Manifest V3 entry point
-- `config.js`: local segment configuration
-- `content.js`: skip logic and overlay logic
-- `content.css`: overlay styles
+- `manifest.json`: MV3 entry point with background worker and permissions
+- `common.js`: shared helpers used by content and background scripts
+- `config.js`: local fallback rules plus remote API configuration
+- `background.js`: identity, cache, remote fetch, subtitle fetch
+- `page-bridge.js`: reads page-level Bilibili state from the page context
+- `content.js`: skip logic, feedback overlay, manual marking toolbox
+- `content.css`: overlay and toolbox styles
 
-## Add Segment Rules
+## Local Testing
 
-Edit `defaultSegmentsByVideoId` inside `config.js`:
+1. Open Chrome or Edge extensions
+2. Turn on developer mode
+3. Click "Load unpacked"
+4. Select `E:\code\SE-frontend\skip_ad`
+5. Reload the extension after every code change
+
+## Remote API Setup
+
+Edit `config.js` and set:
 
 ```js
-defaultSegmentsByVideoId: {
-  BV1xxxxxxxxxx: [
-    { start: 12, end: 35.5, label: 'Intro sponsor', category: 'sponsor' },
-    { start: 420, end: 438, label: 'Mid-roll sponsor', category: 'sponsor' }
-  ]
+remoteApi: {
+  enabled: true,
+  functionsBaseUrl: 'https://<project-ref>.supabase.co/functions/v1',
+  anonKey: '<supabase-anon-key>',
+  requestTimeoutMs: 8000,
+  cacheTtlMs: 24 * 60 * 60 * 1000,
+  analysisCooldownMs: 10 * 60 * 1000
 }
 ```
 
-Field reference:
+If `enabled` is `false`, the extension falls back to `defaultSegmentsByVideoId`.
 
-- `start`: segment start time in seconds
-- `end`: segment end time in seconds
-- `label`: overlay label for the skipped segment
-- `category`: reserved for future segment types such as `intro` or `selfpromo`
+## Manual Marking
 
-## Load Locally
+- `Alt+[` sets the draft start boundary
+- `Alt+]` sets the draft end boundary
+- `Alt+\` submits the current draft
+- The bottom-left toolbox also offers click buttons and `-1s / -0.5s / +0.5s / +1s` refinement
+- If subtitles are available, boundaries snap to the nearest subtitle line
 
-1. Open the extension manager page in Chrome or Edge
-2. Turn on developer mode
-3. Choose "Load unpacked"
-4. Select `E:\code\SE-frontend\skip_ad`
+## Shared Feedback
 
-## Next Steps
+After an automatic skip, the bottom-right overlay offers:
 
-- Add a popup to mark sponsor start and end times from the current video
-- Move rules from hardcoded config to `chrome.storage.local`
-- Add a shared API so multiple users can reuse submitted segments
+- `撤销`
+- `不是广告`
+- `开始太早`
+- `开始太晚`
+- `结束太早`
+- `结束太晚`
+
+These actions update local session behavior immediately and submit feedback to the remote API when configured.

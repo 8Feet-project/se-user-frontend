@@ -1,14 +1,21 @@
 (function initBiliSponsorBlockConfig(globalScope) {
   const config = {
+    remoteApi: {
+      enabled: false,
+      functionsBaseUrl: '',
+      anonKey: '',
+      requestTimeoutMs: 8000,
+      cacheTtlMs: 24 * 60 * 60 * 1000,
+      analysisCooldownMs: 10 * 60 * 1000,
+    },
     overlayDurationMs: 6000,
     undoIgnoreDurationMs: 30000,
     skipPaddingSeconds: 0.15,
     debug: false,
     defaultSegmentsByVideoId: {
-      // Example:
-      // BV1xxxxxxxxxx: [
-      //   { start: 12, end: 35.5, label: '片头推广', category: 'sponsor' }
-      // ]
+      BV1ewdhBmEux: [
+        { start: 1760, end: 1816, label: '\u6d4b\u8bd5\u7247\u6bb5', category: 'sponsor' },
+      ],
     },
   };
 
