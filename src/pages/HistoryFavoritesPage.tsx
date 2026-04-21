@@ -1,5 +1,6 @@
-﻿import { Clock3, FileSearch, History, RotateCcw, Sparkles } from 'lucide-react';
+import { Clock3, FileSearch, History, RotateCcw, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { getResearchHistory, getResearchHistoryDetail, reloadResearchHistory } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
@@ -15,11 +16,13 @@ function objectTypeLabel(type: HistoryTaskItem['object_type']) {
 }
 
 export function HistoryFavoritesPage() {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ResearchHistoryDetail | null>(null);
   const [reloadResult, setReloadResult] = useState<ResearchHistoryReloadResponse | null>(null);
   const [message, setMessage] = useState('');
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -29,6 +32,8 @@ export function HistoryFavoritesPage() {
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载历史失败';
         setMessage(reason);
+      } finally {
+        setLoaded(true);
       }
     };
 
@@ -88,13 +93,18 @@ export function HistoryFavoritesPage() {
           <div className="space-y-2">
             <p className="page-kicker">History Stream</p>
             <h2 className="text-2xl font-semibold text-slate-100">调研历史</h2>
-            <p className="text-sm leading-7 text-slate-400">把过去的任务保留成可回溯的资产，你可以重新查看详情，也可以把结果重新载入到当前工作流。</p>
+            <p className="text-sm leading-7 text-slate-400">
+              把过去的任务保留成可回溯的资产，你可以重新查看详情、重载结果，也可以直接跳转到流程页或报告页继续处理。
+            </p>
           </div>
 
           <div className="space-y-4">
             {tasks.length > 0 ? (
               tasks.map((task) => (
-                <div key={task.task_id} className="panel-subtle rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]">
+                <div
+                  key={task.task_id}
+                  className="panel-subtle rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]"
+                >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-base font-semibold text-slate-100">{task.object_name}</p>
@@ -108,18 +118,36 @@ export function HistoryFavoritesPage() {
                     创建时间：{task.created_at}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => handleLoadDetail(task.task_id)} disabled={submittingTaskId === task.task_id}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleLoadDetail(task.task_id)}
+                      disabled={submittingTaskId === task.task_id}
+                    >
                       查看详情
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => handleReloadTask(task.task_id)} disabled={submittingTaskId === task.task_id}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleReloadTask(task.task_id)}
+                      disabled={submittingTaskId === task.task_id}
+                    >
                       重载结果
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${task.task_id}`)}>
+                      查看流程
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${task.task_id}`)}>
+                      查看报告
                     </Button>
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="panel-subtle p-5 text-sm text-slate-500">暂时没有历史任务。</div>
-            )}
+            ) : loaded ? (
+              <div className="panel-subtle p-5 text-sm text-slate-500">
+                当前暂无历史任务。待完成一次调研后，这里会显示可复查、可重载、可跳转的任务记录。
+              </div>
+            ) : null}
           </div>
         </Card>
 
@@ -131,10 +159,24 @@ export function HistoryFavoritesPage() {
             </div>
             {selectedDetail ? (
               <div className="panel-subtle space-y-3 p-4 text-sm text-slate-300">
-                <p><span className="text-slate-500">调研对象：</span>{selectedDetail.object_name}</p>
-                <p className="flex items-center gap-2"><span className="text-slate-500">状态：</span><StatusBadge status={selectedDetail.status} /></p>
-                <p><span className="text-slate-500">数据集：</span>{selectedDetail.fact_dataset}</p>
-                {selectedDetail.report_id ? <p><span className="text-slate-500">报告 ID：</span>{selectedDetail.report_id}</p> : null}
+                <p>
+                  <span className="text-slate-500">调研对象：</span>
+                  {selectedDetail.object_name}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-slate-500">状态：</span>
+                  <StatusBadge status={selectedDetail.status} />
+                </p>
+                <p>
+                  <span className="text-slate-500">数据集：</span>
+                  {selectedDetail.fact_dataset}
+                </p>
+                {selectedDetail.report_id ? (
+                  <p>
+                    <span className="text-slate-500">报告 ID：</span>
+                    {selectedDetail.report_id}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <div className="panel-subtle p-4 text-sm text-slate-500">从左侧选择一条历史任务查看详情。</div>
@@ -148,9 +190,20 @@ export function HistoryFavoritesPage() {
             </div>
             {reloadResult ? (
               <div className="panel-subtle space-y-3 p-4 text-sm text-slate-300">
-                <p><span className="text-slate-500">任务 ID：</span>{reloadResult.task_id}</p>
-                <p><span className="text-slate-500">报告 ID：</span>{reloadResult.report_id ?? '待生成'}</p>
-                {reloadResult.redirect_url ? <p><span className="text-slate-500">跳转链接：</span>{reloadResult.redirect_url}</p> : null}
+                <p>
+                  <span className="text-slate-500">任务 ID：</span>
+                  {reloadResult.task_id}
+                </p>
+                <p>
+                  <span className="text-slate-500">报告 ID：</span>
+                  {reloadResult.report_id ?? '待生成'}
+                </p>
+                {reloadResult.redirect_url ? (
+                  <p>
+                    <span className="text-slate-500">跳转链接：</span>
+                    {reloadResult.redirect_url}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <div className="panel-subtle p-4 text-sm text-slate-500">还没有执行过重载操作。</div>

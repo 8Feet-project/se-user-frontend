@@ -1,5 +1,6 @@
-﻿import { BookmarkPlus, Bot, Clock3, Search, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { BookmarkPlus, Bot, Clock3, Search, Sparkles, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   createFavoriteItem,
@@ -22,6 +23,7 @@ import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '@/t
 const objectTypes = ['', 'company', 'stock', 'commodity'] as const;
 
 export function TaskLaunchPage() {
+  const navigate = useNavigate();
   const [objectName, setObjectName] = useState('');
   const [objectType, setObjectType] = useState<(typeof objectTypes)[number]>('');
   const [timeRange, setTimeRange] = useState('30d');
@@ -35,6 +37,8 @@ export function TaskLaunchPage() {
   const [recommendedModelId, setRecommendedModelId] = useState('');
   const [recommendationReason, setRecommendationReason] = useState('');
   const [researchTasks, setResearchTasks] = useState<ResearchTaskListItem[]>([]);
+  const [baseDataLoaded, setBaseDataLoaded] = useState(false);
+  const [baseDataWarning, setBaseDataWarning] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,10 +50,13 @@ export function TaskLaunchPage() {
         getResearchTasks({ page: 1, page_size: 10 }),
       ]);
 
+      const warnings: string[] = [];
+
       if (favoritesResult.status === 'fulfilled') {
         setFavoriteModelIds(favoritesResult.value.list.map((item: FavoriteItem) => item.target_id));
       } else {
         setFavoriteModelIds([]);
+        warnings.push('模型收藏夹加载失败');
       }
 
       if (modelsResult.status === 'fulfilled') {
@@ -58,13 +65,18 @@ export function TaskLaunchPage() {
       } else {
         setAvailableModels([]);
         setRecommendedModelId('');
+        warnings.push('可用模型列表加载失败');
       }
 
       if (tasksResult.status === 'fulfilled') {
         setResearchTasks(tasksResult.value.list);
       } else {
         setResearchTasks([]);
+        warnings.push('最近任务加载失败');
       }
+
+      setBaseDataWarning(warnings.join('；'));
+      setBaseDataLoaded(true);
     };
 
     void loadBaseData();
@@ -114,6 +126,7 @@ export function TaskLaunchPage() {
       setMessage(`任务已创建：${response.task_id}，当前状态：${response.status}`);
       const tasksResponse = await getResearchTasks({ page: 1, page_size: 10 });
       setResearchTasks(tasksResponse.list);
+      navigate(`/process?task_id=${response.task_id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '创建失败';
       setMessage(reason);
@@ -206,6 +219,12 @@ export function TaskLaunchPage() {
             </p>
           </section>
 
+          {baseDataWarning ? (
+            <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+              基础数据存在部分加载失败：{baseDataWarning}。仍可继续填写表单，缺失项会按空数据处理。
+            </div>
+          ) : null}
+
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="lg:col-span-2">
               <Label htmlFor="task-object-name">调研对象</Label>
@@ -258,7 +277,7 @@ export function TaskLaunchPage() {
                 id="task-source-types"
                 value={sourceTypesText}
                 onChange={(event) => setSourceTypesText(event.target.value)}
-                placeholder="news,report,filing"
+                placeholder="例如：news,report"
               />
             </div>
 
@@ -278,6 +297,7 @@ export function TaskLaunchPage() {
                   收藏当前模型
                 </Button>
                 {modelId && favoriteModelIds.includes(modelId) ? <span className="text-xs text-[#63cab7]">已收藏</span> : null}
+                {recommendedModelId ? <p className="text-xs text-slate-500">推荐模型：{recommendedModelId}</p> : null}
               </div>
             </div>
 
@@ -366,23 +386,23 @@ export function TaskLaunchPage() {
                       <StatusBadge status={task.status} />
                     </div>
                     <p className="mt-3 text-xs text-slate-500">创建时间：{task.created_at}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${task.task_id}`)}>
+                        查看流程
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${task.task_id}`)}>
+                        查看报告
+                      </Button>
+                    </div>
                   </div>
                 ))
-              ) : (
+              ) : baseDataLoaded ? (
                 <div className="panel-subtle p-4 text-sm text-slate-500">暂时没有任务记录。</div>
-              )}
+              ) : null}
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">
-              这一版任务发起页已经按设计系统落地为深海军蓝底色、teal 重点动作、24px 级卡片圆角，以及“主表单 + 侧栏信息卡”的信息结构。
-            </p>
-          </Card>
+
         </div>
       </div>
     </PageShell>

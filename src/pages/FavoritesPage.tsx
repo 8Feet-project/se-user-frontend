@@ -306,7 +306,9 @@ export function FavoritesPage() {
           </div>
 
           <div className="space-y-3">
-            {items.length > 0 ? (
+            {items.length === 0 ? (
+              <div className="panel-subtle p-4 text-sm text-slate-500">当前目录下暂无收藏条目。</div>
+            ) : (
               items.map((item) => (
                 <div key={item.favorite_id} className="panel-subtle p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -316,6 +318,7 @@ export function FavoritesPage() {
                         <span className="ml-2 font-normal text-slate-500">{item.target_id}</span>
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{item.favorite_id}</p>
+                      <p className="text-xs text-slate-500">目录：{item.folder_id ?? '-'}</p>
                       {item.remark ? <p className="mt-2 text-sm text-slate-400">备注：{item.remark}</p> : null}
                     </div>
                   </div>
@@ -330,8 +333,6 @@ export function FavoritesPage() {
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">当前目录下暂无收藏条目。</div>
             )}
           </div>
         </Card>

@@ -62,6 +62,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [loginSucceeded, setLoginSucceeded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const activeLoginMode = loginModes.find((item) => item.value === loginMode) ?? loginModes[0];
@@ -80,6 +81,7 @@ export function LoginPage() {
 
     if (!payload || !password) {
       setMessage(loginMode === 'username' ? '请先填写用户名和密码。' : '请先填写邮箱和密码。');
+      setLoginSucceeded(false);
       return;
     }
 
@@ -88,9 +90,11 @@ export function LoginPage() {
       const response = await login(payload);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
+      setLoginSucceeded(true);
       setMessage(`登录成功，欢迎回来：${response.nickname}（${response.role}）。`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '登录失败';
+      setLoginSucceeded(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -104,7 +108,10 @@ export function LoginPage() {
           <Link className="text-slate-400 transition hover:text-slate-200" to="/register">
             注册
           </Link>
-          <Link className="rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-slate-200 transition hover:border-[rgba(99,202,183,0.35)] hover:text-white" to="/platform-init">
+          <Link
+            className="rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-slate-200 transition hover:border-[rgba(99,202,183,0.35)] hover:text-white"
+            to="/platform-init"
+          >
             平台初始化
           </Link>
         </>
@@ -159,6 +166,7 @@ export function LoginPage() {
                   onClick={() => {
                     setLoginMode(item.value);
                     setMessage('');
+                    setLoginSucceeded(false);
                   }}
                   className={cn(
                     'rounded-xl px-4 py-3 text-left transition',
@@ -192,6 +200,9 @@ export function LoginPage() {
                   autoComplete={loginMode === 'username' ? 'username' : 'email'}
                   value={loginMode === 'username' ? username : email}
                   onChange={(event) => {
+                    setMessage('');
+                    setLoginSucceeded(false);
+
                     if (loginMode === 'username') {
                       setUsername(event.target.value);
                       return;
@@ -209,19 +220,48 @@ export function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setMessage('');
+                    setLoginSucceeded(false);
+                  }}
                   placeholder="请输入登录密码"
                 />
               </div>
             </div>
 
-            {message ? <div className="message-strip mt-6">{message}</div> : null}
+            {message ? (
+              <div
+                className={cn(
+                  'mt-6 rounded-[24px] border px-4 py-3 text-sm',
+                  loginSucceeded
+                    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                    : 'message-strip',
+                )}
+              >
+                <p>{message}</p>
+                {loginSucceeded ? (
+                  <p className="mt-2 text-xs text-emerald-200/90">
+                    访问令牌已写入本地存储。若当前为 mock 模式，可直接进入任务发起页或管理端继续验证业务链路。
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <Button className="w-full sm:w-auto" size="lg" type="submit" disabled={submitting}>
-                {submitting ? '登录中...' : '登录'}
-                <ArrowRight size={16} />
-              </Button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button className="w-full sm:w-auto" size="lg" type="submit" disabled={submitting}>
+                  {submitting ? '登录中...' : '登录'}
+                  <ArrowRight size={16} />
+                </Button>
+                {loginSucceeded ? (
+                  <Button variant="secondary" asChild className="w-full sm:w-auto">
+                    <Link to="/" className="w-full sm:w-auto">
+                      进入系统
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
               <div className="flex items-center gap-4 text-sm text-slate-400">
                 <Link className="transition hover:text-slate-200" to="/reset-password">
                   重置密码

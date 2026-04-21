@@ -1,4 +1,4 @@
-﻿import { BellRing, MailOpen, Radar, Settings2 } from 'lucide-react';
+﻿import { BellRing, MailOpen, Radar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -270,13 +270,7 @@ export function AlertsMessagesPage() {
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Settings2 size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">提醒页现在把“策略配置”和“通知流”拆开了：左侧偏表单和管理，右侧偏状态和阅读流，符合设计系统里强调的职责分区。</p>
-          </Card>
+
         </div>
       </div>
     </PageShell>

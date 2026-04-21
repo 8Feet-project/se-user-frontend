@@ -1,4 +1,4 @@
-﻿import { Download, FileText, MessageSquareMore, Quote, Sparkles } from 'lucide-react';
+﻿import { Download, FileText, MessageSquareMore, Quote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -208,7 +208,7 @@ export function ReportPreviewPage() {
                 <div className="whitespace-pre-wrap text-sm leading-7 text-slate-300">{report.content}</div>
               </div>
             ) : (
-              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂时没有报告内容。'}</div>
+              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂无报告内容，请先从任务流程或历史记录进入具体报告。'}</div>
             )}
           </Card>
 
@@ -284,15 +284,7 @@ export function ReportPreviewPage() {
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">
-              这一版报告页采用了“正文主区 + 引用侧栏 + 追问卡片流”的结构，保持了设计系统文档里强调的卡片分层、深色输入与 teal 状态提示。
-            </p>
-          </Card>
+
         </div>
       </div>
 

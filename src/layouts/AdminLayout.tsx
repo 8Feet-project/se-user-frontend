@@ -1,0 +1,236 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { BarChart3, Database, FileSearch, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { getCurrentUserPermissions } from '../api/client';
+import { AuthShell } from '../components/common/AuthShell';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { cn } from '../lib/utils';
+
+interface AdminNavItem {
+  label: string;
+  path: string;
+  icon: typeof Database;
+  permission?: string;
+  description: string;
+}
+
+const adminNavItems: AdminNavItem[] = [
+  {
+    label: '统计看板',
+    path: '/admin/dashboard',
+    icon: BarChart3,
+    permission: 'admin:dashboard:read',
+    description: '查看调研量、活跃用户与模型使用情况。',
+  },
+  {
+    label: '模型配置',
+    path: '/admin/models',
+    icon: Sparkles,
+    permission: 'admin:model:read',
+    description: '维护大模型接入、参数与连接状态。',
+  },
+  {
+    label: '用户权限',
+    path: '/admin/users',
+    icon: Users,
+    permission: 'admin:user:read',
+    description: '管理账号状态、角色权限与密码重置。',
+  },
+  {
+    label: '系统日志',
+    path: '/admin/logs',
+    icon: FileSearch,
+    permission: 'admin:logs:read',
+    description: '按日志级别、操作人、模型等条件排查链路问题。',
+  },
+];
+
+export function AdminLayout() {
+  const location = useLocation();
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [role, setRole] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const hasToken = Boolean(localStorage.getItem('access_token'));
+
+  useEffect(() => {
+    if (!hasToken) {
+      setLoading(false);
+      return;
+    }
+
+    const loadPermissions = async () => {
+      try {
+        const response = await getCurrentUserPermissions();
+        setPermissions(response.permissions);
+        setRole(response.role);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '权限加载失败';
+        setAuthError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadPermissions();
+  }, [hasToken]);
+
+  const accessibleItems = useMemo(() => {
+    if (loading) {
+      return adminNavItems;
+    }
+    return adminNavItems.filter((item) => !item.permission || permissions.includes(item.permission));
+  }, [loading, permissions]);
+
+  if (!hasToken) {
+    return (
+      <AuthShell
+        topActions={
+          <>
+            <Link className="text-slate-400 transition hover:text-slate-200" to="/register">
+              注册
+            </Link>
+            <Link
+              className="rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-slate-200 transition hover:border-[rgba(99,202,183,0.35)] hover:text-white"
+              to="/login"
+            >
+              立即登录
+            </Link>
+          </>
+        }
+        aside={
+          <Card variant="glow" className="p-8 sm:p-10">
+            <p className="page-kicker">Admin Guard</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">管理端需要先登录</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              当前未检测到登录令牌。请先使用平台账号登录，再进入统计看板、模型配置、账户权限与系统日志模块。
+            </p>
+          </Card>
+        }
+      >
+        <Card variant="glass" className="p-8 sm:p-10">
+          <p className="page-kicker">访问控制</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">登录后继续访问管理后台</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-400">如你尚未拥有管理员账号，请联系超级管理员完成账号开通与授权。</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/login">去登录</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/register">去注册</Link>
+            </Button>
+          </div>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  const isAdminRole = role === 'admin' || role === 'super_admin';
+  if (!loading && (!isAdminRole || authError)) {
+    return (
+      <AuthShell
+        topActions={
+          <Link className="text-slate-400 transition hover:text-slate-200" to="/login">
+            切换账号
+          </Link>
+        }
+        aside={
+          <Card variant="glow" className="p-8 sm:p-10">
+            <p className="page-kicker">Admin Guard</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">当前账号无管理端访问权限</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              仅管理员或超级管理员可进入管理后台。若你刚完成授权，请重新登录后重试。
+            </p>
+          </Card>
+        }
+      >
+        <Card variant="glass" className="p-8 sm:p-10">
+          <p className="page-kicker">权限校验</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">访问被拒绝</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-400">
+            {authError || '当前角色不满足管理端访问要求，请联系超级管理员调整权限。'}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/">返回用户端</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/login">重新登录</Link>
+            </Button>
+          </div>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-6">
+        <aside className="flex flex-col rounded-[32px] border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur">
+          <div className="space-y-3 border-b border-slate-800 pb-5">
+            <p className="text-xs uppercase tracking-[0.32em] text-slate-500">8Feet Admin</p>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-white">系统管理后台</h1>
+              <p className="text-sm leading-6 text-slate-400">
+                覆盖模型配置、权限治理、用户数据看板与底层全链路日志排查。
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/60 p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-emerald-500/15 p-2 text-emerald-300">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white">当前身份</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">{role || 'loading'}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-400">已加载 {permissions.length} 项权限，用于控制管理端导航与操作范围。</p>
+              </div>
+            </div>
+          </div>
+
+          <nav className="mt-6 flex-1 space-y-2">
+            {accessibleItems.map((item) => {
+              const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    'block rounded-3xl border px-4 py-4 transition',
+                    active
+                      ? 'border-sky-500/40 bg-sky-500/10 text-white shadow-lg shadow-sky-950/30'
+                      : 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn('rounded-2xl p-2', active ? 'bg-sky-500/20 text-sky-200' : 'bg-slate-800 text-slate-300')}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">{item.label}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-400">{item.description}</div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-6 flex gap-3 border-t border-slate-800 pt-5">
+            <Button asChild variant="secondary" className="flex-1 rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+              <Link to="/">返回用户端</Link>
+            </Button>
+          </div>
+        </aside>
+
+        <div className="flex min-h-0 flex-col rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 p-4 shadow-2xl shadow-slate-950/30 lg:p-6">
+          <Outlet />
+        </div>
+      </div>
+    </div>
+  );
+}

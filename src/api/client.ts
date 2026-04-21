@@ -1,9 +1,25 @@
 import {
+  mockAssignAdminModelPermissions,
   mockChangeCurrentUserPassword,
+  mockCreateAdminModel,
+  mockCreateAdminUser,
   mockCreateAlert,
   mockCreateFavoriteFolder,
   mockCreateFavoriteItem,
   mockCreateResearchTask,
+  mockDeleteAdminModel,
+  mockExportAdminLogs,
+  mockGetAdminDashboardOverview,
+  mockGetAdminLogDetail,
+  mockGetAdminLogExportStatus,
+  mockGetAdminLogs,
+  mockGetAdminModels,
+  mockGetAdminModelUsage,
+  mockGetAdminObjectDistribution,
+  mockGetAdminUserActivity,
+  mockGetAdminUserDetail,
+  mockGetAdminUsers,
+  mockGetCurrentUserPermissions,
   mockGetModelRoutingRecommendation,
   mockGetModelsAvailable,
   mockGetResearchTasks,
@@ -51,9 +67,13 @@ import {
   mockAppendReportQa,
   mockReportDetail,
   mockGetResearchHistoryDetail,
+  mockResetAdminUserPassword,
   mockSendEmailCode,
   mockTaskStatus,
   mockTaskWorkflow,
+  mockTestAdminModelConnection,
+  mockUpdateAdminModel,
+  mockUpdateAdminUser,
   mockUpdateAlert,
   mockUpdateFavoriteFolder,
   mockSubmitTaskIntervention,
@@ -61,23 +81,51 @@ import {
 } from './mock';
 import { request } from './http';
 import type {
+  AdminDashboardOverviewResponse,
+  AdminLogDetail,
+  AdminLogExportResponse,
+  AdminLogExportStatusResponse,
+  AdminLogsResponse,
+  AdminModelListResponse,
+  AdminModelPermissionRequest,
+  AdminModelPermissionResponse,
+  AdminModelUsageResponse,
+  AdminObjectDistributionResponse,
+  AdminUserActivityResponse,
+  AdminUserDetail,
+  AdminUsersResponse,
   AnalyzeTaskRequest,
   AnalyzeTaskResponse,
   AlertsResponse,
+  AppendReportQaRequest,
+  AppendReportQaResponse,
   CancelResearchTaskResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
+  CreateAdminModelRequest,
+  CreateAdminModelResponse,
+  CreateAdminUserRequest,
+  CreateAdminUserResponse,
   CreateAlertRequest,
   CreateAlertResponse,
   CreateFavoriteFolderRequest,
   CreateFavoriteFolderResponse,
   CreateFavoriteItemRequest,
   CreateFavoriteItemResponse,
+  CreateReportQaRequest,
+  CreateReportQaResponse,
   CreateResearchTaskRequest,
   CreateResearchTaskResponse,
+  CrossValidationResultResponse,
+  CurrentUserPermissionsResponse,
+  DeleteAdminModelResponse,
   DeleteAlertResponse,
   DeleteFavoriteFolderResponse,
   DeleteFavoriteItemResponse,
+  DeleteReportShareResponse,
+  ExportAdminLogsRequest,
+  ExportReportRequest,
+  ExportReportResponse,
   FavoriteFoldersResponse,
   FavoriteItemsResponse,
   HistoryTaskItem,
@@ -99,45 +147,43 @@ import type {
   PlatformInitializeRequest,
   PlatformInitializeResponse,
   PlatformInitStatusResponse,
+  PublicSharedReportResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
-  ReportsResponse,
-  ReportCitationsResponse,
   ReportCitationDetail,
-  ReportVersionsResponse,
-  ExportReportRequest,
-  ExportReportResponse,
-  ReportExportStatusResponse,
-  ShareReportRequest,
-  ShareReportResponse,
-  DeleteReportShareResponse,
-  PublicSharedReportResponse,
-  CreateReportQaRequest,
-  CreateReportQaResponse,
-  CrossValidationResultResponse,
-  ReportQaListResponse,
-  AppendReportQaRequest,
-  AppendReportQaResponse,
+  ReportCitationsResponse,
   ReportDetail,
+  ReportExportStatusResponse,
+  ReportQaListResponse,
+  ReportsResponse,
+  ReportVersionsResponse,
   ResearchHistoryDetail,
   ResearchHistoryReloadResponse,
   ResearchHistoryResponse,
   ResearchTaskStatusResponse,
   ResearchTasksResponse,
-  SubmitTaskInterventionRequest,
-  SubmitTaskInterventionResponse,
-  SendEmailCodeRequest,
-  SendEmailCodeResponse,
-  TaskInterventionDetailResponse,
-  TaskWorkflowResponse,
-  TaskFactsResponse,
-  TaskEvent,
-  TriggerCrossValidationRequest,
-  TriggerCrossValidationResponse,
+  ResetAdminUserPasswordResponse,
   RetryAnalysisRequest,
   RetryAnalysisResponse,
+  SendEmailCodeRequest,
+  SendEmailCodeResponse,
+  ShareReportRequest,
+  ShareReportResponse,
+  SubmitTaskInterventionRequest,
+  SubmitTaskInterventionResponse,
+  TaskEvent,
+  TaskFactsResponse,
+  TaskInterventionDetailResponse,
+  TaskWorkflowResponse,
+  TestAdminModelConnectionResponse,
+  TriggerCrossValidationRequest,
+  TriggerCrossValidationResponse,
+  UpdateAdminModelRequest,
+  UpdateAdminModelResponse,
+  UpdateAdminUserRequest,
+  UpdateAdminUserResponse,
   UpdateAlertRequest,
   UpdateAlertResponse,
   UpdateFavoriteFolderRequest,
@@ -766,4 +812,197 @@ export async function markAllMessagesRead(): Promise<MarkAllMessagesReadResponse
   return request<MarkAllMessagesReadResponse>('/messages/read-all', {
     method: 'POST',
   });
+}
+
+export async function getAdminModels(): Promise<AdminModelListResponse> {
+  if (useMock) {
+    return mockGetAdminModels();
+  }
+  return request<AdminModelListResponse>('/admin/models');
+}
+
+export async function createAdminModel(
+  payload: CreateAdminModelRequest
+): Promise<CreateAdminModelResponse> {
+  if (useMock) {
+    return mockCreateAdminModel(payload);
+  }
+  return request<CreateAdminModelResponse>('/admin/models', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminModel(
+  modelId: string,
+  payload: UpdateAdminModelRequest
+): Promise<UpdateAdminModelResponse> {
+  if (useMock) {
+    return mockUpdateAdminModel(modelId, payload);
+  }
+  return request<UpdateAdminModelResponse>(`/admin/models/${modelId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminModel(modelId: string): Promise<DeleteAdminModelResponse> {
+  if (useMock) {
+    return mockDeleteAdminModel(modelId);
+  }
+  return request<DeleteAdminModelResponse>(`/admin/models/${modelId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function testAdminModelConnection(
+  modelId: string
+): Promise<TestAdminModelConnectionResponse> {
+  if (useMock) {
+    return mockTestAdminModelConnection(modelId);
+  }
+  return request<TestAdminModelConnectionResponse>(`/admin/models/${modelId}/test-connection`, {
+    method: 'POST',
+  });
+}
+
+export async function assignAdminModelPermissions(
+  modelId: string,
+  payload: AdminModelPermissionRequest
+): Promise<AdminModelPermissionResponse> {
+  if (useMock) {
+    return mockAssignAdminModelPermissions(modelId, payload);
+  }
+  return request<AdminModelPermissionResponse>(`/admin/models/${modelId}/permissions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAdminUsers(): Promise<AdminUsersResponse> {
+  if (useMock) {
+    return mockGetAdminUsers();
+  }
+  return request<AdminUsersResponse>('/admin/users');
+}
+
+export async function createAdminUser(payload: CreateAdminUserRequest): Promise<CreateAdminUserResponse> {
+  if (useMock) {
+    return mockCreateAdminUser(payload);
+  }
+  return request<CreateAdminUserResponse>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+  if (useMock) {
+    return mockGetAdminUserDetail(userId);
+  }
+  return request<AdminUserDetail>(`/admin/users/${userId}`);
+}
+
+export async function updateAdminUser(
+  userId: string,
+  payload: UpdateAdminUserRequest
+): Promise<UpdateAdminUserResponse> {
+  if (useMock) {
+    return mockUpdateAdminUser(userId, payload);
+  }
+  return request<UpdateAdminUserResponse>(`/admin/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function resetAdminUserPassword(
+  userId: string
+): Promise<ResetAdminUserPasswordResponse> {
+  if (useMock) {
+    return mockResetAdminUserPassword(userId);
+  }
+  return request<ResetAdminUserPasswordResponse>(`/admin/users/${userId}/reset-password`, {
+    method: 'POST',
+  });
+}
+
+export async function getCurrentUserPermissions(): Promise<CurrentUserPermissionsResponse> {
+  if (useMock) {
+    return mockGetCurrentUserPermissions();
+  }
+  return request<CurrentUserPermissionsResponse>('/admin/permissions/current');
+}
+
+export async function getAdminDashboardOverview(): Promise<AdminDashboardOverviewResponse> {
+  if (useMock) {
+    return mockGetAdminDashboardOverview();
+  }
+  return request<AdminDashboardOverviewResponse>('/admin/dashboard/overview');
+}
+
+export async function getAdminObjectDistribution(): Promise<AdminObjectDistributionResponse> {
+  if (useMock) {
+    return mockGetAdminObjectDistribution();
+  }
+  return request<AdminObjectDistributionResponse>('/admin/dashboard/object-distribution');
+}
+
+export async function getAdminModelUsage(): Promise<AdminModelUsageResponse> {
+  if (useMock) {
+    return mockGetAdminModelUsage();
+  }
+  return request<AdminModelUsageResponse>('/admin/dashboard/model-usage');
+}
+
+export async function getAdminUserActivity(): Promise<AdminUserActivityResponse> {
+  if (useMock) {
+    return mockGetAdminUserActivity();
+  }
+  return request<AdminUserActivityResponse>('/admin/dashboard/user-activity');
+}
+
+export async function getAdminLogs(params: {
+  level?: string;
+  user_keyword?: string;
+  model_id?: string;
+  module?: string;
+  object_type?: string;
+  start_time?: string;
+  end_time?: string;
+  page?: number;
+  page_size?: number;
+} = {}): Promise<AdminLogsResponse> {
+  if (useMock) {
+    return mockGetAdminLogs();
+  }
+  return request<AdminLogsResponse>('/admin/logs', {}, params);
+}
+
+export async function getAdminLogDetail(logId: string): Promise<AdminLogDetail> {
+  if (useMock) {
+    return mockGetAdminLogDetail(logId);
+  }
+  return request<AdminLogDetail>(`/admin/logs/${logId}`);
+}
+
+export async function exportAdminLogs(
+  payload: ExportAdminLogsRequest
+): Promise<AdminLogExportResponse> {
+  if (useMock) {
+    return mockExportAdminLogs(payload);
+  }
+  return request<AdminLogExportResponse>('/admin/logs/export', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAdminLogExportStatus(
+  exportId: string
+): Promise<AdminLogExportStatusResponse> {
+  if (useMock) {
+    return mockGetAdminLogExportStatus(exportId);
+  }
+  return request<AdminLogExportStatusResponse>(`/admin/logs/export/${exportId}/status`);
 }
