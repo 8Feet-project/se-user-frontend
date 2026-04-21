@@ -26,8 +26,8 @@ export function ProfilePage() {
       setProfile(data);
       setNickname(data.nickname);
       setEmail(data.email);
-      setPhone(data.phone);
-      setAvatarUrl(data.avatar_url);
+      setPhone(data.phone ?? '');
+      setAvatarUrl(data.avatar_url ?? '');
       setMessage('');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '加载个人信息失败';

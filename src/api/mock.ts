@@ -358,16 +358,16 @@ export const mockHistoryDetail: ResearchHistoryDetail = {
 };
 
 export const mockUserProfile: UserProfile = {
-  user_id: 'user-001',
+  user_id: 101,
   username: 'demo_user',
   nickname: '演示用户',
   email: 'demo@8feet.com',
-  phone: '13800138000',
-  avatar_url: 'https://example.com/avatar.png',
+  phone: null,
+  avatar_url: null,
   role: 'user',
   permissions: ['user:profile:read', 'user:profile:write', 'research:task:create', 'report:read'],
   email_verified: true,
-  last_login_at: '2026-04-06T10:00:00Z',
+  last_login_at: null,
 };
 
 const adminPermissionTree: AdminPermissionTreeNode[] = [
@@ -449,59 +449,59 @@ let mockAdminModels: AdminModelListResponse['list'] = [
 ];
 
 const mockAdminModelPermissions: Record<string, AdminModelPermissionRequest> = {
-  'model-deepseek-v3': { user_ids: ['user-ops-001'], group_ids: ['group-research'] },
-  'model-gpt-4.1': { user_ids: ['user-admin-001'], group_ids: ['group-admin'] },
+  'model-deepseek-v3': { user_ids: [1002], group_ids: ['group-research'] },
+  'model-gpt-4.1': { user_ids: [1001], group_ids: ['group-admin'] },
   'model-qwen-max': { user_ids: [], group_ids: [] },
 };
 
 let mockAdminUsers: AdminUserListItem[] = [
   {
-    user_id: 'user-admin-001',
+    user_id: 1001,
     username: 'ops_admin',
     nickname: '运营管理员',
     email: 'ops-admin@8feet.com',
     phone: '13800000001',
     role: 'admin',
     status: 'active',
-    created_by_user_id: 'user-super-001',
+    created_by_user_id: 9001,
     last_login_at: '2026-04-20T09:20:00Z',
     created_at: '2026-03-01T08:00:00Z',
   },
   {
-    user_id: 'user-ops-001',
+    user_id: 1002,
     username: 'research_owner',
     nickname: '研究负责人',
     email: 'research-owner@8feet.com',
     phone: '13800000002',
     role: 'admin',
     status: 'active',
-    created_by_user_id: 'user-admin-001',
+    created_by_user_id: 1001,
     last_login_at: '2026-04-20T08:45:00Z',
     created_at: '2026-03-02T08:00:00Z',
   },
   {
-    user_id: 'user-007',
+    user_id: 1003,
     username: 'auditor',
     nickname: '审计专员',
     email: 'auditor@8feet.com',
     phone: '13800000003',
     role: 'user',
     status: 'disabled',
-    created_by_user_id: 'user-admin-001',
+    created_by_user_id: 1001,
     last_login_at: '2026-04-15T14:18:00Z',
     created_at: '2026-03-06T09:00:00Z',
   },
 ];
 
-const mockAdminUserDetails: Record<string, AdminUserDetail> = {
-  'user-admin-001': {
-    user_id: 'user-admin-001',
+const mockAdminUserDetails: Record<number, AdminUserDetail> = {
+  1001: {
+    user_id: 1001,
     basic_info: {
       username: 'ops_admin',
       nickname: '运营管理员',
       email: 'ops-admin@8feet.com',
       phone: '13800000001',
-      created_by_user_id: 'user-super-001',
+      created_by_user_id: 9001,
       created_at: '2026-03-01T08:00:00Z',
       last_login_at: '2026-04-20T09:20:00Z',
     },
@@ -522,14 +522,14 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
       { model_id: 'model-deepseek-v3', model_name: 'DeepSeek V3' },
     ],
   },
-  'user-ops-001': {
-    user_id: 'user-ops-001',
+  1002: {
+    user_id: 1002,
     basic_info: {
       username: 'research_owner',
       nickname: '研究负责人',
       email: 'research-owner@8feet.com',
       phone: '13800000002',
-      created_by_user_id: 'user-admin-001',
+      created_by_user_id: 1001,
       created_at: '2026-03-02T08:00:00Z',
       last_login_at: '2026-04-20T08:45:00Z',
     },
@@ -539,14 +539,14 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
     permission_tree: adminPermissionTree,
     model_permissions: [{ model_id: 'model-deepseek-v3', model_name: 'DeepSeek V3' }],
   },
-  'user-007': {
-    user_id: 'user-007',
+  1003: {
+    user_id: 1003,
     basic_info: {
       username: 'auditor',
       nickname: '审计专员',
       email: 'auditor@8feet.com',
       phone: '13800000003',
-      created_by_user_id: 'user-admin-001',
+      created_by_user_id: 1001,
       created_at: '2026-03-06T09:00:00Z',
       last_login_at: '2026-04-15T14:18:00Z',
     },
@@ -556,6 +556,11 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
     permission_tree: adminPermissionTree,
     model_permissions: [],
   },
+};
+
+let mockPlatformInitStatus: PlatformInitStatusResponse = {
+  initialized: false,
+  has_super_admin: false,
 };
 
 const mockAdminDashboardOverview: AdminDashboardOverviewResponse = {
@@ -928,8 +933,8 @@ export async function mockGetAdminUsers(): Promise<AdminUsersResponse> {
 }
 
 export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Promise<CreateAdminUserResponse> {
-  const userId = `user-${Date.now()}`;
-  const creatorUserId = 'user-admin-001';
+  const userId = Date.now();
+  const creatorUserId = 1001;
   const now = new Date().toISOString();
   mockAdminUsers.unshift({
     user_id: userId,
@@ -965,7 +970,7 @@ export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Prom
   };
 }
 
-export async function mockGetAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+export async function mockGetAdminUserDetail(userId: number): Promise<AdminUserDetail> {
   const target = mockAdminUserDetails[userId];
   if (target) {
     return {
@@ -980,8 +985,8 @@ export async function mockGetAdminUserDetail(userId: string): Promise<AdminUserD
   return {
     user_id: userId,
     basic_info: {
-      username: userId,
-      nickname: userId,
+      username: String(userId),
+      nickname: String(userId),
       email: `${userId}@example.com`,
     },
     role: 'user',
@@ -993,7 +998,7 @@ export async function mockGetAdminUserDetail(userId: string): Promise<AdminUserD
 }
 
 export async function mockUpdateAdminUser(
-  userId: string,
+  userId: number,
   payload: UpdateAdminUserRequest
 ): Promise<UpdateAdminUserResponse> {
   const listTarget = mockAdminUsers.find((item) => item.user_id === userId);
@@ -1022,7 +1027,7 @@ export async function mockUpdateAdminUser(
 }
 
 export async function mockResetAdminUserPassword(
-  userId: string
+  userId: number
 ): Promise<ResetAdminUserPasswordResponse> {
   return {
     user_id: userId,
@@ -1032,7 +1037,7 @@ export async function mockResetAdminUserPassword(
 
 export async function mockGetCurrentUserPermissions(): Promise<CurrentUserPermissionsResponse> {
   return {
-    user_id: 'user-admin-001',
+    user_id: 1001,
     role: 'admin',
     permissions: [
       'admin:model:read',
@@ -1142,7 +1147,7 @@ export async function mockLogin(payload: LoginRequest): Promise<LoginResponse> {
       : payload.username;
 
   return {
-    user_id: 'user-001',
+    user_id: 101,
     nickname,
     role: 'user',
     permissions: ['auth:login', 'research:task:create', 'research:task:read', 'report:read'],
@@ -1158,7 +1163,7 @@ export async function mockRegister(payload: RegisterRequest): Promise<RegisterRe
   }
 
   return {
-    user_id: 'user-002',
+    user_id: 102,
     role: 'user',
     access_token: 'mock-access-token',
     refresh_token: 'mock-refresh-token',
@@ -1216,18 +1221,19 @@ export async function mockPasswordResetConfirm(
 }
 
 export async function mockGetPlatformInitStatus(): Promise<PlatformInitStatusResponse> {
-  return {
-    initialized: false,
-    has_super_admin: false,
-  };
+  return { ...mockPlatformInitStatus };
 }
 
 export async function mockPlatformInitialize(
-  _payload: PlatformInitializeRequest
+  _payload: PlatformInitializeRequest = {}
 ): Promise<PlatformInitializeResponse> {
+  mockPlatformInitStatus = {
+    initialized: true,
+    has_super_admin: true,
+  };
   return {
     initialized: true,
-    super_admin_user_id: 'user-super-admin-001',
+    super_admin_user_id: 9001,
   };
 }
 

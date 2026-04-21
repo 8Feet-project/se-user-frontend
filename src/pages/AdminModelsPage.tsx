@@ -32,6 +32,13 @@ const contextWindowMax = 512000;
 const temperatureMin = 0;
 const temperatureMax = 2;
 
+function parseUserIds(value: string) {
+  return value
+    .split(',')
+    .map((item) => Number(item.trim()))
+    .filter((item) => Number.isInteger(item) && item > 0);
+}
+
 export function AdminModelsPage() {
   const [models, setModels] = useState<AdminModelItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +49,7 @@ export function AdminModelsPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
   const [permissionPayload, setPermissionPayload] = useState<AdminModelPermissionRequest>({
-    user_ids: ['user-admin-001'],
+    user_ids: [1001],
     group_ids: ['group-admin'],
   });
 
@@ -437,13 +444,13 @@ export function AdminModelsPage() {
               <ShieldCheck className="h-5 w-5 text-slate-500" />
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Field label="授权用户 ID（逗号分隔）">
+              <Field label="授权用户 ID（正整数，逗号分隔）">
                 <Input
                   value={(permissionPayload.user_ids ?? []).join(',')}
                   onChange={(event) =>
                     setPermissionPayload((prev) => ({
                       ...prev,
-                      user_ids: event.target.value.split(',').map((item) => item.trim()).filter(Boolean),
+                      user_ids: parseUserIds(event.target.value),
                     }))
                   }
                   className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"

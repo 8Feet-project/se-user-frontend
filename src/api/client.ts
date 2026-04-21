@@ -293,7 +293,7 @@ export async function getPlatformInitStatus(): Promise<PlatformInitStatusRespons
 }
 
 export async function platformInitialize(
-  payload: PlatformInitializeRequest
+  payload: PlatformInitializeRequest = {}
 ): Promise<PlatformInitializeResponse> {
   if (useMock) {
     return mockPlatformInitialize(payload);
@@ -896,7 +896,7 @@ export async function createAdminUser(payload: CreateAdminUserRequest): Promise<
   });
 }
 
-export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+export async function getAdminUserDetail(userId: number): Promise<AdminUserDetail> {
   if (useMock) {
     return mockGetAdminUserDetail(userId);
   }
@@ -904,7 +904,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
 }
 
 export async function updateAdminUser(
-  userId: string,
+  userId: number,
   payload: UpdateAdminUserRequest
 ): Promise<UpdateAdminUserResponse> {
   if (useMock) {
@@ -917,7 +917,7 @@ export async function updateAdminUser(
 }
 
 export async function resetAdminUserPassword(
-  userId: string
+  userId: number
 ): Promise<ResetAdminUserPasswordResponse> {
   if (useMock) {
     return mockResetAdminUserPassword(userId);

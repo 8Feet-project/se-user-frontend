@@ -43,7 +43,7 @@ export type LoginRequest =
     };
 
 export interface LoginResponse {
-  user_id: string;
+  user_id: number;
   nickname: string;
   role: UserRole;
   permissions: string[];
@@ -63,7 +63,7 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  user_id: string;
+  user_id: number;
   role: UserRole;
   access_token: string;
   refresh_token: string;
@@ -129,28 +129,24 @@ export interface PlatformInitStatusResponse {
   has_super_admin: boolean;
 }
 
-export interface PlatformInitializeRequest {
-  site_name: string;
-  default_model_id?: string;
-  admin_email: string;
-}
+export type PlatformInitializeRequest = Record<string, never>;
 
 export interface PlatformInitializeResponse {
   initialized: boolean;
-  super_admin_user_id: string;
+  super_admin_user_id: number | null;
 }
 
 export interface UserProfile {
-  user_id: string;
+  user_id: number;
   username: string;
   nickname: string;
   email: string;
-  phone: string;
-  avatar_url: string;
+  phone: string | null;
+  avatar_url: string | null;
   role: UserRole;
   permissions: string[];
   email_verified: boolean;
-  last_login_at: string;
+  last_login_at: string | null;
 }
 
 export interface UpdateUserProfileRequest {
@@ -161,7 +157,7 @@ export interface UpdateUserProfileRequest {
 }
 
 export interface UpdateUserProfileResponse {
-  user_id: string;
+  user_id: number;
   updated_fields: string[];
 }
 
@@ -751,7 +747,7 @@ export interface TestAdminModelConnectionResponse {
 }
 
 export interface AdminModelPermissionGrant {
-  user_ids?: string[];
+  user_ids?: number[];
   group_ids?: string[];
 }
 
@@ -770,14 +766,14 @@ export interface AdminPermissionTreeNode {
 }
 
 export interface AdminUserListItem {
-  user_id: string;
+  user_id: number;
   username: string;
   nickname: string;
   email: string;
   phone?: string;
   role: UserRole;
   status: AdminUserStatus;
-  created_by_user_id?: string;
+  created_by_user_id?: number;
   last_login_at?: string;
   created_at: string;
 }
@@ -796,18 +792,18 @@ export interface CreateAdminUserRequest {
 }
 
 export interface CreateAdminUserResponse {
-  user_id: string;
+  user_id: number;
   temp_password: string;
 }
 
 export interface AdminUserDetail {
-  user_id: string;
+  user_id: number;
   basic_info: {
     username: string;
     nickname: string;
     email: string;
     phone?: string;
-    created_by_user_id?: string;
+    created_by_user_id?: number;
     created_at?: string;
     last_login_at?: string;
   };
@@ -825,17 +821,17 @@ export interface UpdateAdminUserRequest {
 }
 
 export interface UpdateAdminUserResponse {
-  user_id: string;
+  user_id: number;
   updated_fields: string[];
 }
 
 export interface ResetAdminUserPasswordResponse {
-  user_id: string;
+  user_id: number;
   temp_password: string;
 }
 
 export interface CurrentUserPermissionsResponse {
-  user_id?: string;
+  user_id?: number;
   role: UserRole;
   permissions: string[];
 }

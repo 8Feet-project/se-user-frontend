@@ -41,7 +41,7 @@ export function AdminUsersPage() {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | AdminUserStatus>('');
   const [currentRole, setCurrentRole] = useState<UserRole>('user');
-  const [currentUserId, setCurrentUserId] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
@@ -54,7 +54,7 @@ export function AdminUsersPage() {
     try {
       const response = await getCurrentUserPermissions();
       setCurrentRole(response.role);
-      setCurrentUserId(response.user_id || '');
+      setCurrentUserId(response.user_id ?? null);
       setCurrentPermissions(response.permissions);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '加载当前授权上下文失败';
@@ -62,7 +62,7 @@ export function AdminUsersPage() {
     }
   };
 
-  const handleSelectUser = async (userId: string) => {
+  const handleSelectUser = async (userId: number) => {
     setDetailLoading(true);
     try {
       const response = await getAdminUserDetail(userId);
@@ -109,7 +109,7 @@ export function AdminUsersPage() {
     }
 
     const currentSelected = selectedUser?.user_id;
-    if (!currentSelected || !scoped.some((item) => item.user_id === currentSelected)) {
+    if (currentSelected == null || !scoped.some((item) => item.user_id === currentSelected)) {
       void handleSelectUser(scoped[0].user_id);
     }
   }, [currentRole, currentUserId, selectedUser?.user_id, users]);

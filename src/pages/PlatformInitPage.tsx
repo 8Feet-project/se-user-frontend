@@ -6,15 +6,10 @@ import { getPlatformInitStatus, platformInitialize } from '@/api/client';
 import { AuthShell } from '@/components/common/AuthShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { PlatformInitStatusResponse } from '@/types';
 
 export function PlatformInitPage() {
   const [initStatus, setInitStatus] = useState<PlatformInitStatusResponse | null>(null);
-  const [siteName, setSiteName] = useState('8Feet 平台');
-  const [defaultModelId, setDefaultModelId] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,20 +29,17 @@ export function PlatformInitPage() {
   }, []);
 
   const handleInitialize = async () => {
-    if (!siteName.trim() || !adminEmail.trim()) {
-      setMessage('请填写平台名称和管理员邮箱。');
-      return;
-    }
-
     try {
       setSubmitting(true);
-      const response = await platformInitialize({
-        site_name: siteName.trim(),
-        default_model_id: defaultModelId.trim() || undefined,
-        admin_email: adminEmail.trim(),
-      });
-      setMessage(`初始化完成，超级管理员 ID：${response.super_admin_user_id}`);
+      const response = await platformInitialize();
+      const nextMessage = response.initialized
+        ? response.super_admin_user_id == null
+          ? '初始化完成，但后端未返回超级管理员 ID。'
+          : `初始化完成，超级管理员 ID：${response.super_admin_user_id}`
+        : '初始化请求已提交，但后端未返回已初始化状态。';
+
       await loadStatus();
+      setMessage(nextMessage);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '初始化失败';
       setMessage(reason);
@@ -82,8 +74,8 @@ export function PlatformInitPage() {
                   <Settings2 size={16} strokeWidth={1.9} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-100">基础配置</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">填写平台名称、默认模型和管理员邮箱，完成首轮可用配置。</p>
+                  <p className="text-sm font-semibold text-slate-100">初始化契约</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">当前版本由后端预置初始化参数，前端仅负责触发初始化并回显状态。</p>
                 </div>
               </div>
             </div>
@@ -122,48 +114,24 @@ export function PlatformInitPage() {
           <p className="page-kicker">平台初始化</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">8Feet 平台初始化配置</h1>
           <p className="text-sm leading-7 text-slate-400">
-            用统一的深色工作流完成首轮配置，后续整个应用都将沿用同一套设计 token、组件层级与交互规范。
+            当前后端契约不再从前端收集平台名称、默认模型和管理员邮箱，本页专注于执行初始化与复核实际状态。
           </p>
         </div>
 
         {initialized ? (
           <div className="mt-6 rounded-[24px] border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
-            平台已完成初始化。为避免重复创建超级管理员与默认配置，当前表单已切换为只读展示。
+            平台已完成初始化。为避免重复创建超级管理员与默认配置，当前页面已切换为状态展示模式。
           </div>
         ) : null}
 
-        <div className="mt-8 grid gap-5">
-          <div>
-            <Label htmlFor="platform-site-name">site_name</Label>
-            <Input
-              id="platform-site-name"
-              value={siteName}
-              onChange={(event) => setSiteName(event.target.value)}
-              placeholder="请输入平台名称"
-              disabled={initialized || submitting}
-            />
-          </div>
-          <div>
-            <Label htmlFor="platform-default-model-id">default_model_id（可选）</Label>
-            <Input
-              id="platform-default-model-id"
-              value={defaultModelId}
-              onChange={(event) => setDefaultModelId(event.target.value)}
-              placeholder="请输入默认模型 ID"
-              disabled={initialized || submitting}
-            />
-          </div>
-          <div>
-            <Label htmlFor="platform-admin-email">admin_email</Label>
-            <Input
-              id="platform-admin-email"
-              type="email"
-              value={adminEmail}
-              onChange={(event) => setAdminEmail(event.target.value)}
-              placeholder="请输入管理员邮箱"
-              disabled={initialized || submitting}
-            />
-          </div>
+        <div className="mt-8 rounded-[24px] border border-white/10 bg-slate-950/40 p-5">
+          <p className="text-sm font-semibold text-slate-100">当前前后端对齐后的初始化方式</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            平台初始化请求会发送空配置对象，由后端使用服务端预置参数完成初始化，不再假设前端能够配置 site_name、default_model_id、admin_email。
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            如果后端返回了超级管理员 ID，页面会直接展示；如果返回 null，也会按无 ID 的结果给出提示，避免把空值误当成字符串使用。
+          </p>
         </div>
 
         {message ? <div className="message-strip mt-6">{message}</div> : null}
