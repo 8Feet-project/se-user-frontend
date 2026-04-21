@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { register, sendEmailCode, verifyEmail } from '@/api/client';
+import { register, sendEmailCode } from '@/api/client';
 import { AuthShell } from '@/components/common/AuthShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,7 +13,7 @@ const steps = [
   {
     icon: MailCheck,
     title: '企业邮箱校验',
-    desc: '支持发送注册验证码并在注册前完成邮箱验证。',
+    desc: '支持发送注册验证码，注册时由后端一次性完成验码与用户创建。',
   },
   {
     icon: Bot,
@@ -35,7 +35,6 @@ export function RegisterPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
-  const [emailVerified, setEmailVerified] = useState(false);
   const [registerSucceeded, setRegisterSucceeded] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -44,9 +43,10 @@ export function RegisterPage() {
     const trimmedUsername = username.trim();
     const trimmedNickname = nickname.trim();
     const trimmedEmail = email.trim();
+    const trimmedEmailCode = emailCode.trim();
 
-    if (!trimmedUsername || !trimmedNickname || !trimmedEmail || !password) {
-      setMessage('请先填写用户名、昵称、邮箱和密码。');
+    if (!trimmedUsername || !trimmedNickname || !trimmedEmail || !trimmedEmailCode || !password) {
+      setMessage('请先填写用户名、昵称、邮箱、验证码和密码。');
       setRegisterSucceeded(false);
       return;
     }
@@ -57,6 +57,7 @@ export function RegisterPage() {
         username: trimmedUsername,
         nickname: trimmedNickname,
         email: trimmedEmail,
+        email_code: trimmedEmailCode,
         password,
         phone: phone.trim() || undefined,
         invite_code: inviteCode.trim() || undefined,
@@ -83,31 +84,9 @@ export function RegisterPage() {
     try {
       setSubmitting(true);
       const response = await sendEmailCode({ email: email.trim(), scene: 'register' });
-      setEmailVerified(false);
-      setMessage(`验证码已发送，结果：${response.result}，有效期 ${response.expire_in}s。`);
+      setMessage(`验证码已发送，结果：${response.result}，有效期 ${response.expire_in}s。请在注册时一并提交邮箱和验证码。`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发送验证码失败';
-      setMessage(reason);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleVerifyEmail = async () => {
-    if (!email.trim() || !emailCode.trim()) {
-      setMessage('请填写邮箱和验证码。');
-      setEmailVerified(false);
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const response = await verifyEmail({ email: email.trim(), code: emailCode.trim() });
-      setEmailVerified(response.verified);
-      setMessage(`邮箱验证结果：${response.verified ? '已通过' : '未通过'}`);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : '验证邮箱失败';
-      setEmailVerified(false);
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -149,7 +128,7 @@ export function RegisterPage() {
 
           <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-300">
             <p className="font-medium text-slate-100">推荐路径</p>
-            <p className="mt-2 text-slate-400">发送验证码 → 验证邮箱 → 提交注册 → 进入任务发起页。</p>
+            <p className="mt-2 text-slate-400">填写基础信息 → 发送验证码 → 输入验证码 → 提交注册。</p>
           </div>
         </Card>
       }
@@ -176,7 +155,7 @@ export function RegisterPage() {
             <Label htmlFor="register-email">邮箱</Label>
             <Input id="register-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="请输入企业邮箱" />
           </div>
-          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div>
               <Label htmlFor="register-email-code">邮箱验证码</Label>
               <Input id="register-email-code" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} placeholder="请输入验证码" />
@@ -184,12 +163,9 @@ export function RegisterPage() {
             <Button type="button" variant="secondary" onClick={handleSendEmailCode} disabled={submitting}>
               发送验证码
             </Button>
-            <Button type="button" variant="secondary" onClick={handleVerifyEmail} disabled={submitting}>
-              验证邮箱
-            </Button>
           </div>
           <div className="sm:col-span-2 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
-            邮箱状态：{emailVerified ? '已验证，可直接注册' : '未验证，建议先完成邮箱验证'}
+            验证说明：注册接口会连同邮箱和验证码一起提交，由后端完成验码与创建用户。
           </div>
           <div>
             <Label htmlFor="register-phone">手机号（可选）</Label>
