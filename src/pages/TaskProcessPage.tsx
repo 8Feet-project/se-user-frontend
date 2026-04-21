@@ -1,4 +1,4 @@
-import { Activity, Bot, ListChecks, Shield, Sparkles, Workflow } from 'lucide-react';
+import { Activity, Bot, ListChecks, Shield, Workflow } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -406,6 +406,7 @@ export function TaskProcessPage() {
             启动交叉验证
           </Button>
           <Button
+            size="sm"
             variant="secondary"
             onClick={handleRefreshCrossValidationResult}
             disabled={loadingCrossValidationResult || !taskId}
@@ -611,65 +612,6 @@ export function TaskProcessPage() {
               )}
             </div>
           </Card>
-
-          <Card className="space-y-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <ListChecks size={16} className="text-[#63cab7]" />
-                <h3 className="text-xl font-semibold text-slate-100">实时事件流</h3>
-              </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleRefreshCrossValidationResult}
-                disabled={loadingCrossValidationResult || !taskId}
-              >
-                刷新交叉验证
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {!taskId ? (
-                <div className="panel-subtle p-6 text-sm text-slate-500">
-                  选择任务后，这里会按时间展示节点执行、失败重试、人工介入等关键事件。
-                </div>
-              ) : events.length > 0 ? (
-                events.map((event) => (
-                  <div
-                    key={event.event_id ?? `${event.node_id}-${event.timestamp}`}
-                    className={`panel-subtle p-4 ${eventTone(event.level)}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-100">{event.title ?? event.node_name}</p>
-                          <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(event.node_status)}`}>
-                            {statusText(event.node_status)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-slate-500">{formatTime(event.timestamp)}</p>
-                        {event.message ? <p className="mt-2 text-xs leading-6 text-slate-400">{event.message}</p> : null}
-                        <p className="mt-2 text-xs text-slate-500">节点：{event.node_name}</p>
-                      </div>
-                      <StatusBadge status={event.node_status} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs leading-6 text-slate-400">
-                      {Object.entries(event.metrics).length > 0 ? (
-                        Object.entries(event.metrics).map(([key, value]) => (
-                          <span key={`${event.event_id ?? event.timestamp}-${key}`} className="data-pill">
-                            {key}：{String(value)}
-                          </span>
-                        ))
-                      ) : (
-                        <span>当前事件暂无附加指标</span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="panel-subtle p-4 text-sm text-slate-500">当前没有事件日志。</div>
-              )}
-            </div>
-          </Card>
         </div>
 
         <div className="space-y-6">
@@ -795,33 +737,7 @@ export function TaskProcessPage() {
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">
-              这里把流程节点、事实层、事件流、交叉验证结果拆成四张独立卡片，符合设计系统强调的“深色分层 + teal 边界 + 状态清晰”的信息结构。
-            </p>
-            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-              <p className="font-medium text-white">人工介入说明</p>
-              <p className="mt-3 leading-7">
-                当节点进入等待人工状态时，前端会高亮节点并打开介入面板。用户可继续执行、修改规则或跳过节点，操作结果会实时回写到状态卡片与事件时间线。
-              </p>
-              {waitingNode ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button onClick={() => handleOpenIntervention(waitingNode)}>打开当前待介入节点</Button>
-                  <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${taskId}`)} disabled={!taskId}>
-                    查看报告
-                  </Button>
-                </div>
-              ) : (
-                <p className="mt-3 text-slate-400">
-                  {taskId ? '当前没有待人工处理节点。' : '请选择任务后查看是否存在待介入节点。'}
-                </p>
-              )}
-            </div>
-          </Card>
+
         </div>
       </div>
 

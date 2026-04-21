@@ -1,4 +1,4 @@
-import { BookmarkPlus, Bot, Clock3, Search, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { BookmarkPlus, Bot, Clock3, Search, Sparkles, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -402,15 +402,7 @@ export function TaskLaunchPage() {
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">
-              这一版任务发起页已经按设计系统落地为深海军蓝底色、teal 重点动作、24px 级卡片圆角，以及“主表单 + 侧栏信息卡”的信息结构。
-            </p>
-          </Card>
+
         </div>
       </div>
     </PageShell>

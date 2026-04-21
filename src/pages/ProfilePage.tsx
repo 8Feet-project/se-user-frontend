@@ -1,4 +1,4 @@
-﻿import { KeyRound, ShieldCheck, UserRound } from 'lucide-react';
+﻿import { KeyRound, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { changeCurrentUserPassword, getCurrentUserProfile, updateCurrentUserProfile } from '@/api/client';
@@ -204,15 +204,7 @@ export function ProfilePage() {
             </Button>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2">
-              <UserRound size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">设计落地说明</h3>
-            </div>
-            <p className="text-sm leading-7 text-slate-400">
-              个人中心现在更像“运营中的产品面板”而不是普通表单页：左边偏编辑，右边偏状态与安全，和新的壳层层级更一致。
-            </p>
-          </Card>
+
         </div>
       </div>
     </PageShell>
