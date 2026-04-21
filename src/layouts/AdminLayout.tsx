@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { BarChart3, Database, FileSearch, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { getCurrentUserPermissions } from '../api/client';
+import { AuthShell } from '../components/common/AuthShell';
 import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { cn } from '../lib/utils';
 
 interface AdminNavItem {
@@ -49,20 +51,30 @@ export function AdminLayout() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const hasToken = Boolean(localStorage.getItem('access_token'));
 
   useEffect(() => {
+    if (!hasToken) {
+      setLoading(false);
+      return;
+    }
+
     const loadPermissions = async () => {
       try {
         const response = await getCurrentUserPermissions();
         setPermissions(response.permissions);
         setRole(response.role);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '权限加载失败';
+        setAuthError(message);
       } finally {
         setLoading(false);
       }
     };
 
     void loadPermissions();
-  }, []);
+  }, [hasToken]);
 
   const accessibleItems = useMemo(() => {
     if (loading) {
@@ -70,6 +82,87 @@ export function AdminLayout() {
     }
     return adminNavItems.filter((item) => !item.permission || permissions.includes(item.permission));
   }, [loading, permissions]);
+
+  if (!hasToken) {
+    return (
+      <AuthShell
+        topActions={
+          <>
+            <Link className="text-slate-400 transition hover:text-slate-200" to="/register">
+              注册
+            </Link>
+            <Link
+              className="rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-slate-200 transition hover:border-[rgba(99,202,183,0.35)] hover:text-white"
+              to="/login"
+            >
+              立即登录
+            </Link>
+          </>
+        }
+        aside={
+          <Card variant="glow" className="p-8 sm:p-10">
+            <p className="page-kicker">Admin Guard</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">管理端需要先登录</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              当前未检测到登录令牌。请先使用平台账号登录，再进入统计看板、模型配置、账户权限与系统日志模块。
+            </p>
+          </Card>
+        }
+      >
+        <Card variant="glass" className="p-8 sm:p-10">
+          <p className="page-kicker">访问控制</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">登录后继续访问管理后台</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-400">如你尚未拥有管理员账号，请联系超级管理员完成账号开通与授权。</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/login">去登录</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/register">去注册</Link>
+            </Button>
+          </div>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  const isAdminRole = role === 'admin' || role === 'super_admin';
+  if (!loading && (!isAdminRole || authError)) {
+    return (
+      <AuthShell
+        topActions={
+          <Link className="text-slate-400 transition hover:text-slate-200" to="/login">
+            切换账号
+          </Link>
+        }
+        aside={
+          <Card variant="glow" className="p-8 sm:p-10">
+            <p className="page-kicker">Admin Guard</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">当前账号无管理端访问权限</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              仅管理员或超级管理员可进入管理后台。若你刚完成授权，请重新登录后重试。
+            </p>
+          </Card>
+        }
+      >
+        <Card variant="glass" className="p-8 sm:p-10">
+          <p className="page-kicker">权限校验</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">访问被拒绝</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-400">
+            {authError || '当前角色不满足管理端访问要求，请联系超级管理员调整权限。'}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/">返回用户端</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/login">重新登录</Link>
+            </Button>
+          </div>
+        </Card>
+      </AuthShell>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

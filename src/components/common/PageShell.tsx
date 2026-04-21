@@ -63,7 +63,7 @@ export function PageShell({
         >
           <div
             className={cn(
-              'flex h-full w-full flex-col overflow-hidden px-[10px] py-6 transition-[width,background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              'flex h-full w-full flex-col overflow-hidden px-[10px] py-6 transition-[width,background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-in-out',
               expanded
                 ? 'border-r border-[rgba(99,202,183,0.09)] bg-[#07111f]/92 shadow-[4px_0_32px_rgba(0,0,0,0.45)] backdrop-blur-xl'
                 : 'border-r border-transparent bg-transparent shadow-none backdrop-blur-none'
@@ -207,7 +207,7 @@ export function PageShell({
         </aside>
 
         <div
-          className="flex min-h-screen flex-col px-5 py-5 transition-[padding-left] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] sm:px-6 lg:pl-[var(--page-offset)] lg:pr-8 lg:py-8 xl:pr-10"
+          className="flex min-h-screen flex-col px-5 py-5 transition-[padding-left] duration-200 ease-in-out sm:px-6 lg:pl-[var(--page-offset)] lg:pr-8 lg:py-8 xl:pr-10"
           style={{ '--page-offset': `${contentOffset}px` } as CSSProperties}
         >
           <div className="mb-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/75 p-4 backdrop-blur-xl lg:hidden">

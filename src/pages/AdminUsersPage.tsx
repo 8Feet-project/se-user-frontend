@@ -4,6 +4,7 @@ import {
   createAdminUser,
   getAdminUserDetail,
   getAdminUsers,
+  getCurrentUserPermissions,
   resetAdminUserPassword,
   updateAdminUser,
 } from '../api/client';
@@ -12,8 +13,15 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { MultiSelect } from '../components/ui/multi-select';
 import { Select } from '../components/ui/select';
-import type { AdminUserDetail, AdminUserStatus, AdminUserListItem, UserRole } from '../types';
+import type {
+  AdminPermissionTreeNode,
+  AdminUserDetail,
+  AdminUserListItem,
+  AdminUserStatus,
+  UserRole,
+} from '../types';
 
 const statusOptions: Array<{ label: string; value: '' | AdminUserStatus }> = [
   { label: '全部状态', value: '' },
@@ -22,42 +30,37 @@ const statusOptions: Array<{ label: string; value: '' | AdminUserStatus }> = [
   { label: 'disabled', value: 'disabled' },
 ];
 
-const createRoleOptions: Array<{ label: string; value: 'admin' | 'user' }> = [
-  { label: 'admin', value: 'admin' },
-  { label: 'user', value: 'user' },
-];
-
 const editableStatusOptions: AdminUserStatus[] = ['active', 'pending', 'disabled'];
-const editableRoles: UserRole[] = ['super_admin', 'admin', 'user'];
 
 export function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserListItem[]>([]);
+  const [visibleUsers, setVisibleUsers] = useState<AdminUserListItem[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | AdminUserStatus>('');
-  const [form, setForm] = useState({ username: '', email: '', phone: '', role: 'admin' as 'admin' | 'user' });
+  const [currentRole, setCurrentRole] = useState<UserRole>('user');
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  const [form, setForm] = useState({ username: '', email: '', phone: '', role: 'user' as 'admin' | 'user', permissions: [] as string[] });
   const [tempPassword, setTempPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [savingDetail, setSavingDetail] = useState(false);
 
-  const loadUsers = async () => {
-    setLoading(true);
+  const loadGrantContext = async () => {
     try {
-      const response = await getAdminUsers();
-      setUsers(response.list);
-      if (response.list[0]) {
-        void handleSelectUser(response.list[0].user_id);
-      }
-    } finally {
-      setLoading(false);
+      const response = await getCurrentUserPermissions();
+      setCurrentRole(response.role);
+      setCurrentUserId(response.user_id || '');
+      setCurrentPermissions(response.permissions);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '加载当前授权上下文失败';
+      setFeedback({ tone: 'error', text: reason });
     }
   };
-
-  useEffect(() => {
-    void loadUsers();
-  }, []);
 
   const handleSelectUser = async (userId: string) => {
     setDetailLoading(true);
@@ -69,8 +72,63 @@ export function AdminUsersPage() {
     }
   };
 
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await getAdminUsers();
+      setUsers(response.list);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadGrantContext();
+    void loadUsers();
+  }, []);
+
+  useEffect(() => {
+    const scoped = users.filter((item) => {
+      if (currentRole === 'super_admin') {
+        return true;
+      }
+      if (currentRole === 'admin') {
+        if (item.user_id === currentUserId) {
+          return true;
+        }
+        return item.created_by_user_id === currentUserId;
+      }
+      return item.user_id === currentUserId;
+    });
+
+    setVisibleUsers(scoped);
+
+    if (scoped.length === 0) {
+      setSelectedUser(null);
+      return;
+    }
+
+    const currentSelected = selectedUser?.user_id;
+    if (!currentSelected || !scoped.some((item) => item.user_id === currentSelected)) {
+      void handleSelectUser(scoped[0].user_id);
+    }
+  }, [currentRole, currentUserId, selectedUser?.user_id, users]);
+
+  const creatableRoles = useMemo(() => {
+    if (currentRole === 'super_admin' || currentRole === 'admin') {
+      return ['admin', 'user'] as Array<'admin' | 'user'>;
+    }
+    return ['user'] as Array<'admin' | 'user'>;
+  }, [currentRole]);
+
+  useEffect(() => {
+    if (!creatableRoles.includes(form.role)) {
+      setForm((prev) => ({ ...prev, role: creatableRoles[0] }));
+    }
+  }, [creatableRoles, form.role]);
+
   const filteredUsers = useMemo(() => {
-    return users.filter((item) => {
+    return visibleUsers.filter((item) => {
       const matchesStatus = !statusFilter || item.status === statusFilter;
       const matchesKeyword =
         !keyword ||
@@ -79,25 +137,59 @@ export function AdminUsersPage() {
         item.email.toLowerCase().includes(keyword.toLowerCase());
       return matchesStatus && matchesKeyword;
     });
-  }, [keyword, statusFilter, users]);
+  }, [keyword, statusFilter, visibleUsers]);
+
+  const grantablePermissionOptions = useMemo(
+    () =>
+      currentPermissions.map((item) => ({
+        label: item,
+        value: item,
+      })),
+    [currentPermissions]
+  );
+
+  const selectedUserGrantablePermissions = useMemo(() => {
+    if (!selectedUser) {
+      return [];
+    }
+    return selectedUser.permissions.filter((item) => currentPermissions.includes(item));
+  }, [currentPermissions, selectedUser]);
 
   const handleCreateUser = async () => {
-    if (!form.username.trim() || !form.email.trim()) {
+    const username = form.username.trim();
+    const email = form.email.trim();
+    if (!username || !email) {
+      setFeedback({ tone: 'error', text: '请先填写用户名和邮箱。' });
       return;
     }
+
+    if (form.permissions.length === 0) {
+      setFeedback({ tone: 'error', text: '请至少授予 1 项权限。' });
+      return;
+    }
+
+    if (!form.permissions.every((item) => currentPermissions.includes(item))) {
+      setFeedback({ tone: 'error', text: '检测到越权授予：新账号权限必须是你当前权限集合的子集。' });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const response = await createAdminUser({
-        username: form.username.trim(),
-        email: form.email.trim(),
+        username,
+        email,
         phone: form.phone.trim() || undefined,
         role: form.role,
-        permissions: form.role === 'admin' ? ['admin:user:read', 'admin:dashboard:read'] : ['research:task:read'],
+        permissions: form.permissions,
       });
       setTempPassword(response.temp_password);
-      setForm({ username: '', email: '', phone: '', role: 'admin' });
+      setForm({ username: '', email: '', phone: '', role: creatableRoles[0], permissions: [] });
       await loadUsers();
       await handleSelectUser(response.user_id);
+      setFeedback({ tone: 'success', text: '账号创建成功，已应用前端子集校验并通过服务端校验。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '创建账号失败';
+      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
     } finally {
       setSubmitting(false);
     }
@@ -109,12 +201,24 @@ export function AdminUsersPage() {
     }
     const response = await resetAdminUserPassword(selectedUser.user_id);
     setTempPassword(response.temp_password);
+    setFeedback({ tone: 'success', text: '临时密码已重置。' });
   };
 
   const handleSaveDetail = async () => {
     if (!selectedUser) {
       return;
     }
+
+    if (!selectedUser.permissions.every((item) => currentPermissions.includes(item))) {
+      setFeedback({ tone: 'error', text: '检测到越权授予：目标账号权限必须为你当前权限的子集。' });
+      return;
+    }
+
+    if (selectedUser.role === 'super_admin' && currentRole !== 'super_admin') {
+      setFeedback({ tone: 'error', text: '仅超级管理员可修改超级管理员账号。' });
+      return;
+    }
+
     setSavingDetail(true);
     try {
       await updateAdminUser(selectedUser.user_id, {
@@ -124,10 +228,31 @@ export function AdminUsersPage() {
       });
       await loadUsers();
       await handleSelectUser(selectedUser.user_id);
+      setFeedback({ tone: 'success', text: '保存成功，前后端授权校验均已通过。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '保存失败';
+      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
     } finally {
       setSavingDetail(false);
     }
   };
+
+  const editableRoles = useMemo(() => {
+    if (currentRole === 'super_admin') {
+      return ['admin', 'user'] as const;
+    }
+    if (currentRole === 'admin') {
+      return ['admin', 'user'] as const;
+    }
+    return ['user'] as const;
+  }, [currentRole]);
+
+  const selectedPermissionTree = useMemo(() => {
+    if (!selectedUser) {
+      return [] as AdminPermissionTreeNode[];
+    }
+    return syncPermissionTreeChecked(selectedUser.permission_tree, new Set(selectedUser.permissions));
+  }, [selectedUser]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-6 text-slate-100">
@@ -136,7 +261,7 @@ export function AdminUsersPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">User & Permission</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">用户与权限管理</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            对齐管理端账户治理需求，提供账号创建、状态切换、权限查看、模型授权查看与临时密码重置能力。
+            管理员可向其创建的管理员/普通用户授予权限，且授权集合必须是当前授权者权限的子集；保存时执行前端校验与服务端二次校验。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadUsers()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
@@ -145,12 +270,24 @@ export function AdminUsersPage() {
         </Button>
       </header>
 
+      {feedback ? (
+        <div
+          className={`rounded-3xl border px-4 py-3 text-sm ${
+            feedback.tone === 'success'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+              : 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+          }`}
+        >
+          {feedback.text}
+        </div>
+      ) : null}
+
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">新建账号</h2>
-              <p className="mt-1 text-sm text-slate-400">用于初始化管理账号或业务用户。</p>
+              <p className="mt-1 text-sm text-slate-400">可创建管理员或普通用户，并分配当前账号权限子集。</p>
             </div>
             <Badge variant="secondary" className="bg-slate-800 text-slate-200">
               Create User
@@ -194,12 +331,25 @@ export function AdminUsersPage() {
                 value={form.role}
                 onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value as 'admin' | 'user' }))}
               >
-                {createRoleOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
+                {creatableRoles.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-slate-300">授予权限（可多选）</Label>
+              <div className="mt-2">
+                <MultiSelect
+                  options={grantablePermissionOptions}
+                  defaultValue={form.permissions}
+                  onValueChange={(values) => setForm((prev) => ({ ...prev, permissions: values }))}
+                  placeholder="请选择要授予的权限"
+                  className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"
+                  searchable
+                />
+              </div>
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -222,7 +372,7 @@ export function AdminUsersPage() {
               <p className="mt-1 text-sm text-slate-400">按关键词与状态快速定位账号。</p>
             </div>
             <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-              {filteredUsers.length} / {users.length}
+              {filteredUsers.length} / {visibleUsers.length}
             </Badge>
           </div>
           <div className="mt-6 grid gap-4">
@@ -251,7 +401,7 @@ export function AdminUsersPage() {
               </Select>
             </div>
             <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
-              管理端支持查看用户状态、角色、最后登录时间，并可进入详情页修改权限与重置密码。
+              当前授权上下文：角色 {currentRole}，可授予权限 {currentPermissions.length} 项。超管可见全部账户；管理员仅可见自己创建的账户与本人。
             </div>
           </div>
         </Card>
@@ -304,7 +454,7 @@ export function AdminUsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">用户详情与权限</h2>
-              <p className="mt-1 text-sm text-slate-400">可修改角色、状态，并查看权限树与模型授权。</p>
+              <p className="mt-1 text-sm text-slate-400">可修改角色、状态，并配置权限子集。</p>
             </div>
             <ShieldCheck className="h-5 w-5 text-slate-500" />
           </div>
@@ -326,6 +476,7 @@ export function AdminUsersPage() {
                       onChange={(event) =>
                         setSelectedUser((prev) => (prev ? { ...prev, role: event.target.value as UserRole } : prev))
                       }
+                      disabled={selectedUser.role === 'super_admin' && currentRole !== 'super_admin'}
                     >
                       {editableRoles.map((item) => (
                         <option key={item} value={item}>
@@ -353,18 +504,32 @@ export function AdminUsersPage() {
 
                 <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white">权限列表</h3>
+                    <h3 className="text-sm font-semibold text-white">可授予权限编辑（多选）</h3>
                     <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-                      {selectedUser.permissions.length} 项
+                      子集约束
                     </Badge>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {selectedUser.permissions.map((item) => (
-                      <Badge key={item} variant="secondary" className="bg-slate-800 text-slate-200">
-                        {item}
-                      </Badge>
-                    ))}
+                  <div className="mt-4">
+                    <MultiSelect
+                      options={grantablePermissionOptions}
+                      defaultValue={selectedUserGrantablePermissions}
+                      onValueChange={(values) =>
+                        setSelectedUser((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+                          const nonGrantable = prev.permissions.filter((item) => !currentPermissions.includes(item));
+                          return {
+                            ...prev,
+                            permissions: [...nonGrantable, ...values],
+                          };
+                        })
+                      }
+                      placeholder="请选择可授予权限"
+                      className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-900/80 text-slate-100"
+                    />
                   </div>
+                  <p className="mt-3 text-xs leading-5 text-slate-500">前端会拦截越权授予，提交后服务端会再次校验。</p>
                 </section>
 
                 <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5">
@@ -375,7 +540,7 @@ export function AdminUsersPage() {
                     </Badge>
                   </div>
                   <div className="mt-4 space-y-3">
-                    {selectedUser.permission_tree.map((node) => (
+                    {selectedPermissionTree.map((node) => (
                       <div key={node.key} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
                         <div className="font-medium text-white">{node.label}</div>
                         {node.children?.length ? (
@@ -383,7 +548,11 @@ export function AdminUsersPage() {
                             {node.children.map((child) => (
                               <Badge
                                 key={child.key}
-                                className={child.checked ? 'bg-emerald-500/15 text-emerald-200' : 'bg-slate-800 text-slate-300'}
+                                className={
+                                  child.checked
+                                    ? 'bg-emerald-500/15 text-emerald-200'
+                                    : 'bg-slate-800 text-slate-300'
+                                }
                               >
                                 {child.label}
                               </Badge>
@@ -440,6 +609,14 @@ export function AdminUsersPage() {
       </section>
     </div>
   );
+}
+
+function syncPermissionTreeChecked(nodes: AdminPermissionTreeNode[], selected: Set<string>): AdminPermissionTreeNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    checked: selected.has(node.key),
+    children: node.children ? syncPermissionTreeChecked(node.children, selected) : node.children,
+  }));
 }
 
 function StatusBadge({ status }: { status: AdminUserStatus }) {

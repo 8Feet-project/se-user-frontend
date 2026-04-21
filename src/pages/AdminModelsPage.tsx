@@ -5,6 +5,7 @@ import {
   createAdminModel,
   deleteAdminModel,
   getAdminModels,
+  getCurrentUserPermissions,
   testAdminModelConnection,
   updateAdminModel,
 } from '../api/client';
@@ -26,12 +27,20 @@ const defaultForm = {
   enabled: 'true',
 };
 
+const contextWindowMin = 1024;
+const contextWindowMax = 512000;
+const temperatureMin = 0;
+const temperatureMax = 2;
+
 export function AdminModelsPage() {
   const [models, setModels] = useState<AdminModelItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
   const [permissionPayload, setPermissionPayload] = useState<AdminModelPermissionRequest>({
     user_ids: ['user-admin-001'],
     group_ids: ['group-admin'],
@@ -45,14 +54,27 @@ export function AdminModelsPage() {
       const current = response.list[0];
       if (current) {
         setSelectedModelId((prev) => (prev && response.list.some((item) => item.model_id === prev) ? prev : current.model_id));
+      } else {
+        setSelectedModelId('');
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const loadCurrentPermissions = async () => {
+    try {
+      const response = await getCurrentUserPermissions();
+      setCurrentPermissions(response.permissions);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '无法加载当前权限';
+      setFeedback({ tone: 'error', text: reason });
+    }
+  };
+
   useEffect(() => {
     void loadModels();
+    void loadCurrentPermissions();
   }, []);
 
   const selectedModel = useMemo(() => {
@@ -75,20 +97,57 @@ export function AdminModelsPage() {
     });
   }, [selectedModel]);
 
+  const canAssignPermissions = currentPermissions.includes('admin:model:permission') || currentPermissions.includes('admin:model:write');
+
+  const validateForm = () => {
+    const contextWindow = Number(form.context_window);
+    const temperature = Number(form.temperature);
+
+    if (!form.model_name.trim() || !form.provider.trim() || !form.api_base_url.trim()) {
+      return '模型名称、提供商、API Base URL 为必填项。';
+    }
+    if (!Number.isFinite(contextWindow) || contextWindow < contextWindowMin || contextWindow > contextWindowMax) {
+      return `上下文窗口需在 ${contextWindowMin} 到 ${contextWindowMax} 之间。`;
+    }
+    if (!Number.isFinite(temperature) || temperature < temperatureMin || temperature > temperatureMax) {
+      return `温度值需在 ${temperatureMin} 到 ${temperatureMax} 之间。`;
+    }
+    return '';
+  };
+
   const handleCreate = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setFeedback({ tone: 'error', text: validationError });
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await createAdminModel({
-        model_name: form.model_name,
-        provider: form.provider,
-        api_base_url: form.api_base_url,
+        model_name: form.model_name.trim(),
+        provider: form.provider.trim(),
+        api_base_url: form.api_base_url.trim(),
         api_key: form.api_key,
         context_window: Number(form.context_window),
         temperature: Number(form.temperature),
         enabled: form.enabled === 'true',
       });
+
+      const testResult = await testAdminModelConnection(response.model_id);
+      if (!testResult.success) {
+        await deleteAdminModel(response.model_id);
+        await loadModels();
+        setFeedback({ tone: 'error', text: '接口连接测试失败，请检查 API 密钥或网络配置。已拦截保存。' });
+        return;
+      }
+
       await loadModels();
       setSelectedModelId(response.model_id);
+      setFeedback({ tone: 'success', text: '模型创建成功并通过连通性校验，配置已生效。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '新增模型失败';
+      setFeedback({ tone: 'error', text: reason });
     } finally {
       setSaving(false);
     }
@@ -98,18 +157,47 @@ export function AdminModelsPage() {
     if (!selectedModel) {
       return;
     }
+
+    const validationError = validateForm();
+    if (validationError) {
+      setFeedback({ tone: 'error', text: validationError });
+      return;
+    }
+
+    const rollbackPayload = {
+      model_name: selectedModel.model_name,
+      provider: selectedModel.provider,
+      api_base_url: selectedModel.api_base_url,
+      context_window: selectedModel.context_window,
+      temperature: selectedModel.temperature,
+      enabled: selectedModel.enabled,
+    };
+
     setSaving(true);
     try {
       await updateAdminModel(selectedModel.model_id, {
-        model_name: form.model_name,
-        provider: form.provider,
-        api_base_url: form.api_base_url,
+        model_name: form.model_name.trim(),
+        provider: form.provider.trim(),
+        api_base_url: form.api_base_url.trim(),
         api_key: form.api_key || undefined,
         context_window: Number(form.context_window),
         temperature: Number(form.temperature),
         enabled: form.enabled === 'true',
       });
+
+      const testResult = await testAdminModelConnection(selectedModel.model_id);
+      if (!testResult.success) {
+        await updateAdminModel(selectedModel.model_id, rollbackPayload);
+        await loadModels();
+        setFeedback({ tone: 'error', text: '接口连接测试失败，请检查 API 密钥或网络配置。已回滚本次修改。' });
+        return;
+      }
+
       await loadModels();
+      setFeedback({ tone: 'success', text: '保存成功并通过连通性校验。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '更新模型失败';
+      setFeedback({ tone: 'error', text: reason });
     } finally {
       setSaving(false);
     }
@@ -119,24 +207,68 @@ export function AdminModelsPage() {
     if (!selectedModel) {
       return;
     }
-    await deleteAdminModel(selectedModel.model_id);
-    await loadModels();
+
+    const shouldDelete = window.confirm(`确认删除模型 ${selectedModel.model_name} 吗？`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteAdminModel(selectedModel.model_id);
+      await loadModels();
+      setFeedback({ tone: 'success', text: '模型已删除。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '删除模型失败';
+      setFeedback({ tone: 'error', text: reason });
+    }
   };
 
   const handleTestConnection = async () => {
     if (!selectedModel) {
       return;
     }
-    await testAdminModelConnection(selectedModel.model_id);
-    await loadModels();
+
+    setTesting(true);
+    try {
+      const response = await testAdminModelConnection(selectedModel.model_id);
+      await loadModels();
+      if (response.success) {
+        setFeedback({ tone: 'success', text: `连接测试成功，延迟 ${response.latency_ms}ms。` });
+      } else {
+        setFeedback({ tone: 'error', text: response.message || '连接测试失败，请检查 API 密钥或网络配置。' });
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '连接测试失败';
+      setFeedback({ tone: 'error', text: reason });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleAssignPermissions = async () => {
     if (!selectedModel) {
       return;
     }
-    await assignAdminModelPermissions(selectedModel.model_id, permissionPayload);
-    await loadModels();
+
+    if (!canAssignPermissions) {
+      setFeedback({ tone: 'error', text: '当前账号无模型权限分配能力，请联系超级管理员授权。' });
+      return;
+    }
+
+    const hasGrantTarget = (permissionPayload.user_ids?.length ?? 0) > 0 || (permissionPayload.group_ids?.length ?? 0) > 0;
+    if (!hasGrantTarget) {
+      setFeedback({ tone: 'error', text: '请至少指定 1 个用户或用户组。' });
+      return;
+    }
+
+    try {
+      await assignAdminModelPermissions(selectedModel.model_id, permissionPayload);
+      await loadModels();
+      setFeedback({ tone: 'success', text: '模型权限分配已提交并通过服务端校验。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '模型权限分配失败';
+      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
+    }
   };
 
   return (
@@ -146,7 +278,7 @@ export function AdminModelsPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Model Management</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">大模型参数配置与权限管理</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            支持模型新增、参数编辑、连接测试、启停控制以及模型授权分配，作为管理端核心能力之一。
+            支持模型新增、参数编辑、连接测试、启停控制以及模型授权分配。保存动作会触发连通性校验，失败时自动拦截并回滚。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadModels()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
@@ -154,6 +286,18 @@ export function AdminModelsPage() {
           {loading ? '刷新中...' : '刷新模型'}
         </Button>
       </header>
+
+      {feedback ? (
+        <div
+          className={`rounded-3xl border px-4 py-3 text-sm ${
+            feedback.tone === 'success'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+              : 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+          }`}
+        >
+          {feedback.text}
+        </div>
+      ) : null}
 
       <section className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="min-h-0 rounded-[28px] border border-slate-800 bg-slate-900/70 p-5">
@@ -228,10 +372,40 @@ export function AdminModelsPage() {
                 <Input value={form.api_key} onChange={(event) => setForm((prev) => ({ ...prev, api_key: event.target.value }))} className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100" placeholder="编辑时可留空表示不更新" />
               </Field>
               <Field label="上下文窗口">
-                <Input value={form.context_window} onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))} className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100" />
+                <div className="space-y-3">
+                  <input
+                    type="range"
+                    min={contextWindowMin}
+                    max={contextWindowMax}
+                    step={1024}
+                    value={Number(form.context_window) || contextWindowMin}
+                    onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))}
+                    className="w-full accent-sky-400"
+                  />
+                  <Input
+                    value={form.context_window}
+                    onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))}
+                    className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  />
+                </div>
               </Field>
               <Field label="温度">
-                <Input value={form.temperature} onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))} className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100" />
+                <div className="space-y-3">
+                  <input
+                    type="range"
+                    min={temperatureMin}
+                    max={temperatureMax}
+                    step={0.1}
+                    value={Number(form.temperature) || 0}
+                    onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))}
+                    className="w-full accent-sky-400"
+                  />
+                  <Input
+                    value={form.temperature}
+                    onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))}
+                    className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  />
+                </div>
               </Field>
               <Field label="启用状态">
                 <Select value={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.value }))}>
@@ -289,9 +463,9 @@ export function AdminModelsPage() {
               </Field>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button onClick={() => void handleTestConnection()} variant="secondary" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200" disabled={!selectedModel}>
+              <Button onClick={() => void handleTestConnection()} variant="secondary" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200" disabled={!selectedModel || testing}>
                 <Wifi className="mr-2 h-4 w-4" />
-                测试连接
+                {testing ? '测试中...' : '测试连接'}
               </Button>
               <Button onClick={() => void handleAssignPermissions()} className="rounded-2xl bg-emerald-500 text-white hover:bg-emerald-400" disabled={!selectedModel}>
                 分配模型权限
@@ -303,6 +477,9 @@ export function AdminModelsPage() {
                 <span className="text-sky-300">{selectedModel.connectivity_status}</span>，授权摘要：{selectedModel.granted_scope_summary || '未配置'}。
               </div>
             ) : null}
+            <p className="mt-4 text-xs leading-5 text-slate-500">
+              权限分配采用双重确认：前端先校验当前账号是否具备授权能力，提交后再由服务端进行最终合法性校验。
+            </p>
           </Card>
         </div>
       </section>

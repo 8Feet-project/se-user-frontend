@@ -463,6 +463,7 @@ let mockAdminUsers: AdminUserListItem[] = [
     phone: '13800000001',
     role: 'admin',
     status: 'active',
+    created_by_user_id: 'user-super-001',
     last_login_at: '2026-04-20T09:20:00Z',
     created_at: '2026-03-01T08:00:00Z',
   },
@@ -474,6 +475,7 @@ let mockAdminUsers: AdminUserListItem[] = [
     phone: '13800000002',
     role: 'admin',
     status: 'active',
+    created_by_user_id: 'user-admin-001',
     last_login_at: '2026-04-20T08:45:00Z',
     created_at: '2026-03-02T08:00:00Z',
   },
@@ -485,6 +487,7 @@ let mockAdminUsers: AdminUserListItem[] = [
     phone: '13800000003',
     role: 'user',
     status: 'disabled',
+    created_by_user_id: 'user-admin-001',
     last_login_at: '2026-04-15T14:18:00Z',
     created_at: '2026-03-06T09:00:00Z',
   },
@@ -498,6 +501,7 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
       nickname: '运营管理员',
       email: 'ops-admin@8feet.com',
       phone: '13800000001',
+      created_by_user_id: 'user-super-001',
       created_at: '2026-03-01T08:00:00Z',
       last_login_at: '2026-04-20T09:20:00Z',
     },
@@ -525,6 +529,7 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
       nickname: '研究负责人',
       email: 'research-owner@8feet.com',
       phone: '13800000002',
+      created_by_user_id: 'user-admin-001',
       created_at: '2026-03-02T08:00:00Z',
       last_login_at: '2026-04-20T08:45:00Z',
     },
@@ -541,6 +546,7 @@ const mockAdminUserDetails: Record<string, AdminUserDetail> = {
       nickname: '审计专员',
       email: 'auditor@8feet.com',
       phone: '13800000003',
+      created_by_user_id: 'user-admin-001',
       created_at: '2026-03-06T09:00:00Z',
       last_login_at: '2026-04-15T14:18:00Z',
     },
@@ -923,6 +929,7 @@ export async function mockGetAdminUsers(): Promise<AdminUsersResponse> {
 
 export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Promise<CreateAdminUserResponse> {
   const userId = `user-${Date.now()}`;
+  const creatorUserId = 'user-admin-001';
   const now = new Date().toISOString();
   mockAdminUsers.unshift({
     user_id: userId,
@@ -932,6 +939,7 @@ export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Prom
     phone: payload.phone,
     role: payload.role,
     status: 'pending',
+    created_by_user_id: creatorUserId,
     created_at: now,
     last_login_at: undefined,
   });
@@ -942,6 +950,7 @@ export async function mockCreateAdminUser(payload: CreateAdminUserRequest): Prom
       nickname: payload.username,
       email: payload.email,
       phone: payload.phone,
+      created_by_user_id: creatorUserId,
       created_at: now,
     },
     role: payload.role,
@@ -1023,6 +1032,7 @@ export async function mockResetAdminUserPassword(
 
 export async function mockGetCurrentUserPermissions(): Promise<CurrentUserPermissionsResponse> {
   return {
+    user_id: 'user-admin-001',
     role: 'admin',
     permissions: [
       'admin:model:read',

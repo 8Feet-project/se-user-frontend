@@ -767,6 +767,7 @@ export interface AdminUserListItem {
   phone?: string;
   role: UserRole;
   status: AdminUserStatus;
+  created_by_user_id?: string;
   last_login_at?: string;
   created_at: string;
 }
@@ -796,6 +797,7 @@ export interface AdminUserDetail {
     nickname: string;
     email: string;
     phone?: string;
+    created_by_user_id?: string;
     created_at?: string;
     last_login_at?: string;
   };
@@ -823,6 +825,7 @@ export interface ResetAdminUserPasswordResponse {
 }
 
 export interface CurrentUserPermissionsResponse {
+  user_id?: string;
   role: UserRole;
   permissions: string[];
 }
