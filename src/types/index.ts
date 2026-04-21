@@ -57,6 +57,7 @@ export interface RegisterRequest {
   nickname: string;
   password: string;
   email: string;
+  email_code: string;
   phone?: string;
   invite_code?: string;
 }
