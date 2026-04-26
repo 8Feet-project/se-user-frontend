@@ -13,10 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { downloadReport } from '@/lib/exportReport';
 import type { ReportDetail, ReportListItem, ReportQaItem } from '@/types';
 
+const isValidReportId = (value: string | null | undefined) => Boolean(value && /^\d+$/.test(value));
+
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const initialReportId = searchParams.get('report_id');
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [reportId, setReportId] = useState(searchParams.get('report_id') ?? '');
+  const [reportId, setReportId] = useState(isValidReportId(initialReportId) ? initialReportId ?? '' : '');
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [qaList, setQaList] = useState<ReportQaItem[]>([]);
   const [qaQuestion, setQaQuestion] = useState('');
@@ -34,15 +37,18 @@ export function ReportPreviewPage() {
         setReports(response.list);
 
         const reportIdFromUrl = searchParams.get('report_id');
-        if (reportIdFromUrl) {
-          setReportId(reportIdFromUrl);
+        const validReportIdFromUrl = isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '';
+        if (validReportIdFromUrl) {
+          setReportId(validReportIdFromUrl);
           return;
         }
 
-        const fallbackId = response.list[0]?.report_id ?? '';
+        const fallbackId = response.list.find((item) => isValidReportId(item.report_id))?.report_id ?? '';
         setReportId(fallbackId);
         if (fallbackId) {
           setSearchParams({ report_id: fallbackId }, { replace: true });
+        } else if (reportIdFromUrl) {
+          setSearchParams({}, { replace: true });
         }
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载报告列表失败';
@@ -75,6 +81,11 @@ export function ReportPreviewPage() {
   }, [reportId]);
 
   const handleChangeReport = (nextReportId: string) => {
+    if (nextReportId && !isValidReportId(nextReportId)) {
+      setMessage('报告 ID 无效，请重新选择报告。');
+      return;
+    }
+
     setReportId(nextReportId);
     setQaQuestion('');
     setAppendInputs({});
