@@ -227,6 +227,19 @@ export async function logout(payload: LogoutRequest): Promise<LogoutResponse> {
   });
 }
 
+export async function logoutCurrentSession(): Promise<void> {
+  const refreshToken = localStorage.getItem('refresh_token');
+
+  try {
+    if (refreshToken) {
+      await logout({ refresh_token: refreshToken });
+    }
+  } finally {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  }
+}
+
 export async function refreshToken(
   payload: RefreshTokenRequest
 ): Promise<RefreshTokenResponse> {

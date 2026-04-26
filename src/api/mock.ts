@@ -1171,7 +1171,11 @@ export async function mockRegister(payload: RegisterRequest): Promise<RegisterRe
   };
 }
 
-export async function mockLogout(_payload: LogoutRequest): Promise<LogoutResponse> {
+export async function mockLogout(payload: LogoutRequest): Promise<LogoutResponse> {
+  if (!payload.refresh_token.trim()) {
+    throw new Error('缺少刷新令牌');
+  }
+
   return {
     result: 'ok',
   };

@@ -1,5 +1,5 @@
 ﻿import { type CSSProperties, type ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
   Bookmark,
@@ -8,12 +8,13 @@ import {
   GitBranch,
   History,
   LayoutDashboard,
-  LogIn,
+  LogOut,
   Settings,
   ShieldPlus,
   User,
 } from 'lucide-react';
 
+import { logoutCurrentSession } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -48,10 +49,21 @@ export function PageShell({
   children: ReactNode;
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(_sidebarHovered);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleMouseEnter = () => { _sidebarHovered = true; setExpanded(true); };
   const handleMouseLeave = () => { _sidebarHovered = false; setExpanded(false); };
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await logoutCurrentSession();
+    } finally {
+      setLoggingOut(false);
+      navigate('/login');
+    }
+  };
 
   const contentOffset = expanded ? 220 : 68;
 
@@ -175,18 +187,20 @@ export function PageShell({
             </div>
 
             <div className={cn('mt-auto pt-3', expanded ? 'border-t border-[rgba(99,202,183,0.08)]' : '')}>
-              <Link
-                to="/login"
-                title="登录 / 切换账号"
-                className="flex items-center gap-2 rounded-[10px] px-[11px] py-2 text-[13px] text-slate-500 transition-colors duration-150 hover:text-slate-300"
+              <button
+                type="button"
+                title="退出登录"
+                onClick={() => void handleLogout()}
+                disabled={loggingOut}
+                className="flex w-full items-center gap-2 rounded-[10px] px-[11px] py-2 text-left text-[13px] text-slate-500 transition-colors duration-150 hover:text-slate-300 disabled:cursor-wait disabled:opacity-70"
               >
                 <span className="flex w-[14px] shrink-0 items-center justify-center">
-                  <LogIn size={14} strokeWidth={1.6} />
+                  <LogOut size={14} strokeWidth={1.6} />
                 </span>
                 <span className={cn('min-w-0 overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
-                  登录 / 切换账号
+                  {loggingOut ? '退出中...' : '退出登录'}
                 </span>
-              </Link>
+              </button>
             </div>
           </div>
         </aside>
@@ -206,12 +220,15 @@ export function PageShell({
                   <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-slate-500">Intel Research</p>
                 </div>
               </Link>
-              <Link
-                to="/login"
-                className="rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-[rgba(99,202,183,0.35)] hover:text-slate-100"
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                disabled={loggingOut}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-[rgba(99,202,183,0.35)] hover:text-slate-100 disabled:cursor-wait disabled:opacity-70"
               >
-                账户入口
-              </Link>
+                <LogOut size={13} strokeWidth={1.7} />
+                {loggingOut ? '退出中...' : '退出登录'}
+              </button>
             </div>
             <nav className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {navItems.map((item) => {

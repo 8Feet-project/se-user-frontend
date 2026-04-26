@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { BarChart3, Database, FileSearch, ShieldCheck, Sparkles, Users } from 'lucide-react';
-import { getCurrentUserPermissions } from '../api/client';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { BarChart3, Database, FileSearch, LogOut, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { getCurrentUserPermissions, logoutCurrentSession } from '../api/client';
 import { AuthShell } from '../components/common/AuthShell';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -48,11 +48,23 @@ const adminNavItems: AdminNavItem[] = [
 
 export function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [permissions, setPermissions] = useState<string[]>([]);
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
   const hasToken = Boolean(localStorage.getItem('access_token'));
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await logoutCurrentSession();
+    } finally {
+      setLoggingOut(false);
+      navigate('/login');
+    }
+  };
 
   useEffect(() => {
     if (!hasToken) {
@@ -131,9 +143,15 @@ export function AdminLayout() {
     return (
       <AuthShell
         topActions={
-          <Link className="text-slate-400 transition hover:text-slate-200" to="/login">
-            切换账号
-          </Link>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-slate-400 transition hover:text-slate-200 disabled:cursor-wait disabled:opacity-70"
+            onClick={() => void handleLogout()}
+            disabled={loggingOut}
+          >
+            <LogOut className="h-4 w-4" />
+            {loggingOut ? '退出中...' : '切换账号'}
+          </button>
         }
         aside={
           <Card variant="glow" className="p-8 sm:p-10">
@@ -155,8 +173,9 @@ export function AdminLayout() {
             <Button asChild>
               <Link to="/">返回用户端</Link>
             </Button>
-            <Button asChild variant="secondary">
-              <Link to="/login">重新登录</Link>
+            <Button type="button" variant="secondary" onClick={() => void handleLogout()} disabled={loggingOut}>
+              <LogOut className="h-4 w-4" />
+              {loggingOut ? '退出中...' : '重新登录'}
             </Button>
           </div>
         </Card>
@@ -223,6 +242,16 @@ export function AdminLayout() {
           <div className="mt-6 flex gap-3 border-t border-slate-800 pt-5">
             <Button asChild variant="secondary" className="flex-1 rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
               <Link to="/">返回用户端</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1 rounded-2xl border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-900"
+              onClick={() => void handleLogout()}
+              disabled={loggingOut}
+            >
+              <LogOut className="h-4 w-4" />
+              {loggingOut ? '退出中...' : '退出登录'}
             </Button>
           </div>
         </aside>

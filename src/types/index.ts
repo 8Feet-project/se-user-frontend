@@ -71,7 +71,7 @@ export interface RegisterResponse {
 }
 
 export interface LogoutRequest {
-  refresh_token?: string;
+  refresh_token: string;
 }
 
 export interface LogoutResponse {
