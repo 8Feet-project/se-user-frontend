@@ -417,6 +417,10 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     api_base_url: 'https://api.deepseek.com/v1',
     context_window: 128000,
     temperature: 0.2,
+    max_output_tokens: 8192,
+    input_price_1m: 2,
+    output_price_1m: 8,
+    description: '通用推理模型，适合大多数调研问答与摘要场景。',
     enabled: true,
     connectivity_status: 'connected',
     updated_at: '2026-04-18T08:30:00Z',
@@ -429,6 +433,10 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     api_base_url: 'https://api.openai.com/v1',
     context_window: 128000,
     temperature: 0.1,
+    max_output_tokens: 16384,
+    input_price_1m: 5,
+    output_price_1m: 15,
+    description: '复杂推理与高质量写作场景优先，成本相对更高。',
     enabled: true,
     connectivity_status: 'connected',
     updated_at: '2026-04-19T03:20:00Z',
@@ -441,6 +449,10 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     context_window: 32000,
     temperature: 0.3,
+    max_output_tokens: 4096,
+    input_price_1m: 1.8,
+    output_price_1m: 6.5,
+    description: '中文理解表现稳定，当前线路波动较大，已停用。',
     enabled: false,
     connectivity_status: 'failed',
     updated_at: '2026-04-17T12:10:00Z',
@@ -823,6 +835,10 @@ export async function mockCreateAdminModel(
     api_base_url: payload.api_base_url,
     context_window: payload.context_window,
     temperature: payload.temperature,
+    max_output_tokens: payload.max_output_tokens,
+    input_price_1m: payload.input_price_1m,
+    output_price_1m: payload.output_price_1m,
+    description: payload.description,
     enabled: payload.enabled,
     connectivity_status: 'unknown',
     updated_at: new Date().toISOString(),
@@ -861,6 +877,22 @@ export async function mockUpdateAdminModel(
     if (payload.temperature !== undefined) {
       target.temperature = payload.temperature;
       updatedFields.push('temperature');
+    }
+    if (payload.max_output_tokens !== undefined) {
+      target.max_output_tokens = payload.max_output_tokens;
+      updatedFields.push('max_output_tokens');
+    }
+    if (payload.input_price_1m !== undefined) {
+      target.input_price_1m = payload.input_price_1m;
+      updatedFields.push('input_price_1m');
+    }
+    if (payload.output_price_1m !== undefined) {
+      target.output_price_1m = payload.output_price_1m;
+      updatedFields.push('output_price_1m');
+    }
+    if (payload.description !== undefined) {
+      target.description = payload.description;
+      updatedFields.push('description');
     }
     if (payload.enabled !== undefined) {
       target.enabled = payload.enabled;
@@ -1404,10 +1436,15 @@ function normalizeCrossValidationResult(
     [];
 
   return {
+    task_id: record?.task_id,
+    status: record?.status,
     consensus_points: record?.consensus_points ?? (record?.consensus_summary ? [record.consensus_summary] : []),
     difference_points: record?.difference_points ?? record?.disagreements ?? [],
     model_outputs: modelOutputs.map((item) => ({ ...item })),
     used_models: record?.used_models ?? modelOutputs.map((item) => item.model_id),
+    consensus_summary: record?.consensus_summary,
+    consensus_score: record?.consensus_score,
+    updated_at: record?.updated_at,
   };
 }
 

@@ -285,10 +285,15 @@ export interface CrossValidationModelOutput {
 }
 
 export interface CrossValidationResultResponse {
+  task_id?: string;
+  status?: 'queued' | 'running' | 'completed' | 'failed';
   consensus_points: string[];
   difference_points: string[];
   model_outputs: CrossValidationModelOutput[];
   used_models: string[];
+  consensus_summary?: string;
+  consensus_score?: number;
+  updated_at?: string;
 }
 
 export interface WorkflowNodeMetric {
@@ -694,6 +699,10 @@ export interface AdminModelItem {
   api_base_url: string;
   context_window: number;
   temperature: number;
+  max_output_tokens?: number;
+  input_price_1m?: number;
+  output_price_1m?: number;
+  description?: string;
   enabled: boolean;
   connectivity_status: AdminModelConnectivityStatus;
   updated_at: string;
@@ -712,6 +721,10 @@ export interface CreateAdminModelRequest {
   api_key: string;
   context_window: number;
   temperature: number;
+  max_output_tokens: number;
+  input_price_1m: number;
+  output_price_1m: number;
+  description?: string;
   enabled: boolean;
 }
 
@@ -727,6 +740,10 @@ export interface UpdateAdminModelRequest {
   api_key?: string;
   context_window?: number;
   temperature?: number;
+  max_output_tokens?: number;
+  input_price_1m?: number;
+  output_price_1m?: number;
+  description?: string;
   enabled?: boolean;
 }
 

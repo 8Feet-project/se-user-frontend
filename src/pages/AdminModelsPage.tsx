@@ -15,6 +15,7 @@ import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
 import type { AdminModelItem, AdminModelPermissionRequest } from '../types';
 
 const defaultForm = {
@@ -24,6 +25,10 @@ const defaultForm = {
   api_key: '',
   context_window: '128000',
   temperature: '0.2',
+  max_output_tokens: '2048',
+  input_price_1m: '0',
+  output_price_1m: '0',
+  description: '',
   enabled: 'true',
 };
 
@@ -31,6 +36,9 @@ const contextWindowMin = 1024;
 const contextWindowMax = 512000;
 const temperatureMin = 0;
 const temperatureMax = 2;
+const maxOutputTokensMin = 1;
+const maxOutputTokensMax = 512000;
+const priceMin = 0;
 
 function parseUserIds(value: string) {
   return value
@@ -100,6 +108,10 @@ export function AdminModelsPage() {
       api_key: '',
       context_window: String(selectedModel.context_window),
       temperature: String(selectedModel.temperature),
+      max_output_tokens: String(selectedModel.max_output_tokens ?? 2048),
+      input_price_1m: String(selectedModel.input_price_1m ?? 0),
+      output_price_1m: String(selectedModel.output_price_1m ?? 0),
+      description: selectedModel.description ?? '',
       enabled: String(selectedModel.enabled),
     });
   }, [selectedModel]);
@@ -109,6 +121,9 @@ export function AdminModelsPage() {
   const validateForm = () => {
     const contextWindow = Number(form.context_window);
     const temperature = Number(form.temperature);
+    const maxOutputTokens = Number(form.max_output_tokens);
+    const inputPrice = Number(form.input_price_1m);
+    const outputPrice = Number(form.output_price_1m);
 
     if (!form.model_name.trim() || !form.provider.trim() || !form.api_base_url.trim()) {
       return '模型名称、提供商、API Base URL 为必填项。';
@@ -118,6 +133,15 @@ export function AdminModelsPage() {
     }
     if (!Number.isFinite(temperature) || temperature < temperatureMin || temperature > temperatureMax) {
       return `温度值需在 ${temperatureMin} 到 ${temperatureMax} 之间。`;
+    }
+    if (!Number.isFinite(maxOutputTokens) || maxOutputTokens < maxOutputTokensMin || maxOutputTokens > maxOutputTokensMax) {
+      return `最大输出 Tokens 需在 ${maxOutputTokensMin} 到 ${maxOutputTokensMax} 之间。`;
+    }
+    if (!Number.isFinite(inputPrice) || inputPrice < priceMin) {
+      return '输入单价需为大于等于 0 的数字。';
+    }
+    if (!Number.isFinite(outputPrice) || outputPrice < priceMin) {
+      return '输出单价需为大于等于 0 的数字。';
     }
     return '';
   };
@@ -138,6 +162,10 @@ export function AdminModelsPage() {
         api_key: form.api_key,
         context_window: Number(form.context_window),
         temperature: Number(form.temperature),
+        max_output_tokens: Number(form.max_output_tokens),
+        input_price_1m: Number(form.input_price_1m),
+        output_price_1m: Number(form.output_price_1m),
+        description: form.description.trim() || undefined,
         enabled: form.enabled === 'true',
       });
 
@@ -177,6 +205,10 @@ export function AdminModelsPage() {
       api_base_url: selectedModel.api_base_url,
       context_window: selectedModel.context_window,
       temperature: selectedModel.temperature,
+      max_output_tokens: selectedModel.max_output_tokens ?? 2048,
+      input_price_1m: selectedModel.input_price_1m ?? 0,
+      output_price_1m: selectedModel.output_price_1m ?? 0,
+      description: selectedModel.description ?? '',
       enabled: selectedModel.enabled,
     };
 
@@ -189,6 +221,10 @@ export function AdminModelsPage() {
         api_key: form.api_key || undefined,
         context_window: Number(form.context_window),
         temperature: Number(form.temperature),
+        max_output_tokens: Number(form.max_output_tokens),
+        input_price_1m: Number(form.input_price_1m),
+        output_price_1m: Number(form.output_price_1m),
+        description: form.description.trim() || undefined,
         enabled: form.enabled === 'true',
       });
 
@@ -346,6 +382,9 @@ export function AdminModelsPage() {
                       温度 {item.temperature}
                     </Badge>
                     <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+                      输出上限 {item.max_output_tokens ?? 2048}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-slate-800 text-slate-200">
                       {item.enabled ? '已启用' : '已停用'}
                     </Badge>
                   </div>
@@ -414,11 +453,40 @@ export function AdminModelsPage() {
                   />
                 </div>
               </Field>
+              <Field label="最大输出 Tokens">
+                <Input
+                  value={form.max_output_tokens}
+                  onChange={(event) => setForm((prev) => ({ ...prev, max_output_tokens: event.target.value }))}
+                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                />
+              </Field>
+              <Field label="输入单价 / 1M Tokens">
+                <Input
+                  value={form.input_price_1m}
+                  onChange={(event) => setForm((prev) => ({ ...prev, input_price_1m: event.target.value }))}
+                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                />
+              </Field>
+              <Field label="输出单价 / 1M Tokens">
+                <Input
+                  value={form.output_price_1m}
+                  onChange={(event) => setForm((prev) => ({ ...prev, output_price_1m: event.target.value }))}
+                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                />
+              </Field>
               <Field label="启用状态">
                 <Select value={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.value }))}>
                   <option value="true">启用</option>
                   <option value="false">停用</option>
                 </Select>
+              </Field>
+              <Field label="模型描述">
+                <Textarea
+                  value={form.description}
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                  className="min-h-28 rounded-2xl border-slate-700 bg-slate-950/80 px-4 py-3 text-slate-100"
+                  placeholder="填写模型推荐使用场景、优势和限制"
+                />
               </Field>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
