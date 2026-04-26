@@ -86,6 +86,7 @@ import type {
   AdminLogExportResponse,
   AdminLogExportStatusResponse,
   AdminLogsResponse,
+  AdminModelItem,
   AdminModelListResponse,
   AdminModelPermissionRequest,
   AdminModelPermissionResponse,
@@ -93,6 +94,7 @@ import type {
   AdminObjectDistributionResponse,
   AdminUserActivityResponse,
   AdminUserDetail,
+  AdminUserListItem,
   AdminUsersResponse,
   AnalyzeTaskRequest,
   AnalyzeTaskResponse,
@@ -196,6 +198,90 @@ import type {
 } from '../types';
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
+
+type BackendAdminModelItem = Partial<AdminModelItem> & {
+  id?: number | string;
+  name?: string;
+  api_endpoint?: string;
+  is_enabled?: boolean;
+  is_online?: boolean;
+  pricing?: {
+    input?: number;
+    output?: number;
+  };
+  params?: Record<string, unknown>;
+};
+
+function mapAdminModel(item: BackendAdminModelItem): AdminModelItem {
+  const enabled = item.enabled ?? item.is_enabled ?? false;
+  const online = item.is_online ?? enabled;
+  return {
+    model_id: String(item.model_id ?? item.id ?? ''),
+    model_name: item.model_name ?? item.name ?? '',
+    provider: item.provider ?? '',
+    api_base_url: item.api_base_url ?? item.api_endpoint ?? '',
+    context_window: item.context_window ?? 4096,
+    temperature: item.temperature ?? Number(item.params?.temperature ?? 0.2),
+    max_output_tokens: item.max_output_tokens ?? 2048,
+    input_price_1m: item.input_price_1m ?? item.pricing?.input ?? 0,
+    output_price_1m: item.output_price_1m ?? item.pricing?.output ?? 0,
+    description: item.description,
+    enabled,
+    connectivity_status: item.connectivity_status ?? (online ? 'connected' : 'failed'),
+    updated_at: item.updated_at ?? '',
+    granted_scope_summary: item.granted_scope_summary,
+  };
+}
+
+type BackendAdminUserListItem = Omit<AdminUserListItem, 'user_id'> & {
+  user_id: number | string;
+};
+
+type BackendAdminUserDetail = Omit<AdminUserDetail, 'user_id'> & {
+  user_id: number | string;
+};
+
+type BackendCreateAdminUserResponse = Omit<CreateAdminUserResponse, 'user_id'> & {
+  user_id: number | string;
+};
+
+function mapAdminUser(item: BackendAdminUserListItem): AdminUserListItem {
+  return {
+    ...item,
+    user_id: Number(item.user_id),
+  };
+}
+
+function mapAdminUserDetail(item: BackendAdminUserDetail): AdminUserDetail {
+  return {
+    ...item,
+    user_id: Number(item.user_id),
+  };
+}
+
+function toBackendAdminModelPayload(payload: CreateAdminModelRequest | UpdateAdminModelRequest) {
+  const params: Record<string, unknown> = {};
+  if (payload.temperature !== undefined) {
+    params.temperature = payload.temperature;
+  }
+  return {
+    name: payload.model_name,
+    model_name: payload.model_name,
+    provider_model_id: payload.model_name,
+    provider: payload.provider,
+    api_endpoint: payload.api_base_url,
+    api_base_url: payload.api_base_url,
+    api_key: payload.api_key,
+    context_window: payload.context_window,
+    max_output_tokens: payload.max_output_tokens,
+    input_price_1m: payload.input_price_1m,
+    output_price_1m: payload.output_price_1m,
+    params,
+    description: payload.description,
+    is_enabled: payload.enabled,
+    enabled: payload.enabled,
+  };
+}
 
 export async function login(payload: LoginRequest): Promise<LoginResponse> {
   if (useMock) {
@@ -514,7 +600,7 @@ export async function getResearchHistory(params: {
       page_size: params.page_size,
     };
   }
-  return request<ResearchHistoryResponse>('/research/history', {}, params);
+  return request<ResearchHistoryResponse>('/research/history/', {}, params);
 }
 
 export async function getResearchHistoryDetail(taskId: string): Promise<ResearchHistoryDetail> {
@@ -550,7 +636,7 @@ export async function getReports(params: {
   if (useMock) {
     return mockGetReports(params);
   }
-  return request<ReportsResponse>('/reports', {}, params);
+  return request<ReportsResponse>('/reports/', {}, params);
 }
 
 export async function getReportCitations(reportId: string): Promise<ReportCitationsResponse> {
@@ -671,7 +757,7 @@ export async function getFavoriteFolders(): Promise<FavoriteFoldersResponse> {
   if (useMock) {
     return mockGetFavoriteFolders();
   }
-  return request<FavoriteFoldersResponse>('/favorites/folders');
+  return request<FavoriteFoldersResponse>('/favorites/folders/');
 }
 
 export async function createFavoriteFolder(
@@ -680,7 +766,7 @@ export async function createFavoriteFolder(
   if (useMock) {
     return mockCreateFavoriteFolder(payload);
   }
-  return request<CreateFavoriteFolderResponse>('/favorites/folders', {
+  return request<CreateFavoriteFolderResponse>('/favorites/folders/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -717,7 +803,7 @@ export async function getFavoriteItems(params: {
   if (useMock) {
     return mockGetFavoriteItems(params);
   }
-  return request<FavoriteItemsResponse>('/favorites/items', {}, params);
+  return request<FavoriteItemsResponse>('/favorites/items/', {}, params);
 }
 
 export async function createFavoriteItem(
@@ -726,7 +812,7 @@ export async function createFavoriteItem(
   if (useMock) {
     return mockCreateFavoriteItem(payload);
   }
-  return request<CreateFavoriteItemResponse>('/favorites/items', {
+  return request<CreateFavoriteItemResponse>('/favorites/items/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -763,14 +849,14 @@ export async function getAlerts(params: {
   if (useMock) {
     return mockGetAlerts(params);
   }
-  return request<AlertsResponse>('/alerts', {}, params);
+  return request<AlertsResponse>('/alerts/', {}, params);
 }
 
 export async function createAlert(payload: CreateAlertRequest): Promise<CreateAlertResponse> {
   if (useMock) {
     return mockCreateAlert(payload);
   }
-  return request<CreateAlertResponse>('/alerts', {
+  return request<CreateAlertResponse>('/alerts/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -806,7 +892,7 @@ export async function getMessages(params: {
   if (useMock) {
     return mockGetMessages(params);
   }
-  return request<MessagesResponse>('/messages', {}, params);
+  return request<MessagesResponse>('/messages/', {}, params);
 }
 
 export async function markMessageRead(messageId: string): Promise<MarkMessageReadResponse> {
@@ -822,7 +908,7 @@ export async function markAllMessagesRead(): Promise<MarkAllMessagesReadResponse
   if (useMock) {
     return mockMarkAllMessagesRead();
   }
-  return request<MarkAllMessagesReadResponse>('/messages/read-all', {
+  return request<MarkAllMessagesReadResponse>('/messages/read-all/', {
     method: 'POST',
   });
 }
@@ -831,7 +917,11 @@ export async function getAdminModels(): Promise<AdminModelListResponse> {
   if (useMock) {
     return mockGetAdminModels();
   }
-  return request<AdminModelListResponse>('/admin/models');
+  const response = await request<{ list: BackendAdminModelItem[]; total: number }>('/admin/models/');
+  return {
+    list: response.list.map(mapAdminModel),
+    total: response.total,
+  };
 }
 
 export async function createAdminModel(
@@ -840,9 +930,9 @@ export async function createAdminModel(
   if (useMock) {
     return mockCreateAdminModel(payload);
   }
-  return request<CreateAdminModelResponse>('/admin/models', {
+  return request<CreateAdminModelResponse>('/admin/models/', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toBackendAdminModelPayload(payload)),
   });
 }
 
@@ -855,7 +945,7 @@ export async function updateAdminModel(
   }
   return request<UpdateAdminModelResponse>(`/admin/models/${modelId}`, {
     method: 'PATCH',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toBackendAdminModelPayload(payload)),
   });
 }
 
@@ -896,24 +986,33 @@ export async function getAdminUsers(): Promise<AdminUsersResponse> {
   if (useMock) {
     return mockGetAdminUsers();
   }
-  return request<AdminUsersResponse>('/admin/users');
+  const response = await request<{ list: BackendAdminUserListItem[]; total: number }>('/admin/users/');
+  return {
+    list: response.list.map(mapAdminUser),
+    total: response.total,
+  };
 }
 
 export async function createAdminUser(payload: CreateAdminUserRequest): Promise<CreateAdminUserResponse> {
   if (useMock) {
     return mockCreateAdminUser(payload);
   }
-  return request<CreateAdminUserResponse>('/admin/users', {
+  const response = await request<BackendCreateAdminUserResponse>('/admin/users/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  return {
+    ...response,
+    user_id: Number(response.user_id),
+  };
 }
 
 export async function getAdminUserDetail(userId: number): Promise<AdminUserDetail> {
   if (useMock) {
     return mockGetAdminUserDetail(userId);
   }
-  return request<AdminUserDetail>(`/admin/users/${userId}`);
+  const response = await request<BackendAdminUserDetail>(`/admin/users/${userId}`);
+  return mapAdminUserDetail(response);
 }
 
 export async function updateAdminUser(
@@ -989,7 +1088,7 @@ export async function getAdminLogs(params: {
   if (useMock) {
     return mockGetAdminLogs();
   }
-  return request<AdminLogsResponse>('/admin/logs', {}, params);
+  return request<AdminLogsResponse>('/admin/logs/', {}, params);
 }
 
 export async function getAdminLogDetail(logId: string): Promise<AdminLogDetail> {
@@ -1005,7 +1104,7 @@ export async function exportAdminLogs(
   if (useMock) {
     return mockExportAdminLogs(payload);
   }
-  return request<AdminLogExportResponse>('/admin/logs/export', {
+  return request<AdminLogExportResponse>('/admin/logs/export/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

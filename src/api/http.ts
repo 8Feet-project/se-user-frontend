@@ -37,6 +37,13 @@ export async function request<T>(
     },
   });
 
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    const preview = text.trim().slice(0, 120) || response.statusText;
+    throw new Error(`服务端返回了非 JSON 响应 (${response.status})：${preview}`);
+  }
+
   const parsed = (await response.json()) as ApiResponse<T> | T;
   if (!response.ok) {
     const message = (parsed as ApiResponse<T>).message ?? 'Request failed';
