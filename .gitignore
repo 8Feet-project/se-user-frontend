@@ -15,3 +15,7 @@ example/
 AGENTS.md
 8Feet Design System/
 screenshots/
+.env.local
+package-lock.json
+package.json
+deploy.sh
