@@ -121,7 +121,7 @@ npm run preview
 
 ## CI/CD
 
-仓库使用 GitHub Actions 做前端质量门禁与手动部署。
+仓库使用 GitHub Actions 做前端质量门禁与自动/手动部署。
 
 ### Frontend CI
 
@@ -145,7 +145,13 @@ npm run preview
 
 配置文件：`.github/workflows/deploy.yml`
 
-触发方式：GitHub Actions 手动触发 `workflow_dispatch`。
+触发方式：
+
+- `Frontend CI` 在 `main` 上成功后，自动部署 `main` 到 `production`
+- GitHub Actions 手动触发 `workflow_dispatch`
+
+自动部署会跳过 GHCR 镜像发布，只通过 SSH 更新服务器。需要部署其他
+ref、部署到 `staging` 或发布 GHCR 镜像时，使用手动触发。
 
 输入参数：
 
