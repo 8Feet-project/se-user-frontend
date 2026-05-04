@@ -112,6 +112,7 @@ jobs:
           DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
           DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
           DEPLOY_APP_DIR: ${{ secrets.DEPLOY_APP_DIR }}
+          DEPLOY_STATIC_DIR: ${{ secrets.DEPLOY_STATIC_DIR }}
           DEPLOY_REF: ${{ github.event.inputs.ref || 'main' }}
           SMOKE_URL: ${{ github.event.inputs.smoke_url || 'http://8feet.meteor041.com/' }}
         run: |
@@ -122,7 +123,7 @@ jobs:
           ssh -i ~/.ssh/8feet_frontend_deploy_key \
             -p "${DEPLOY_SSH_PORT:-22}" \
             "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" \
-            "DEPLOY_APP_DIR='${DEPLOY_APP_DIR}' DEPLOY_REF='${DEPLOY_REF}' SMOKE_URL='${SMOKE_URL}' bash -s" <<'REMOTE_DEPLOY'
+            "DEPLOY_APP_DIR='${DEPLOY_APP_DIR}' DEPLOY_STATIC_DIR='${DEPLOY_STATIC_DIR}' DEPLOY_REF='${DEPLOY_REF}' SMOKE_URL='${SMOKE_URL}' bash -s" <<'REMOTE_DEPLOY'
           set -euo pipefail
           cd "${DEPLOY_APP_DIR}"
           git fetch --tags origin
@@ -130,10 +131,25 @@ jobs:
           if git show-ref --verify --quiet "refs/remotes/origin/${DEPLOY_REF}"; then
             git pull --ff-only origin "${DEPLOY_REF}"
           fi
-          if [ -f docker-compose.yml ] || [ -f compose.yml ]; then
+          if [ -n "${DEPLOY_STATIC_DIR}" ]; then
+            npm ci
+            npm run build
+            mkdir -p "${DEPLOY_STATIC_DIR}"
+            rsync -a --delete dist/ "${DEPLOY_STATIC_DIR}/"
+            if command -v nginx >/dev/null 2>&1; then
+              nginx -t
+              nginx -s reload
+            elif command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files nginx.service >/dev/null 2>&1; then
+              systemctl reload nginx
+            fi
+          elif [ -f docker-compose.yml ] || [ -f compose.yml ]; then
             docker compose up -d --build
             docker compose ps
           else
+            if ss -ltn '( sport = :80 )' | grep -q ':80'; then
+              echo "Port 80 is already in use. Set DEPLOY_STATIC_DIR to the nginx site root or add a docker-compose.yml."
+              exit 1
+            fi
             docker build -t 8feet-frontend:latest .
             docker rm -f 8feet-frontend || true
             docker run -d --name 8feet-frontend --restart unless-stopped -p 80:80 8feet-frontend:latest

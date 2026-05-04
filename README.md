@@ -170,6 +170,7 @@ ref、部署到 `staging` 或发布 GHCR 镜像时，使用手动触发。
 | `DEPLOY_SSH_KEY` | SSH 部署必需 | 可登录服务器的私钥 |
 | `DEPLOY_APP_DIR` | SSH 部署必需 | 服务器上的前端仓库目录 |
 | `DEPLOY_SSH_PORT` | 可选 | SSH 端口，默认 `22` |
+| `DEPLOY_STATIC_DIR` | 现有 Nginx 部署推荐 | Nginx 静态站点根目录，例如 `/usr/share/nginx/html` |
 
 SSH 部署会在服务器上执行：
 
@@ -177,16 +178,28 @@ SSH 部署会在服务器上执行：
 git fetch --tags origin
 git checkout <ref>
 git pull --ff-only origin <ref>  # 仅分支场景
-docker compose up -d --build     # 如果存在 compose 文件
+npm ci && npm run build          # 如果配置了 DEPLOY_STATIC_DIR
+rsync -a --delete dist/ <DEPLOY_STATIC_DIR>/
+nginx -t && nginx -s reload
 ```
 
-如果服务器目录没有 compose 文件，workflow 会直接执行：
+如果没有配置 `DEPLOY_STATIC_DIR`，但服务器目录存在 compose 文件，workflow 会执行：
+
+```bash
+docker compose up -d --build
+```
+
+如果既没有配置 `DEPLOY_STATIC_DIR`，也没有 compose 文件，workflow 会尝试 Docker
+容器部署：
 
 ```bash
 docker build -t 8feet-frontend:latest .
 docker rm -f 8feet-frontend || true
 docker run -d --name 8feet-frontend --restart unless-stopped -p 80:80 8feet-frontend:latest
 ```
+
+如果服务器 80 端口已经被宿主机 Nginx 占用，请配置 `DEPLOY_STATIC_DIR`，不要让
+workflow 再启动一个绑定 `80:80` 的前端容器。
 
 生产环境建议在 GitHub 的 `production` Environment 上启用 required reviewers。
 
