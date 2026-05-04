@@ -119,6 +119,76 @@ npm run preview
 - 本机具备 `scp` / `ssh` 能力
 - 服务器登录信息与脚本内配置一致
 
+## CI/CD
+
+仓库使用 GitHub Actions 做前端质量门禁与手动部署。
+
+### Frontend CI
+
+配置文件：`.github/workflows/ci.yml`
+
+触发条件：
+
+- PR 到 `main`
+- push 到 `main`
+- push 到 `fix/**`、`feat/**`、`ref/**`
+
+流水线阶段：
+
+- Node.js 20
+- `npm ci`
+- `npm run build`
+- 上传 `dist/` 构建产物，保留 7 天
+- Docker image build 校验，不推送镜像
+
+### Frontend CD
+
+配置文件：`.github/workflows/deploy.yml`
+
+触发方式：GitHub Actions 手动触发 `workflow_dispatch`。
+
+输入参数：
+
+- `ref`：要部署的分支、tag 或 commit，默认 `main`
+- `environment`：`staging` 或 `production`
+- `publish_image`：是否发布镜像到 GHCR
+- `deploy_ssh`：是否通过 SSH 部署到服务器
+- `smoke_url`：部署后 smoke check URL，默认 `http://8feet.meteor041.com/`
+
+部署需要在 GitHub Environment 或仓库 secrets 中配置：
+
+| Secret | 是否必需 | 说明 |
+| --- | --- | --- |
+| `DEPLOY_SSH_HOST` | SSH 部署必需 | 服务器主机名或 IP |
+| `DEPLOY_SSH_USER` | SSH 部署必需 | SSH 用户 |
+| `DEPLOY_SSH_KEY` | SSH 部署必需 | 可登录服务器的私钥 |
+| `DEPLOY_APP_DIR` | SSH 部署必需 | 服务器上的前端仓库目录 |
+| `DEPLOY_SSH_PORT` | 可选 | SSH 端口，默认 `22` |
+
+SSH 部署会在服务器上执行：
+
+```bash
+git fetch --tags origin
+git checkout <ref>
+git pull --ff-only origin <ref>  # 仅分支场景
+docker compose up -d --build     # 如果存在 compose 文件
+```
+
+如果服务器目录没有 compose 文件，workflow 会直接执行：
+
+```bash
+docker build -t 8feet-frontend:latest .
+docker rm -f 8feet-frontend || true
+docker run -d --name 8feet-frontend --restart unless-stopped -p 80:80 8feet-frontend:latest
+```
+
+生产环境建议在 GitHub 的 `production` Environment 上启用 required reviewers。
+
+### 回滚
+
+回滚时重新运行 `Frontend CD`，把 `ref` 设置为上一个确认可用的 commit 或 tag。
+workflow 会重新 checkout 该版本、构建镜像并执行 smoke check。
+
 ## 相关文档
 
 - 需求文档：`docs/8Feet需求规格说明书.md`
