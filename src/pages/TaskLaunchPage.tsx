@@ -220,7 +220,7 @@ export function TaskLaunchPage() {
           </section>
 
           {baseDataWarning ? (
-            <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <div className="rounded-[28px] border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
               基础数据存在部分加载失败：{baseDataWarning}。仍可继续填写表单，缺失项会按空数据处理。
             </div>
           ) : null}

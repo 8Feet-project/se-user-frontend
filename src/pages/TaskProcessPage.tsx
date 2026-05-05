@@ -70,31 +70,31 @@ function statusText(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['st
 function statusTone(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['status']) {
   switch (status) {
     case 'completed':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100';
     case 'running':
     case 'searching':
     case 'analyzing':
-      return 'border-blue-200 bg-blue-50 text-blue-700';
+      return 'border-sky-500/30 bg-sky-500/10 text-sky-100';
     case 'waiting_user':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-100';
     case 'failed':
     case 'cancelled':
-      return 'border-rose-200 bg-rose-50 text-rose-700';
+      return 'border-rose-500/30 bg-rose-500/10 text-rose-100';
     default:
-      return 'border-slate-200 bg-slate-50 text-slate-600';
+      return 'border-white/10 bg-white/[0.06] text-slate-300';
   }
 }
 
 function eventTone(level?: TaskEvent['level']) {
   switch (level) {
     case 'success':
-      return 'border-emerald-200 bg-emerald-50';
+      return 'border-emerald-500/30 bg-emerald-500/10';
     case 'warning':
-      return 'border-amber-200 bg-amber-50';
+      return 'border-amber-500/30 bg-amber-500/10';
     case 'error':
-      return 'border-rose-200 bg-rose-50';
+      return 'border-rose-500/30 bg-rose-500/10';
     default:
-      return 'border-slate-200 bg-white/[0.05]';
+      return 'border-white/10 bg-white/[0.05]';
   }
 }
 

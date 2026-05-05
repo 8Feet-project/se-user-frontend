@@ -183,7 +183,7 @@ export function AdminDashboardPage() {
 
   return (
     <div className="flex h-full flex-col gap-6 text-slate-100">
-      <header className="flex flex-col gap-4 rounded-[28px] border border-slate-800 bg-slate-900/60 p-6 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Admin Dashboard</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">多维度用户数据展示</h1>
@@ -191,13 +191,13 @@ export function AdminDashboardPage() {
             支持全局时间筛选器：默认今日，可按时间点或时间段查询，并可快捷选择近 7 日 / 近 30 日联动刷新统计视图。
           </p>
         </div>
-        <Button variant="secondary" onClick={() => void loadData()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+        <Button variant="secondary" onClick={() => void loadData()} className="rounded-2xl border-[rgba(99,202,183,0.2)] bg-white/[0.06] text-slate-100 hover:bg-white/[0.1]">
           <RefreshCw className="mr-2 h-4 w-4" />
           {loading ? '刷新中...' : '刷新数据'}
         </Button>
       </header>
 
-      <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+      <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
         <div className="grid gap-4 lg:grid-cols-5">
           <div>
             <LabelText text="时间模式" />
@@ -214,7 +214,7 @@ export function AdminDashboardPage() {
                 type="date"
                 value={pointDate}
                 onChange={(event) => setPointDate(event.target.value)}
-                className="mt-2 h-12 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                className="mt-2 h-12 w-full rounded-2xl border border-[rgba(99,202,183,0.18)] bg-[#07111f] px-4 text-slate-100"
               />
             </div>
           ) : (
@@ -225,7 +225,7 @@ export function AdminDashboardPage() {
                   type="date"
                   value={rangeStartDate}
                   onChange={(event) => setRangeStartDate(event.target.value)}
-                  className="mt-2 h-12 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  className="mt-2 h-12 w-full rounded-2xl border border-[rgba(99,202,183,0.18)] bg-[#07111f] px-4 text-slate-100"
                 />
               </div>
               <div>
@@ -234,7 +234,7 @@ export function AdminDashboardPage() {
                   type="date"
                   value={rangeEndDate}
                   onChange={(event) => setRangeEndDate(event.target.value)}
-                  className="mt-2 h-12 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  className="mt-2 h-12 w-full rounded-2xl border border-[rgba(99,202,183,0.18)] bg-[#07111f] px-4 text-slate-100"
                 />
               </div>
             </>
@@ -243,13 +243,13 @@ export function AdminDashboardPage() {
           <div className="lg:col-span-2">
             <LabelText text="快捷筛选" />
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" className="rounded-xl bg-slate-800 text-slate-200" onClick={() => handlePresetRange('today')}>
+              <Button size="sm" variant="secondary" className="rounded-xl border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200" onClick={() => handlePresetRange('today')}>
                 今日
               </Button>
-              <Button size="sm" variant="secondary" className="rounded-xl bg-slate-800 text-slate-200" onClick={() => handlePresetRange('7d')}>
+              <Button size="sm" variant="secondary" className="rounded-xl border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200" onClick={() => handlePresetRange('7d')}>
                 近 7 日
               </Button>
-              <Button size="sm" variant="secondary" className="rounded-xl bg-slate-800 text-slate-200" onClick={() => handlePresetRange('30d')}>
+              <Button size="sm" variant="secondary" className="rounded-xl border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200" onClick={() => handlePresetRange('30d')}>
                 近 30 日
               </Button>
             </div>
@@ -275,13 +275,13 @@ export function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+        <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">活跃用户趋势</h2>
               <p className="mt-1 text-sm text-slate-400">按天展示当前时间范围内活跃用户变化。</p>
             </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+            <Badge variant="secondary" className="border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200">
               FR-SJGL-0003
             </Badge>
           </div>
@@ -289,12 +289,12 @@ export function AdminDashboardPage() {
           {filteredOverviewTrend.length === 0 ? (
             <EmptyState text="所选时间范围内暂无运行数据" />
           ) : (
-            <div className="mt-6 flex h-72 items-end gap-3 rounded-3xl border border-slate-800 bg-slate-950/70 p-4">
+            <div className="mt-6 flex h-72 items-end gap-3 rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4">
               {filteredOverviewTrend.map((item) => (
                 <div key={item.date} className="flex flex-1 flex-col items-center gap-3">
-                  <div className="flex h-52 w-full items-end rounded-2xl bg-slate-900/80 p-1">
+                  <div className="flex h-52 w-full items-end rounded-2xl bg-white/[0.04] p-1">
                     <div
-                      className="w-full rounded-2xl bg-gradient-to-t from-sky-500 to-cyan-300"
+                      className="w-full rounded-2xl bg-gradient-to-t from-[#63cab7] via-sky-400 to-cyan-300"
                       style={{ height: `${Math.max(10, (item.value / maxActiveUsers) * 100)}%` }}
                     />
                   </div>
@@ -308,13 +308,13 @@ export function AdminDashboardPage() {
           )}
         </Card>
 
-        <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+        <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">调研对象分布</h2>
               <p className="mt-1 text-sm text-slate-400">按公司 / 股票 / 商品分类统计。</p>
             </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+            <Badge variant="secondary" className="border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200">
               Object Mix
             </Badge>
           </div>
@@ -330,13 +330,13 @@ export function AdminDashboardPage() {
                       <span className="text-slate-300">{item.label}</span>
                       <span className="font-medium text-white">{item.value}%</span>
                     </div>
-                    <div className="h-3 rounded-full bg-slate-800">
+                    <div className="h-3 rounded-full bg-white/[0.06]">
                       <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950/70 p-4 text-sm leading-6 text-slate-400">
+              <div className="mt-6 rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4 text-sm leading-6 text-slate-400">
                 当前调研对象以公司与股票为主，商品调研占比较低，可作为模型路由与提示词优化的依据。
               </div>
             </>
@@ -345,13 +345,13 @@ export function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+        <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">模型调用排行</h2>
               <p className="mt-1 text-sm text-slate-400">辅助识别高频使用模型与容量热点。</p>
             </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+            <Badge variant="secondary" className="border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200">
               Model Usage
             </Badge>
           </div>
@@ -361,7 +361,7 @@ export function AdminDashboardPage() {
           ) : (
             <div className="mt-6 space-y-4">
               {filteredModelRanking.map((item, index) => (
-                <div key={item.model_id} className="rounded-3xl border border-slate-800 bg-slate-950/70 p-4">
+                <div key={item.model_id} className="rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-500">TOP {index + 1}</p>
@@ -370,7 +370,7 @@ export function AdminDashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-slate-500">调用次数</p>
-                      <p className="mt-2 text-2xl font-semibold text-sky-300">{item.call_count}</p>
+                      <p className="mt-2 text-2xl font-semibold text-[#63cab7]">{item.call_count}</p>
                     </div>
                   </div>
                 </div>
@@ -379,22 +379,22 @@ export function AdminDashboardPage() {
           )}
         </Card>
 
-        <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+        <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">用户活跃与留存</h2>
               <p className="mt-1 text-sm text-slate-400">支撑管理端用户行为观察。</p>
             </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+            <Badge variant="secondary" className="border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200">
               User Activity
             </Badge>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {userActivity.retention_summary.map((item) => (
-              <div key={item.label} className="rounded-3xl border border-slate-800 bg-slate-950/70 p-4">
+              <div key={item.label} className="rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4">
                 <p className="text-sm text-slate-400">{item.label}</p>
-                <p className="mt-3 text-3xl font-semibold text-emerald-300">{item.value}</p>
+                <p className="mt-3 text-3xl font-semibold text-[#63cab7]">{item.value}</p>
               </div>
             ))}
           </div>
@@ -402,13 +402,13 @@ export function AdminDashboardPage() {
           {filteredActivitySeries.length === 0 ? (
             <EmptyState text="所选时间范围内暂无运行数据" />
           ) : (
-            <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950/70 p-4">
+            <div className="mt-6 rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4">
               <div className="space-y-3">
                 {filteredActivitySeries.map((item) => (
                   <div key={item.date} className="flex items-center gap-3 text-sm">
                     <span className="w-12 text-slate-400">{item.date}</span>
-                    <div className="h-2 flex-1 rounded-full bg-slate-800">
-                      <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${Math.min(100, item.active_users / 2)}%` }} />
+                    <div className="h-2 flex-1 rounded-full bg-white/[0.06]">
+                      <div className="h-2 rounded-full bg-[#63cab7]" style={{ width: `${Math.min(100, item.active_users / 2)}%` }} />
                     </div>
                     <span className="w-12 text-right font-medium text-white">{item.active_users}</span>
                   </div>
@@ -463,7 +463,7 @@ function endOfDay(date: string) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="mt-6 rounded-3xl border border-dashed border-slate-700 bg-slate-950/60 p-10 text-center text-sm text-slate-500">
+    <div className="mt-6 rounded-3xl border border-dashed border-[rgba(99,202,183,0.16)] bg-[#07111f]/60 p-10 text-center text-sm text-slate-500">
       {text}
     </div>
   );
@@ -481,14 +481,14 @@ function MetricCard({
   hint: string;
 }) {
   return (
-    <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 p-6">
+    <Card className="rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-slate-400">{title}</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-white">{value}</p>
           <p className="mt-3 text-xs leading-5 text-slate-500">{hint}</p>
         </div>
-        <div className="rounded-2xl bg-slate-800 p-3 text-sky-300">{icon}</div>
+        <div className="rounded-2xl bg-[rgba(99,202,183,0.12)] p-3 text-[#63cab7]">{icon}</div>
       </div>
     </Card>
   );

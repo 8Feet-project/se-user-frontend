@@ -184,10 +184,10 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.09),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#0a1628_0%,#0c1c36_60%,#0a1628_100%)] text-slate-100">
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-6">
-        <aside className="flex flex-col rounded-[32px] border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur">
-          <div className="space-y-3 border-b border-slate-800 pb-5">
+        <aside className="flex flex-col rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/82 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="space-y-3 border-b border-[rgba(99,202,183,0.1)] pb-5">
             <p className="text-xs uppercase tracking-[0.32em] text-slate-500">8Feet Admin</p>
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-tight text-white">系统管理后台</h1>
@@ -197,9 +197,9 @@ export function AdminLayout() {
             </div>
           </div>
 
-          <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="mt-5 rounded-3xl border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-4">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-emerald-500/15 p-2 text-emerald-300">
+              <div className="rounded-2xl bg-[rgba(99,202,183,0.14)] p-2 text-[#63cab7]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -221,12 +221,12 @@ export function AdminLayout() {
                   className={cn(
                     'block rounded-3xl border px-4 py-4 transition',
                     active
-                      ? 'border-sky-500/40 bg-sky-500/10 text-white shadow-lg shadow-sky-950/30'
-                      : 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+                      ? 'border-[rgba(99,202,183,0.28)] bg-[rgba(99,202,183,0.1)] text-white shadow-[0_0_22px_rgba(99,202,183,0.08)]'
+                      : 'border-[rgba(99,202,183,0.1)] bg-white/[0.03] text-slate-300 hover:border-[rgba(99,202,183,0.18)] hover:bg-white/[0.05]'
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={cn('rounded-2xl p-2', active ? 'bg-sky-500/20 text-sky-200' : 'bg-slate-800 text-slate-300')}>
+                    <div className={cn('rounded-2xl p-2', active ? 'bg-[rgba(99,202,183,0.18)] text-[#63cab7]' : 'bg-white/[0.06] text-slate-300')}>
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
@@ -239,14 +239,14 @@ export function AdminLayout() {
             })}
           </nav>
 
-          <div className="mt-6 flex gap-3 border-t border-slate-800 pt-5">
-            <Button asChild variant="secondary" className="flex-1 rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+          <div className="mt-6 flex gap-3 border-t border-[rgba(99,202,183,0.1)] pt-5">
+            <Button asChild variant="secondary" className="flex-1 rounded-2xl border-[rgba(99,202,183,0.2)] bg-white/[0.06] text-slate-100 hover:bg-white/[0.1]">
               <Link to="/">返回用户端</Link>
             </Button>
             <Button
               type="button"
               variant="secondary"
-              className="flex-1 rounded-2xl border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-900"
+              className="flex-1 rounded-2xl border-[rgba(99,202,183,0.2)] bg-[#07111f] text-slate-200 hover:bg-[#0b1730]"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
             >
@@ -256,7 +256,7 @@ export function AdminLayout() {
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-col rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 p-4 shadow-2xl shadow-slate-950/30 lg:p-6">
+        <div className="flex min-h-0 flex-col rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01)),rgba(7,17,31,0.82)] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:p-6">
           <Outlet />
         </div>
       </div>

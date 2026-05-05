@@ -1,13 +1,24 @@
 ﻿@import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/noto-sans-sc/chinese-simplified.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
-  font-family: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Geist Variable',
+    'Noto Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   color: #f1f5f9;
   background: #0a1628;
 
@@ -228,48 +239,48 @@ select optgroup {
   }
 
   :root {
-    --background: oklch(0.114 0.038 248);
-    --foreground: oklch(0.964 0.006 265);
+    --background: 218 57% 12%;
+    --foreground: 210 40% 96%;
 
-    --card: oklch(0.154 0.048 248);
-    --card-foreground: oklch(0.964 0.006 265);
-    --popover: oklch(0.154 0.048 248);
-    --popover-foreground: oklch(0.964 0.006 265);
+    --card: 214 47% 18%;
+    --card-foreground: 210 40% 96%;
+    --popover: 214 47% 18%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: oklch(0.745 0.095 183);
-    --primary-foreground: oklch(0.114 0.038 248);
+    --primary: 171 49% 59%;
+    --primary-foreground: 218 57% 12%;
 
-    --secondary: oklch(0.198 0.046 248);
-    --secondary-foreground: oklch(0.85 0.01 265);
-    --muted: oklch(0.198 0.04 248);
-    --muted-foreground: oklch(0.598 0.01 265);
+    --secondary: 216 32% 22%;
+    --secondary-foreground: 210 30% 85%;
+    --muted: 216 32% 22%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: oklch(0.745 0.095 183 / 0.14);
-    --accent-foreground: oklch(0.745 0.095 183);
+    --accent: 171 49% 59%;
+    --accent-foreground: 210 40% 96%;
 
-    --destructive: oklch(0.648 0.22 25);
-    --destructive-foreground: oklch(0.964 0.006 265);
+    --destructive: 0 68% 56%;
+    --destructive-foreground: 210 40% 96%;
 
-    --border: oklch(0.745 0.095 183 / 0.16);
-    --input: oklch(0.745 0.095 183 / 0.16);
-    --ring: oklch(0.745 0.095 183 / 0.45);
+    --border: 171 49% 59%;
+    --input: 171 49% 59%;
+    --ring: 171 49% 59%;
 
-    --chart-1: oklch(0.745 0.095 183);
-    --chart-2: oklch(0.648 0.12 210);
-    --chart-3: oklch(0.548 0.1 230);
-    --chart-4: oklch(0.748 0.12 155);
-    --chart-5: oklch(0.698 0.14 200);
+    --chart-1: 171 49% 59%;
+    --chart-2: 198 83% 60%;
+    --chart-3: 223 74% 60%;
+    --chart-4: 152 62% 58%;
+    --chart-5: 191 85% 52%;
 
     --radius: 1.25rem;
 
-    --sidebar: oklch(0.088 0.03 248);
-    --sidebar-foreground: oklch(0.964 0.006 265);
-    --sidebar-primary: oklch(0.745 0.095 183);
-    --sidebar-primary-foreground: oklch(0.114 0.038 248);
-    --sidebar-accent: oklch(0.745 0.095 183 / 0.12);
-    --sidebar-accent-foreground: oklch(0.964 0.006 265);
-    --sidebar-border: oklch(0.745 0.095 183 / 0.09);
-    --sidebar-ring: oklch(0.745 0.095 183 / 0.4);
+    --sidebar: 214 64% 8%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 171 49% 59%;
+    --sidebar-primary-foreground: 218 57% 12%;
+    --sidebar-accent: 171 49% 59%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 171 49% 59%;
+    --sidebar-ring: 171 49% 59%;
   }
 
   * {

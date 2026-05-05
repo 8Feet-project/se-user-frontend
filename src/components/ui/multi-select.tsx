@@ -47,14 +47,15 @@ export interface AnimationConfig {
  * Variants for the multi-select component to handle different styles.
  * Uses class-variance-authority (cva) to define different styles based on "variant" prop.
  */
-const multiSelectVariants = cva("m-1 transition-all duration-300 ease-in-out", {
+const multiSelectVariants = cva("m-1 border transition-all duration-300 ease-in-out", {
 	variants: {
 		variant: {
-			default: "border-foreground/10 text-foreground bg-card hover:bg-card/80",
+			default:
+				"border-[rgba(99,202,183,0.18)] bg-[rgba(99,202,183,0.1)] text-slate-100 hover:bg-[rgba(99,202,183,0.16)]",
 			secondary:
-				"border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
+				"border-white/10 bg-white/[0.06] text-slate-300 hover:bg-white/[0.1]",
 			destructive:
-				"border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+				"border-rose-500/20 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15",
 			inverted: "inverted",
 		},
 		badgeAnimation: {
@@ -413,7 +414,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 						buttonRef.current.focus();
 						const originalOutline = buttonRef.current.style.outline;
 						const originalOutlineOffset = buttonRef.current.style.outlineOffset;
-						buttonRef.current.style.outline = "2px solid hsl(var(--ring))";
+						buttonRef.current.style.outline =
+							"2px solid rgba(99, 202, 183, 0.55)";
 						buttonRef.current.style.outlineOffset = "2px";
 						setTimeout(() => {
 							if (buttonRef.current) {
@@ -923,7 +925,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 										{selectedValues.length > responsiveSettings.maxCount && (
 											<Badge
 												className={cn(
-													"bg-transparent text-foreground border-foreground/1 hover:bg-transparent",
+													"border-white/10 bg-transparent text-slate-300 hover:bg-transparent",
 													getBadgeAnimationClass(),
 													multiSelectVariants({ variant }),
 													responsiveSettings.compactMode &&
@@ -1189,8 +1191,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 					{animation > 0 && selectedValues.length > 0 && (
 						<WandSparkles
 							className={cn(
-								"cursor-pointer my-2 text-foreground bg-background w-3 h-3",
-								isAnimating ? "" : "text-muted-foreground"
+								"my-2 h-3 w-3 cursor-pointer bg-transparent text-slate-300",
+								isAnimating ? "" : "text-slate-500"
 							)}
 							onClick={() => setIsAnimating(!isAnimating)}
 						/>
@@ -1203,4 +1205,3 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 
 MultiSelect.displayName = "MultiSelect";
 export type { MultiSelectOption, MultiSelectGroup, MultiSelectProps };
-
