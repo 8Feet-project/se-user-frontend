@@ -8,6 +8,8 @@ import {
   deleteFavoriteItem,
   getFavoriteFolders,
   getFavoriteItems,
+  getModelsAvailable,
+  getReports,
   moveFavoriteItem,
   updateFavoriteFolder,
 } from '@/api/client';
@@ -17,7 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import type { FavoriteFolder, FavoriteItem, FavoriteType } from '@/types';
+import type { FavoriteFolder, FavoriteItem, FavoriteType, ModelAvailableItem, ReportListItem } from '@/types';
 
 const favoriteTypes: FavoriteType[] = ['insight', 'report', 'model'];
 
@@ -30,6 +32,8 @@ function favoriteTypeLabel(type: FavoriteType) {
 export function FavoritesPage() {
   const [folders, setFolders] = useState<FavoriteFolder[]>([]);
   const [items, setItems] = useState<FavoriteItem[]>([]);
+  const [reports, setReports] = useState<ReportListItem[]>([]);
+  const [models, setModels] = useState<ModelAvailableItem[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState('');
   const [folderName, setFolderName] = useState('');
   const [editingFolderName, setEditingFolderName] = useState('');
@@ -39,6 +43,18 @@ export function FavoritesPage() {
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const favoriteTargets = useMemo(() => {
+    if (favoriteType === 'report') {
+      return reports.map((report) => ({ id: report.report_id, label: report.title }));
+    }
+    if (favoriteType === 'model') {
+      return models.map((model) => ({ id: model.model_id, label: `${model.model_name}（${model.provider}）` }));
+    }
+    return items
+      .filter((item) => item.favorite_type === 'insight')
+      .map((item) => ({ id: item.target_id, label: item.remark || item.target_id }));
+  }, [favoriteType, items, models, reports]);
 
   const selectedFolder = useMemo(
     () => folders.find((folder) => folder.folder_id === selectedFolderId),
@@ -66,6 +82,9 @@ export function FavoritesPage() {
 
   const loadAll = async () => {
     try {
+      const [reportsResponse, modelsResponse] = await Promise.all([getReports({ page: 1, page_size: 50 }), getModelsAvailable()]);
+      setReports(reportsResponse.list);
+      setModels(modelsResponse.models);
       await loadFolders();
       await loadItems(selectedFolderId || undefined);
       setMessage('');
@@ -82,6 +101,10 @@ export function FavoritesPage() {
   useEffect(() => {
     void loadItems(selectedFolderId || undefined);
   }, [selectedFolderId]);
+
+  useEffect(() => {
+    setTargetId('');
+  }, [favoriteType]);
 
   const handleCreateFolder = async () => {
     if (!folderName.trim()) {
@@ -144,7 +167,7 @@ export function FavoritesPage() {
 
   const handleCreateItem = async () => {
     if (!targetId.trim()) {
-      setMessage('请输入要收藏的内容 ID。');
+      setMessage('请选择要收藏的对象。');
       return;
     }
     try {
@@ -282,8 +305,18 @@ export function FavoritesPage() {
               ))}
             </Select>
 
-            <Label htmlFor="favorite-target-id">内容 ID</Label>
-            <Input id="favorite-target-id" value={targetId} onChange={(event) => setTargetId(event.target.value)} placeholder="例如：report-001" />
+            <Label htmlFor="favorite-target-id">收藏对象</Label>
+            <Select id="favorite-target-id" value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+              <option value="">请选择收藏对象</option>
+              {favoriteTargets.map((target) => (
+                <option key={`${favoriteType}-${target.id}`} value={target.id}>
+                  {target.label}（{target.id}）
+                </option>
+              ))}
+            </Select>
+            {favoriteTargets.length === 0 ? (
+              <p className="text-xs text-amber-300">当前类型暂无可选对象，请从报告页或历史页直接点击“收藏”。</p>
+            ) : null}
 
             <Label htmlFor="favorite-remark">备注（可选）</Label>
             <Input id="favorite-remark" value={remark} onChange={(event) => setRemark(event.target.value)} placeholder="例如：高价值参考样本" />

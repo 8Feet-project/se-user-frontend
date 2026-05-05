@@ -1,4 +1,4 @@
-﻿import { type CSSProperties, type ReactNode, useState } from 'react';
+﻿import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -64,8 +64,6 @@ export function PageShell({
       navigate('/login');
     }
   };
-
-  const contentOffset = expanded ? 220 : 68;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.09),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#0a1628_0%,#0c1c36_60%,#0a1628_100%)]">
@@ -206,8 +204,7 @@ export function PageShell({
         </aside>
 
         <div
-          className="flex min-h-screen flex-col px-5 py-5 transition-[padding-left] duration-200 ease-in-out sm:px-6 lg:pl-[var(--page-offset)] lg:pr-8 lg:py-8 xl:pr-10"
-          style={{ '--page-offset': `${contentOffset}px` } as CSSProperties}
+          className="flex min-h-screen flex-col px-5 py-5 sm:px-6 lg:pl-[68px] lg:pr-8 lg:py-8 xl:pr-10"
         >
           <div className="mb-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/75 p-4 backdrop-blur-xl lg:hidden">
             <div className="flex items-center justify-between gap-4">
