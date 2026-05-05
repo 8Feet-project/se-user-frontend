@@ -1,8 +1,19 @@
-﻿import { Download, FileText, MessageSquareMore, Quote } from 'lucide-react';
+﻿import { Download, ExternalLink, FileText, MessageSquareMore, Quote, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { appendReportQa, createReportQa, getReportDetail, getReportQa, getReports } from '@/api/client';
+import {
+  appendReportQa,
+  createFavoriteItem,
+  createReportQa,
+  exportReport,
+  getReportCitationDetail,
+  getReportCitations,
+  getReportDetail,
+  getReportExportStatus,
+  getReportQa,
+  getReports,
+} from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,9 +22,20 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 import { downloadReport } from '@/lib/exportReport';
-import type { ReportDetail, ReportListItem, ReportQaItem } from '@/types';
+import type { ReportCitation, ReportCitationDetail, ReportDetail, ReportListItem, ReportQaItem } from '@/types';
 
-const isValidReportId = (value: string | null | undefined) => Boolean(value && /^\d+$/.test(value));
+const isValidReportId = (value: string | null | undefined) => Boolean(value?.trim());
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function triggerDownload(url: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,14 +43,18 @@ export function ReportPreviewPage() {
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [reportId, setReportId] = useState(isValidReportId(initialReportId) ? initialReportId ?? '' : '');
   const [report, setReport] = useState<ReportDetail | null>(null);
+  const [citations, setCitations] = useState<ReportCitation[]>([]);
+  const [citationDetail, setCitationDetail] = useState<ReportCitationDetail | null>(null);
+  const [loadingCitationId, setLoadingCitationId] = useState<string | null>(null);
   const [qaList, setQaList] = useState<ReportQaItem[]>([]);
   const [qaQuestion, setQaQuestion] = useState('');
   const [appendInputs, setAppendInputs] = useState<Record<string, string>>({});
   const [submittingQa, setSubmittingQa] = useState(false);
   const [appendingQaId, setAppendingQaId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const [exportFormat, setExportFormat] = useState<'pdf' | 'md' | 'html'>('pdf');
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'docx' | 'md' | 'html'>('pdf');
   const [exporting, setExporting] = useState(false);
+  const [favoriting, setFavoriting] = useState(false);
 
   useEffect(() => {
     const loadReports = async () => {
@@ -37,9 +63,17 @@ export function ReportPreviewPage() {
         setReports(response.list);
 
         const reportIdFromUrl = searchParams.get('report_id');
+        const taskIdFromUrl = searchParams.get('task_id');
         const validReportIdFromUrl = isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '';
         if (validReportIdFromUrl) {
           setReportId(validReportIdFromUrl);
+          return;
+        }
+
+        const reportFromTask = taskIdFromUrl ? response.list.find((item) => item.task_id === taskIdFromUrl)?.report_id : '';
+        if (reportFromTask) {
+          setReportId(reportFromTask);
+          setSearchParams({ report_id: reportFromTask }, { replace: true });
           return;
         }
 
@@ -68,9 +102,15 @@ export function ReportPreviewPage() {
 
     const loadData = async () => {
       try {
-        const [detail, qaResponse] = await Promise.all([getReportDetail(reportId), getReportQa(reportId)]);
+        const [detail, qaResponse, citationResponse] = await Promise.all([
+          getReportDetail(reportId),
+          getReportQa(reportId),
+          getReportCitations(reportId),
+        ]);
         setReport(detail);
         setQaList(qaResponse.list);
+        setCitations(citationResponse.list);
+        setCitationDetail(null);
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载报告失败';
         setMessage(reason);
@@ -89,6 +129,7 @@ export function ReportPreviewPage() {
     setReportId(nextReportId);
     setQaQuestion('');
     setAppendInputs({});
+    setCitationDetail(null);
     if (nextReportId) {
       setSearchParams({ report_id: nextReportId }, { replace: true });
     } else {
@@ -138,7 +179,44 @@ export function ReportPreviewPage() {
     }
   };
 
-  const handleExportReport = () => {
+  const handleShowCitationDetail = async (citation: ReportCitation) => {
+    if (!reportId) return;
+    setLoadingCitationId(citation.citation_id);
+    setMessage('');
+    try {
+      const detail = await getReportCitationDetail(reportId, citation.citation_id);
+      setCitationDetail(detail);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '加载引用详情失败';
+      setMessage(reason);
+    } finally {
+      setLoadingCitationId(null);
+    }
+  };
+
+  const handleFavoriteReport = async () => {
+    if (!report) {
+      setMessage('请先选择报告。');
+      return;
+    }
+    setFavoriting(true);
+    setMessage('');
+    try {
+      await createFavoriteItem({
+        favorite_type: 'report',
+        target_id: report.report_id,
+        remark: report.title,
+      });
+      setMessage(`已收藏报告：${report.report_id}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '收藏报告失败';
+      setMessage(reason);
+    } finally {
+      setFavoriting(false);
+    }
+  };
+
+  const handleExportReport = async () => {
     if (!report) {
       setMessage('请先选择报告。');
       return;
@@ -147,10 +225,32 @@ export function ReportPreviewPage() {
     setExporting(true);
     setMessage('');
     try {
-      downloadReport(report, exportFormat);
-      if (exportFormat !== 'pdf') {
+      if (exportFormat === 'md' || exportFormat === 'html') {
+        downloadReport(report, exportFormat);
         setMessage('报告导出成功，下载已开始。');
+        return;
       }
+
+      const exportTask = await exportReport(report.report_id, { format: exportFormat, include_citations: true });
+      setMessage(`导出任务已创建：${exportTask.export_id}，正在生成下载链接...`);
+
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const status = await getReportExportStatus(exportTask.export_id);
+        if (status.status === 'completed') {
+          if (!status.download_url) {
+            throw new Error('导出完成但未返回下载链接。');
+          }
+          triggerDownload(status.download_url);
+          setMessage(`报告导出完成，下载链接${status.expires_at ? `有效期至 ${status.expires_at}` : '已打开'}。`);
+          return;
+        }
+        if (status.status === 'failed') {
+          throw new Error(status.error_message || '报告导出失败');
+        }
+        await wait(1000);
+      }
+
+      throw new Error('导出仍在处理中，请稍后重试。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '报告导出失败';
       setMessage(reason);
@@ -164,7 +264,7 @@ export function ReportPreviewPage() {
       title="调研报告"
       subtitle="查看、导出和继续追问 AI 生成的调研报告，引用区与追问流全部按 8Feet 的卡片层级重新组织。"
       action={
-        <Button variant="secondary" disabled={exporting || !reportId} onClick={handleExportReport}>
+        <Button variant="secondary" disabled={exporting || !reportId} onClick={() => void handleExportReport()}>
           <Download size={16} />
           {exporting ? '导出中...' : '导出当前报告'}
         </Button>
@@ -187,13 +287,14 @@ export function ReportPreviewPage() {
               </div>
               <div>
                 <Label htmlFor="report-export-format">导出格式</Label>
-                <Select id="report-export-format" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as 'pdf' | 'md' | 'html')} size="sm" disabled={exporting}>
+                <Select id="report-export-format" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as 'pdf' | 'docx' | 'md' | 'html')} size="sm" disabled={exporting}>
                   <option value="pdf">PDF</option>
+                  <option value="docx">DOCX</option>
                   <option value="md">Markdown</option>
                   <option value="html">HTML</option>
                 </Select>
               </div>
-              <Button type="button" variant="secondary" onClick={handleExportReport} disabled={exporting || !reportId}>
+              <Button type="button" variant="secondary" onClick={() => void handleExportReport()} disabled={exporting || !reportId}>
                 {exporting ? '导出中...' : '下载报告'}
               </Button>
             </div>
@@ -206,6 +307,10 @@ export function ReportPreviewPage() {
                   <span className="data-pill">报告 ID：{report.report_id}</span>
                   <span className="data-pill">来源任务：{report.task_id}</span>
                   <span className="data-pill">创建时间：{report.created_at}</span>
+                  <Button type="button" size="sm" variant="secondary" disabled={favoriting} onClick={() => void handleFavoriteReport()}>
+                    <Star size={14} />
+                    {favoriting ? '收藏中...' : '收藏'}
+                  </Button>
                 </div>
               ) : null}
             </div>
@@ -282,17 +387,59 @@ export function ReportPreviewPage() {
               <h3 className="text-xl font-semibold text-slate-100">引用信息</h3>
             </div>
             <div className="space-y-4 text-sm leading-7 text-slate-400">
-              {report?.citations.length ? (
-                report.citations.map((citation) => (
+              {citations.length ? (
+                citations.map((citation) => (
                   <div key={citation.citation_id} className="panel-subtle p-4">
                     <p className="font-medium text-slate-100">{citation.source_title}</p>
-                    <p className="mt-2 break-all text-xs text-[#63cab7]/80">{citation.source_url}</p>
+                    {citation.source_url ? (
+                      <a className="mt-2 inline-flex items-center gap-1 break-all text-xs text-[#63cab7]/80 hover:text-[#63cab7]" href={citation.source_url} target="_blank" rel="noopener noreferrer">
+                        {citation.source_url}
+                        <ExternalLink size={12} />
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-xs text-amber-300">来源不足</p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="secondary" onClick={() => void handleShowCitationDetail(citation)} disabled={loadingCitationId === citation.citation_id}>
+                        {loadingCitationId === citation.citation_id ? '加载中...' : '查看详情'}
+                      </Button>
+                      {citation.source_url ? (
+                        <Button type="button" size="sm" variant="secondary" onClick={() => triggerDownload(citation.source_url)}>
+                          打开来源
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="panel-subtle p-4 text-sm text-slate-500">当前报告暂无引用信息。</div>
+                <div className="panel-subtle p-4 text-sm text-amber-300">来源不足</div>
               )}
             </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">引用详情</h3>
+            </div>
+            {citationDetail ? (
+              <div className="panel-subtle space-y-3 p-4 text-sm leading-7 text-slate-300">
+                <p className="font-medium text-slate-100">{citationDetail.source_title}</p>
+                <p><span className="text-slate-500">类型：</span>{citationDetail.source_type ?? '未知'}</p>
+                <p><span className="text-slate-500">发布时间：</span>{citationDetail.published_at ?? '未知'}</p>
+                {citationDetail.excerpt ? <p><span className="text-slate-500">摘录：</span>{citationDetail.excerpt}</p> : null}
+                {citationDetail.source_url ? (
+                  <a className="inline-flex items-center gap-1 break-all text-[#63cab7] hover:text-[#8ce5d6]" href={citationDetail.source_url} target="_blank" rel="noopener noreferrer">
+                    打开来源链接
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <p className="text-amber-300">来源不足</p>
+                )}
+              </div>
+            ) : (
+              <div className="panel-subtle p-4 text-sm text-slate-500">选择一条引用查看详情；没有可用来源时会提示“来源不足”。</div>
+            )}
           </Card>
 
 
