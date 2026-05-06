@@ -324,11 +324,6 @@ export function TaskLaunchPage() {
 
           {message ? <div className="message-strip">{message}</div> : null}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button onClick={handleCreateTask} size="lg" disabled={submitting}>
-              {submitting ? '创建中...' : '创建调研任务'}
-            </Button>
-          </div>
         </Card>
 
         <div className="space-y-6">
