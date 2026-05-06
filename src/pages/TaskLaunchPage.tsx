@@ -193,6 +193,7 @@ export function TaskLaunchPage() {
     <PageShell
       title="发起调研"
       subtitle="输入调研对象与分析偏好，启动 AI 驱动的商业情报研究任务。整页视觉和交互均对齐 8Feet Design System。"
+      showHeaderMetrics={false}
       action={
         <Button variant="secondary" onClick={handleCreateTask} disabled={submitting}>
           {submitting ? '创建中...' : '快速创建'}
