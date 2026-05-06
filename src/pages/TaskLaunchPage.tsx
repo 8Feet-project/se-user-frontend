@@ -228,9 +228,6 @@ export function TaskLaunchPage() {
           <section className="space-y-3">
             <p className="page-kicker">Research Launch</p>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-100">创建调研任务</h2>
-            <p className="text-sm leading-7 text-slate-400">
-              通过对象类型、时间范围与模型策略，把一次临时查询整理成标准化调研任务。
-            </p>
           </section>
 
           {baseDataWarning ? (
