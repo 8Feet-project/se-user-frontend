@@ -14,7 +14,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggleTheme}
       className={cn('theme-toggle', isDay && 'theme-toggle-day', className)}
     >
-      <span className="theme-toggle-label">AM</span>
+      <span className="theme-toggle-label">PM</span>
       <span className="theme-toggle-track">
         <span className="theme-toggle-scene theme-toggle-scene-day">
           <span className="theme-cloud theme-cloud-one" />
@@ -36,7 +36,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           <span className="theme-toggle-crater theme-toggle-crater-three" />
         </span>
       </span>
-      <span className="theme-toggle-label">PM</span>
+      <span className="theme-toggle-label">AM</span>
     </button>
   );
 }
