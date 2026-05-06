@@ -102,6 +102,13 @@ export function TaskLaunchPage() {
     void loadRecommendation();
   }, [objectType]);
 
+  useEffect(() => {
+    const availableModelIds = new Set(availableModels.map((model) => model.model_id));
+
+    setModelId((prev) => (prev && !availableModelIds.has(prev) ? '' : prev));
+    setMultiModelIds((prev) => prev.filter((id, index) => availableModelIds.has(id) && prev.indexOf(id) === index));
+  }, [availableModels]);
+
   const handleCreateTask = async () => {
     if (!objectName.trim()) {
       setMessage('请先填写调研对象名称。');
@@ -305,7 +312,7 @@ export function TaskLaunchPage() {
               <Label htmlFor="task-multi-model-ids">多模型交叉</Label>
               <MultiSelect
                 options={multiModelOptions}
-                defaultValue={multiModelIds}
+                value={multiModelIds}
                 onValueChange={setMultiModelIds}
                 placeholder="选择辅助模型"
                 className="w-full"

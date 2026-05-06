@@ -39,9 +39,10 @@ function triggerDownload(url: string) {
 
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialReportId = searchParams.get('report_id');
+  const reportIdFromUrl = searchParams.get('report_id');
+  const taskIdFromUrl = searchParams.get('task_id');
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [reportId, setReportId] = useState(isValidReportId(initialReportId) ? initialReportId ?? '' : '');
+  const [reportId, setReportId] = useState(isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '');
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [citations, setCitations] = useState<ReportCitation[]>([]);
   const [citationDetail, setCitationDetail] = useState<ReportCitationDetail | null>(null);
@@ -56,34 +57,44 @@ export function ReportPreviewPage() {
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
 
+  const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
+    const nextParams = new URLSearchParams(searchParams);
+    let changed = false;
+
+    (Object.entries(updates) as Array<['report_id' | 'task_id', string | null | undefined]>).forEach(([key, value]) => {
+      const normalizedValue = value?.trim() ?? '';
+      const currentValue = nextParams.get(key) ?? '';
+
+      if (normalizedValue) {
+        if (currentValue !== normalizedValue) {
+          nextParams.set(key, normalizedValue);
+          changed = true;
+        }
+        return;
+      }
+
+      if (currentValue) {
+        nextParams.delete(key);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  const resetReportTransientState = () => {
+    setQaQuestion('');
+    setAppendInputs({});
+    setCitationDetail(null);
+  };
+
   useEffect(() => {
     const loadReports = async () => {
       try {
         const response = await getReports({ page: 1, page_size: 50 });
         setReports(response.list);
-
-        const reportIdFromUrl = searchParams.get('report_id');
-        const taskIdFromUrl = searchParams.get('task_id');
-        const validReportIdFromUrl = isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '';
-        if (validReportIdFromUrl) {
-          setReportId(validReportIdFromUrl);
-          return;
-        }
-
-        const reportFromTask = taskIdFromUrl ? response.list.find((item) => item.task_id === taskIdFromUrl)?.report_id : '';
-        if (reportFromTask) {
-          setReportId(reportFromTask);
-          setSearchParams({ report_id: reportFromTask }, { replace: true });
-          return;
-        }
-
-        const fallbackId = response.list.find((item) => isValidReportId(item.report_id))?.report_id ?? '';
-        setReportId(fallbackId);
-        if (fallbackId) {
-          setSearchParams({ report_id: fallbackId }, { replace: true });
-        } else if (reportIdFromUrl) {
-          setSearchParams({}, { replace: true });
-        }
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载报告列表失败';
         setMessage(reason);
@@ -91,12 +102,48 @@ export function ReportPreviewPage() {
     };
 
     void loadReports();
-  }, [searchParams, setSearchParams]);
+  }, []);
+
+  useEffect(() => {
+    const validReportIdFromUrl = isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '';
+    if (validReportIdFromUrl) {
+      if (reportId !== validReportIdFromUrl) {
+        setReportId(validReportIdFromUrl);
+        resetReportTransientState();
+      }
+      return;
+    }
+
+    if (reports.length === 0) {
+      if (reportId) {
+        setReportId('');
+        resetReportTransientState();
+      }
+      return;
+    }
+
+    const reportFromTask = taskIdFromUrl ? reports.find((item) => item.task_id === taskIdFromUrl)?.report_id ?? '' : '';
+    const firstAvailableReportId = reports.find((item) => isValidReportId(item.report_id))?.report_id ?? '';
+    const fallbackId = reportFromTask || firstAvailableReportId;
+
+    if (reportId !== fallbackId) {
+      setReportId(fallbackId);
+      resetReportTransientState();
+    }
+
+    if (fallbackId) {
+      replaceSearchParams({ report_id: fallbackId });
+    } else if (reportIdFromUrl) {
+      replaceSearchParams({ report_id: null });
+    }
+  }, [reportId, reportIdFromUrl, reports, taskIdFromUrl]);
 
   useEffect(() => {
     if (!reportId) {
       setReport(null);
       setQaList([]);
+      setCitations([]);
+      setCitationDetail(null);
       return;
     }
 
@@ -127,13 +174,15 @@ export function ReportPreviewPage() {
     }
 
     setReportId(nextReportId);
-    setQaQuestion('');
-    setAppendInputs({});
-    setCitationDetail(null);
+    resetReportTransientState();
     if (nextReportId) {
-      setSearchParams({ report_id: nextReportId }, { replace: true });
+      const nextReport = reports.find((item) => item.report_id === nextReportId);
+      replaceSearchParams({
+        report_id: nextReportId,
+        task_id: nextReport?.task_id ?? taskIdFromUrl ?? null,
+      });
     } else {
-      setSearchParams({}, { replace: true });
+      replaceSearchParams({ report_id: null });
     }
   };
 

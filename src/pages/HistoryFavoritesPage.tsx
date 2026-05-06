@@ -25,19 +25,19 @@ export function HistoryFavoritesPage() {
   const [favoritingTaskId, setFavoritingTaskId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const history = await getResearchHistory({ page: 1, page_size: 10 });
-        setTasks(history.list);
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : '加载历史失败';
-        setMessage(reason);
-      } finally {
-        setLoaded(true);
-      }
-    };
+  const loadData = async () => {
+    try {
+      const history = await getResearchHistory({ page: 1, page_size: 10 });
+      setTasks(history.list);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '加载历史失败';
+      setMessage(reason);
+    } finally {
+      setLoaded(true);
+    }
+  };
 
+  useEffect(() => {
     void loadData();
   }, []);
 
@@ -69,6 +69,7 @@ export function HistoryFavoritesPage() {
       setSubmittingTaskId(taskId);
       const result = await reloadResearchHistory(taskId);
       setReloadResult(result);
+      await loadData();
       setMessage(`重载成功：${result.task_id}`);
       if (result.report_id) {
         navigate(`/report?report_id=${result.report_id}`);

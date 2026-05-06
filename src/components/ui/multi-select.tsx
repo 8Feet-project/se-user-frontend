@@ -120,6 +120,11 @@ interface MultiSelectProps
 	 */
 	options: MultiSelectOption[] | MultiSelectGroup[];
 	/**
+	 * Controlled selected values. When provided, the component stays in sync with parent state.
+	 */
+	value?: string[];
+
+	/**
 	 * Callback function triggered when the selected values change.
 	 * Receives an array of the new selected values.
 	 */
@@ -309,6 +314,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 	(
 		{
 			options,
+			value,
 			onValueChange,
 			variant,
 			defaultValue = [],
@@ -337,7 +343,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		ref
 	) => {
 		const [selectedValues, setSelectedValues] =
-			React.useState<string[]>(defaultValue);
+			React.useState<string[]>(value ?? defaultValue);
 		const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 		const [isAnimating, setIsAnimating] = React.useState(false);
 		const [searchValue, setSearchValue] = React.useState("");
@@ -367,6 +373,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		const selectedCountId = `${multiSelectId}-count`;
 
 		const prevDefaultValueRef = React.useRef<string[]>(defaultValue);
+		const isControlled = value !== undefined;
 
 		const isGroupedOptions = React.useCallback(
 			(
@@ -666,7 +673,15 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		};
 
 		React.useEffect(() => {
-			if (!resetOnDefaultValueChange) return;
+			if (!isControlled) return;
+			const nextValue = value ?? [];
+			if (!arraysEqual(selectedValues, nextValue)) {
+				setSelectedValues(nextValue);
+			}
+		}, [arraysEqual, isControlled, selectedValues, value]);
+
+		React.useEffect(() => {
+			if (isControlled || !resetOnDefaultValueChange) return;
 			const prevDefaultValue = prevDefaultValueRef.current;
 			if (!arraysEqual(prevDefaultValue, defaultValue)) {
 				if (!arraysEqual(selectedValues, defaultValue)) {
@@ -674,7 +689,13 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 				}
 				prevDefaultValueRef.current = [...defaultValue];
 			}
-		}, [defaultValue, selectedValues, arraysEqual, resetOnDefaultValueChange]);
+		}, [
+			arraysEqual,
+			defaultValue,
+			isControlled,
+			resetOnDefaultValueChange,
+			selectedValues,
+		]);
 
 		const getWidthConstraints = () => {
 			const defaultMinWidth = screenSize === "mobile" ? "0px" : "200px";

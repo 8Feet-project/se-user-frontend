@@ -129,11 +129,19 @@ export interface PlatformInitStatusResponse {
   has_super_admin: boolean;
 }
 
-export type PlatformInitializeRequest = Record<string, never>;
+export interface PlatformInitializeRequest {
+  site_name?: string;
+  admin_email?: string;
+  default_model_id?: string;
+}
 
 export interface PlatformInitializeResponse {
   initialized: boolean;
   super_admin_user_id: number | null;
+  message?: string;
+  site_name?: string;
+  default_model_id?: string | null;
+  admin_email?: string;
 }
 
 export interface UserProfile {
@@ -171,11 +179,14 @@ export interface ChangePasswordResponse {
 }
 
 export interface CreateResearchTaskRequest {
+  title?: string;
   object_name: string;
   object_type?: ObjectType;
   time_range: string;
   source_authority: string;
   source_types?: string[];
+  search_params?: Record<string, unknown>;
+  llm_config_id?: number;
   model_id?: string;
   multi_model_ids?: string[];
   enable_cross_validation: boolean;
@@ -209,11 +220,11 @@ export interface ModelAvailableItem {
 
 export interface ModelsAvailableResponse {
   models: ModelAvailableItem[];
-  recommended_model_id?: string;
+  recommended_model_id?: string | null;
 }
 
 export interface ModelRoutingRecommendationResponse {
-  recommended_model_id?: string;
+  recommended_model_id?: string | null;
   candidate_models: ModelAvailableItem[];
   reason: string;
 }
@@ -270,13 +281,19 @@ export interface RetryAnalysisResponse {
 
 export interface TriggerCrossValidationRequest {
   model_ids?: string[];
+  multi_model_ids?: string[];
+  models?: string[];
   compare_dimension?: string[];
+  integrator_model_id?: string;
+  integrator_model?: string;
+  prompt?: string;
 }
 
 export interface TriggerCrossValidationResponse {
   task_id: string;
   status: 'queued' | 'running' | 'completed' | 'failed';
   result_id?: string;
+  run_id?: string;
 }
 
 export interface CrossValidationModelOutput {
@@ -682,7 +699,11 @@ export interface ReportDetail {
   report_id: string;
   task_id: string;
   title: string;
+  summary?: string;
   content: string;
+  content_markdown?: string;
+  content_brief?: string;
+  report_mode?: 'brief' | 'full';
   citations: ReportCitation[];
   created_at: string;
 }
@@ -858,6 +879,7 @@ export interface AdminDashboardOverviewResponse {
   dau: number;
   mau: number;
   active_users_trend: Array<{ date: string; value: number }>;
+  raw?: unknown;
 }
 
 export interface AdminObjectDistributionResponse {
