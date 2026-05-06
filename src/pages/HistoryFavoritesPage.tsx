@@ -15,6 +15,20 @@ function objectTypeLabel(type: HistoryTaskItem['object_type']) {
   return '商品';
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return '未知';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export function HistoryFavoritesPage() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
@@ -70,7 +84,7 @@ export function HistoryFavoritesPage() {
       const result = await reloadResearchHistory(taskId);
       setReloadResult(result);
       await loadData();
-      setMessage(`重载成功：${result.task_id}`);
+      setMessage('历史任务已重新加载。');
       if (result.report_id) {
         navigate(`/report?report_id=${result.report_id}`);
       } else if (result.redirect_url) {
@@ -97,7 +111,7 @@ export function HistoryFavoritesPage() {
         target_id: task.report_id,
         remark: `${task.object_name} 报告`,
       });
-      setMessage(`已收藏报告：${task.report_id}`);
+      setMessage('报告已加入收藏夹。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '收藏报告失败';
       setMessage(reason);
@@ -156,13 +170,12 @@ export function HistoryFavoritesPage() {
                     <div>
                       <p className="text-base font-semibold text-slate-100">{task.object_name}</p>
                       <p className="mt-1 text-sm text-slate-400">{objectTypeLabel(task.object_type)}</p>
-                      <p className="mt-1 text-xs text-slate-500">{task.task_id}</p>
                     </div>
                     <StatusBadge status={task.status} />
                   </div>
                   <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
                     <Clock3 size={12} />
-                    创建时间：{task.created_at}
+                    创建时间：{formatDateTime(task.created_at)}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button
@@ -254,12 +267,6 @@ export function HistoryFavoritesPage() {
                   <span className="text-slate-500">数据集：</span>
                   {selectedDetail.fact_dataset}
                 </p>
-                {selectedDetail.report_id ? (
-                  <p>
-                    <span className="text-slate-500">报告 ID：</span>
-                    {selectedDetail.report_id}
-                  </p>
-                ) : null}
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${selectedDetail.task_id}`)}>
                     恢复任务
@@ -292,12 +299,7 @@ export function HistoryFavoritesPage() {
             {reloadResult ? (
               <div className="panel-subtle space-y-3 p-4 text-sm text-slate-300">
                 <p>
-                  <span className="text-slate-500">任务 ID：</span>
-                  {reloadResult.task_id}
-                </p>
-                <p>
-                  <span className="text-slate-500">报告 ID：</span>
-                  {reloadResult.report_id ?? '待生成'}
+                  历史任务已完成重新加载，可继续查看流程或打开更新后的报告。
                 </p>
                 {reloadResult.redirect_url ? (
                   <p>

@@ -683,16 +683,25 @@ export function TaskProcessPage() {
     () => mergeWorkflowNodes(workflowNodes),
     [workflowNodes]
   );
-  const completedCount = timelineNodes.filter((node) => node.node_status === 'completed').length;
-  const waitingCount = timelineNodes.filter((node) => node.node_status === 'waiting_user').length;
-  const failedCount = timelineNodes.filter((node) => node.node_status === 'failed').length;
+  const stageItems = status?.progress_model?.stages ?? [];
+  const completedCount = stageItems.length > 0
+    ? stageItems.filter((stage) => stage.status === 'completed' || stage.status === 'skipped').length
+    : timelineNodes.filter((node) => node.node_status === 'completed').length;
+  const waitingCount = stageItems.length > 0
+    ? stageItems.filter((stage) => stage.status === 'waiting_user').length
+    : timelineNodes.filter((node) => node.node_status === 'waiting_user').length;
+  const failedCount = stageItems.length > 0
+    ? stageItems.filter((stage) => stage.status === 'failed').length
+    : timelineNodes.filter((node) => node.node_status === 'failed').length;
   const workflowDerivedProgress = useMemo(
     () => deriveWorkflowProgress(timelineNodes, status?.status),
     [timelineNodes, status?.status]
   );
-  const progress = timelineNodes.length > 0
-    ? workflowDerivedProgress
-    : Math.max(0, Math.min(100, status?.progress ?? 0));
+  const progress = typeof status?.progress_model?.percent === 'number'
+    ? Math.max(0, Math.min(100, status.progress_model.percent))
+    : timelineNodes.length > 0
+      ? workflowDerivedProgress
+      : Math.max(0, Math.min(100, status?.progress ?? 0));
   const sortedEvents = useMemo(
     () => [...events].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()),
     [events]
@@ -816,7 +825,9 @@ export function TaskProcessPage() {
                 <div className="panel-subtle p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">流程进度</p>
                   <p className="mt-3 text-lg font-semibold text-slate-100">{progress}%</p>
-                  <p className="mt-1 text-sm text-slate-400">{completedCount}/{timelineNodes.length || 0} 节点完成</p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {completedCount}/{stageItems.length || timelineNodes.length || 0} 阶段完成
+                  </p>
                 </div>
                 <div className="panel-subtle p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">过程信号</p>
@@ -841,6 +852,15 @@ export function TaskProcessPage() {
                   {facts ? <span className="data-pill">事实：{facts.fact_count}</span> : null}
                   <span className="data-pill">可用动作：{status?.available_actions?.length ?? 0}</span>
                 </div>
+                {stageItems.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {stageItems.map((stage) => (
+                      <span key={stage.key} className="data-pill">
+                        {stage.label} {stage.progress_percent}%
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 

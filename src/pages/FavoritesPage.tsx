@@ -172,7 +172,7 @@ export function FavoritesPage() {
     }
     try {
       setSubmitting(true);
-      const response = await createFavoriteItem({
+      await createFavoriteItem({
         favorite_type: favoriteType,
         target_id: targetId.trim(),
         folder_id: selectedFolderId || undefined,
@@ -180,7 +180,7 @@ export function FavoritesPage() {
       });
       setTargetId('');
       setRemark('');
-      setMessage(`收藏成功：${response.favorite_id}`);
+      setMessage('已加入收藏夹。');
       await loadItems(selectedFolderId || undefined);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '新增收藏失败';
@@ -197,10 +197,10 @@ export function FavoritesPage() {
     }
     try {
       setSubmitting(true);
-      const response = await moveFavoriteItem(favoriteId, {
+      await moveFavoriteItem(favoriteId, {
         target_folder_id: moveTargetFolderId,
       });
-      setMessage(`移动成功：${response.favorite_id} -> ${response.target_folder_id}`);
+      setMessage('已移动到目标目录。');
       await loadItems(selectedFolderId || undefined);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '移动收藏失败';

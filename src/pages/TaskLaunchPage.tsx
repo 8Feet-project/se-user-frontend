@@ -167,13 +167,13 @@ export function TaskLaunchPage() {
 
     try {
       setSubmitting(true);
-      const response = await createFavoriteItem({
+      await createFavoriteItem({
         favorite_type: 'model',
         target_id: modelId,
         remark: '从任务发起页收藏',
       });
       setFavoriteModelIds((prev) => [...prev, modelId]);
-      setMessage(`模型已收藏：${response.favorite_id}`);
+      setMessage('模型已加入收藏夹。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '收藏模型失败';
       setMessage(reason);

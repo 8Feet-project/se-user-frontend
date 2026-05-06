@@ -234,6 +234,19 @@ export interface ResearchTaskStatusResponse {
   status: ResearchTaskStatus;
   current_stage: string;
   progress: number;
+  progress_model?: {
+    total_weight: number;
+    completed_weight: number;
+    percent: number;
+    current_stage_index: number;
+    stages: Array<{
+      key: string;
+      label: string;
+      weight: number;
+      status: WorkflowNodeStatus | ResearchTaskStatus;
+      progress_percent: number;
+    }>;
+  };
   hint: string;
   error_code?: string;
   object_name?: string;
