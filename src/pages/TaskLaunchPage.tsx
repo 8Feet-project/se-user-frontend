@@ -22,6 +22,25 @@ import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '@/t
 
 const objectTypes = ['', 'company', 'stock', 'commodity'] as const;
 
+const chineseDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+function formatTaskCreatedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return chineseDateTimeFormatter.format(date);
+}
+
 export function TaskLaunchPage() {
   const navigate = useNavigate();
   const [objectName, setObjectName] = useState('');
@@ -389,11 +408,10 @@ export function TaskLaunchPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-100">{task.object_name}</p>
-                        <p className="mt-1 text-xs text-slate-500">{task.task_id}</p>
                       </div>
                       <StatusBadge status={task.status} />
                     </div>
-                    <p className="mt-3 text-xs text-slate-500">创建时间：{task.created_at}</p>
+                    <p className="mt-3 text-xs text-slate-500">创建时间：{formatTaskCreatedAt(task.created_at)}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${task.task_id}`)}>
                         查看流程
