@@ -322,6 +322,10 @@ export interface WorkflowNode {
   node_id: string;
   node_name: string;
   node_type?: string;
+  node_kind?: string;
+  event_type?: string;
+  execution_id?: string;
+  paired_node_id?: string | null;
   node_status: WorkflowNodeStatus;
   description?: string;
   summary?: string;
@@ -352,6 +356,9 @@ export interface TaskEvent {
   task_id?: string;
   node_id: string;
   node_name: string;
+  node_kind?: string;
+  event_type?: string;
+  execution_id?: string;
   node_status: WorkflowNodeStatus;
   level?: TaskEventLevel;
   title?: string;

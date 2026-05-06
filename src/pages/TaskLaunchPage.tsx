@@ -199,11 +199,6 @@ export function TaskLaunchPage() {
   return (
     <PageShell
       title="发起调研"
-      action={
-        <Button variant="secondary" onClick={handleCreateTask} disabled={submitting}>
-          {submitting ? '创建中...' : '快速创建'}
-        </Button>
-      }
     >
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <Card className="space-y-8">
@@ -323,7 +318,6 @@ export function TaskLaunchPage() {
           </div>
 
           {message ? <div className="message-strip">{message}</div> : null}
-
         </Card>
 
         <div className="space-y-6">

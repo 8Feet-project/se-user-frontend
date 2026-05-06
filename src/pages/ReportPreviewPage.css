@@ -129,3 +129,49 @@
   color: rgb(241 245 249);
   font-weight: 600;
 }
+
+:root[data-theme='day'] .report-markdown {
+  color: rgb(42 67 90);
+}
+
+:root[data-theme='day'] .report-markdown h1,
+:root[data-theme='day'] .report-markdown h2,
+:root[data-theme='day'] .report-markdown h3,
+:root[data-theme='day'] .report-markdown h4,
+:root[data-theme='day'] .report-markdown h5,
+:root[data-theme='day'] .report-markdown h6,
+:root[data-theme='day'] .report-markdown strong,
+:root[data-theme='day'] .report-markdown th {
+  color: rgb(16 32 51);
+}
+
+:root[data-theme='day'] .report-markdown p,
+:root[data-theme='day'] .report-markdown li,
+:root[data-theme='day'] .report-markdown td {
+  color: rgb(42 67 90);
+}
+
+:root[data-theme='day'] .report-markdown blockquote {
+  color: rgb(91 113 135);
+}
+
+:root[data-theme='day'] .report-markdown hr,
+:root[data-theme='day'] .report-markdown table,
+:root[data-theme='day'] .report-markdown th,
+:root[data-theme='day'] .report-markdown td {
+  border-color: rgba(15, 35, 56, 0.08);
+}
+
+:root[data-theme='day'] .report-markdown thead {
+  background: rgba(20, 125, 114, 0.08);
+}
+
+:root[data-theme='day'] .report-markdown code {
+  background: rgba(238, 244, 251, 0.92);
+  color: rgb(15 102 92);
+}
+
+:root[data-theme='day'] .report-markdown pre {
+  background: rgba(236, 244, 251, 0.96);
+  border-color: rgba(20, 125, 114, 0.12);
+}

@@ -17,6 +17,8 @@ import {
 import { logoutCurrentSession } from '@/api/client';
 import { cn } from '@/lib/utils';
 
+import { ThemeToggle } from './ThemeToggle';
+
 const navItems = [
   { label: '发起任务', path: '/launch', icon: ClipboardList },
   { label: '调研流程', path: '/process', icon: GitBranch },
@@ -100,7 +102,12 @@ export function PageShell({
               </Link>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
+            <div
+              className={cn(
+                'min-h-0 flex-1 overflow-x-hidden',
+                expanded ? 'overflow-y-auto pr-1' : 'overflow-y-hidden pr-0'
+              )}
+            >
               <nav className="flex flex-col gap-[2px]">
                 {navItems.map((item) => {
                   const active = location.pathname === item.path;
@@ -269,14 +276,17 @@ export function PageShell({
                       <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
                     ) : null}
                   </div>
-                  {action ? <div className="shrink-0 self-start">{action}</div> : null}
+                  <div className="flex shrink-0 items-start gap-3 self-start">
+                    <ThemeToggle />
+                    {action}
+                  </div>
                 </div>
               </div>
             </header>
 
             <main className="min-w-0 flex-1">
-              <div className="rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[rgba(7,17,31,0.18)] p-1">
-                <div className="min-w-0 flex-1 rounded-[28px] border border-[rgba(255,255,255,0.03)] bg-transparent p-0 sm:p-1">
+              <div className="theme-shell-frame rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[rgba(7,17,31,0.18)] p-1">
+                <div className="theme-shell-frame-inner min-w-0 flex-1 rounded-[28px] border border-[rgba(255,255,255,0.03)] bg-transparent p-0 sm:p-1">
                   {children}
                 </div>
               </div>

@@ -1,6 +1,8 @@
 ﻿import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
+import { ThemeToggle } from './ThemeToggle';
+
 export function AuthShell({
   children,
   aside,
@@ -27,7 +29,10 @@ export function AuthShell({
               <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Research Platform</p>
             </div>
           </Link>
-          {topActions ? <div className="flex items-center gap-3 text-sm text-slate-300">{topActions}</div> : null}
+          <div className="flex items-center gap-3 text-sm text-slate-300">
+            <ThemeToggle />
+            {topActions}
+          </div>
         </header>
 
         <main className="flex flex-1 items-center py-8 lg:py-10">

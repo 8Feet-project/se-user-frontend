@@ -824,7 +824,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								getAllOptions().length
 							} options selected. ${placeholder}`}
 							className={cn(
-								"flex min-h-12 h-auto items-center justify-between rounded-2xl border border-[rgba(99,202,183,0.2)] bg-[#07111f] p-1 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] hover:bg-[#07111f] [&_svg]:pointer-events-auto",
+								"theme-multiselect-trigger flex min-h-12 h-auto items-center justify-between rounded-2xl border border-[rgba(99,202,183,0.2)] bg-[#07111f] p-1 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] hover:bg-[#07111f] [&_svg]:pointer-events-auto",
 								autoSize ? "w-auto" : "w-full",
 								responsiveSettings.compactMode && "min-h-8 text-sm",
 								screenSize === "mobile" && "min-h-12 text-base",
@@ -1021,7 +1021,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 						aria-multiselectable="true"
 						aria-label="Available options"
 						className={cn(
-							"w-auto p-0",
+							"theme-multiselect-panel w-auto p-0",
 							getPopoverAnimationClass(),
 							screenSize === "mobile" && "w-[85vw] max-w-[280px]",
 							screenSize === "tablet" && "w-[70vw] max-w-md",

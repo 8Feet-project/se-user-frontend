@@ -9,6 +9,7 @@ import {
   createFavoriteItem,
   createReportQa,
   exportReport,
+  getFavoriteItems,
   getReportCitationDetail,
   getReportCitations,
   getReportDetail,
@@ -60,6 +61,7 @@ export function ReportPreviewPage() {
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx' | 'md' | 'html'>('pdf');
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const reportMarkdown = report?.content_markdown?.trim() || report?.content || '';
 
   const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
@@ -149,6 +151,7 @@ export function ReportPreviewPage() {
       setQaList([]);
       setCitations([]);
       setCitationDetail(null);
+      setIsFavorited(false);
       return;
     }
 
@@ -170,6 +173,24 @@ export function ReportPreviewPage() {
     };
 
     void loadData();
+  }, [reportId]);
+
+  useEffect(() => {
+    if (!reportId) {
+      setIsFavorited(false);
+      return;
+    }
+
+    const loadFavoriteState = async () => {
+      try {
+        const response = await getFavoriteItems({ favorite_type: 'report', page: 1, page_size: 200 });
+        setIsFavorited(response.list.some((item) => item.target_id === reportId));
+      } catch {
+        setIsFavorited(false);
+      }
+    };
+
+    void loadFavoriteState();
   }, [reportId]);
 
   const handleChangeReport = (nextReportId: string) => {
@@ -253,6 +274,10 @@ export function ReportPreviewPage() {
       setMessage('请先选择报告。');
       return;
     }
+    if (isFavorited) {
+      setMessage('该报告已在收藏夹中。');
+      return;
+    }
     setFavoriting(true);
     setMessage('');
     try {
@@ -261,7 +286,8 @@ export function ReportPreviewPage() {
         target_id: report.report_id,
         remark: report.title,
       });
-      setMessage(`已收藏报告：${report.report_id}`);
+      setIsFavorited(true);
+      setMessage('报告已加入收藏夹。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '收藏报告失败';
       setMessage(reason);
@@ -360,9 +386,9 @@ export function ReportPreviewPage() {
                   <span className="data-pill">报告 ID：{report.report_id}</span>
                   <span className="data-pill">来源任务：{report.task_id}</span>
                   <span className="data-pill">创建时间：{report.created_at}</span>
-                  <Button type="button" size="sm" variant="secondary" disabled={favoriting} onClick={() => void handleFavoriteReport()}>
+                  <Button type="button" size="sm" variant="secondary" disabled={favoriting || isFavorited} onClick={() => void handleFavoriteReport()}>
                     <Star size={14} />
-                    {favoriting ? '收藏中...' : '收藏'}
+                    {favoriting ? '收藏中...' : isFavorited ? '已收藏' : '收藏'}
                   </Button>
                 </div>
               ) : null}
