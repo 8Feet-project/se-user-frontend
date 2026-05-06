@@ -54,7 +54,6 @@ export function TaskLaunchPage() {
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<ModelAvailableItem[]>([]);
   const [recommendedModelId, setRecommendedModelId] = useState('');
-  const [recommendationReason, setRecommendationReason] = useState('');
   const [researchTasks, setResearchTasks] = useState<ResearchTaskListItem[]>([]);
   const [baseDataLoaded, setBaseDataLoaded] = useState(false);
   const [baseDataWarning, setBaseDataWarning] = useState('');
@@ -104,17 +103,14 @@ export function TaskLaunchPage() {
   useEffect(() => {
     const loadRecommendation = async () => {
       if (!objectType) {
-        setRecommendationReason('');
         return;
       }
 
       try {
         const response = await getModelRoutingRecommendation({ object_type: objectType });
         setRecommendedModelId(response.recommended_model_id ?? '');
-        setRecommendationReason(response.reason ?? '');
       } catch {
         setRecommendedModelId('');
-        setRecommendationReason('');
       }
     };
 
@@ -330,7 +326,6 @@ export function TaskLaunchPage() {
               <p className="mt-2 text-sm text-[#63cab7]">
                 {recommendedModel ? `${recommendedModel.model_name} (${recommendedModel.provider})` : recommendedModelId || '等待对象类型选择'}
               </p>
-              {recommendationReason ? <p className="mt-3 text-sm leading-6 text-slate-400">{recommendationReason}</p> : null}
             </div>
           </Card>
 
