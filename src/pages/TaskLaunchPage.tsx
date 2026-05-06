@@ -197,7 +197,7 @@ export function TaskLaunchPage() {
       title="发起调研"
     >
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
-        <Card className="space-y-8">
+        <Card variant="glow" className="space-y-8">
           <div className="flex flex-wrap gap-2">
             <span className="data-pill">
               <Bot size={14} className="text-[#63cab7]" />
@@ -317,7 +317,7 @@ export function TaskLaunchPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card variant="glow" className="space-y-5">
+          <Card className="space-y-5">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-[#63cab7]" />
               <h3 className="text-xl font-semibold text-slate-100">模型路由建议</h3>
