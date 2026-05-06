@@ -372,7 +372,7 @@ export function FavoritesPage() {
       </div>
 
       <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="favorites-dialog sm:max-w-md">
           <DialogHeader>
             <DialogTitle>新增目录</DialogTitle>
             <DialogDescription>创建一个新的收藏目录，用来归档报告、洞察和常用模型。</DialogDescription>
@@ -393,7 +393,7 @@ export function FavoritesPage() {
                 placeholder="例如：周报收藏"
               />
             </div>
-            <DialogFooter>
+            <DialogFooter className="favorites-dialog-footer">
               <DialogClose asChild>
                 <Button type="button" variant="secondary" disabled={submitting}>
                   取消
@@ -408,7 +408,7 @@ export function FavoritesPage() {
       </Dialog>
 
       <Dialog open={isCreateItemDialogOpen} onOpenChange={setIsCreateItemDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="favorites-dialog sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>新增收藏</DialogTitle>
             <DialogDescription>
@@ -458,7 +458,7 @@ export function FavoritesPage() {
               />
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="favorites-dialog-footer">
               <DialogClose asChild>
                 <Button type="button" variant="secondary" disabled={submitting}>
                   取消

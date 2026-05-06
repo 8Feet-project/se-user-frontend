@@ -633,6 +633,30 @@ select optgroup {
       rgba(255, 255, 255, 0.72);
   }
 
+  .favorites-dialog {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      rgba(15, 31, 53, 0.95);
+  }
+
+  :root[data-theme='day'] .favorites-dialog {
+    border-color: rgba(20, 125, 114, 0.16);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 248, 253, 0.9) 42%, rgba(236, 244, 251, 0.88) 100%),
+      radial-gradient(circle at top left, rgba(120, 201, 191, 0.12), transparent 42%),
+      rgba(255, 255, 255, 0.94);
+    box-shadow:
+      0 28px 64px rgba(88, 113, 140, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
+  :root[data-theme='day'] .favorites-dialog-footer {
+    border-top-color: rgba(20, 125, 114, 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(239, 247, 252, 0.84)),
+      rgba(255, 255, 255, 0.68);
+  }
+
   .field-label {
     @apply mb-2 block text-sm font-medium text-slate-300;
   }
