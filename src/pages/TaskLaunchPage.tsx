@@ -309,21 +309,19 @@ export function TaskLaunchPage() {
             </div>
           </div>
 
-          <div className="panel-subtle flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-100">启用多模型交叉验证</p>
-              <p className="mt-1 text-sm leading-6 text-slate-400">在主模型之外增加候选模型，用于交叉比对结论与关键证据。</p>
-            </div>
-            <label className="inline-flex cursor-pointer items-center gap-3 text-sm text-slate-300">
-              <input
-                id="task-enable-cross-validation"
-                type="checkbox"
-                checked={enableCrossValidation}
-                onChange={(event) => setEnableCrossValidation(event.target.checked)}
-                className="h-4 w-4 rounded border-[rgba(99,202,183,0.3)] accent-[#63cab7]"
-              />
-              交叉验证
-            </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              id="task-enable-cross-validation"
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setEnableCrossValidation((prev) => !prev)}
+              disabled={submitting}
+            >
+              <Sparkles size={14} />
+              {enableCrossValidation ? '关闭交叉验证' : '启用交叉验证'}
+            </Button>
+            {enableCrossValidation ? <span className="text-xs text-[#63cab7]">已启用多模型交叉验证</span> : null}
           </div>
 
           {message ? <div className="message-strip">{message}</div> : null}
