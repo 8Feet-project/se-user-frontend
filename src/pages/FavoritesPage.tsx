@@ -227,7 +227,6 @@ export function FavoritesPage() {
   return (
     <PageShell
       title="收藏夹"
-      subtitle="管理收藏目录与收藏条目，把高价值的报告、洞察和常用模型沉淀成可复用资产。"
     >
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
