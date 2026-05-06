@@ -65,9 +65,11 @@ export function PageShell({
     }
   };
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.09),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#0a1628_0%,#0c1c36_60%,#0a1628_100%)]">
-      <div className="relative min-h-screen w-full">
+    <div className="app-shell">
+      <div className="relative z-10 min-h-screen w-full">
         <aside
           className="fixed inset-y-0 left-0 z-40 hidden lg:flex"
           style={{ width: expanded ? 220 : 68, transition: 'width 200ms cubic-bezier(0.4,0,0.2,1)' }}
@@ -78,20 +80,20 @@ export function PageShell({
             className={cn(
               'flex h-full w-full flex-col overflow-hidden px-[10px] py-6 transition-[width,background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-in-out',
               expanded
-                ? 'border-r border-[rgba(99,202,183,0.09)] bg-[#07111f]/92 shadow-[4px_0_32px_rgba(0,0,0,0.45)] backdrop-blur-xl'
+                ? 'shell-sidebar-panel surface-grid'
                 : 'border-r border-transparent bg-transparent shadow-none backdrop-blur-none'
             )}
           >
             <div className="mb-7 flex items-center gap-[10px] px-[3px]">
               <Link to="/welcome" className="flex min-w-0 items-center gap-[10px] overflow-hidden">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]">
+                <div className="brand-mark h-10 w-10 shrink-0 rounded-[18px]">
                   <span className="text-[11px] font-extrabold tracking-[0.15em] text-[#63cab7]">8F</span>
                 </div>
                 <div
                   className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}
                 >
                   <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-[3px] text-[10px] uppercase tracking-[0.1em] text-slate-500">
+                  <p className="mt-[3px] text-[10px] uppercase tracking-[0.16em] text-slate-500">
                     Intel Research
                   </p>
                 </div>
@@ -99,14 +101,15 @@ export function PageShell({
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <p
+              <div
                 className={cn(
-                  'mb-2 h-[18px] px-[11px] text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600 transition-opacity duration-150',
+                  'mb-3 overflow-hidden px-[11px] transition-opacity duration-150',
                   expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
                 )}
               >
-                工作台
-              </p>
+                <p className="shell-kicker">Workspace</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">统一入口、流程追踪与结果资产沉淀。</p>
+              </div>
               <nav className="flex flex-col gap-[2px]">
                 {navItems.map((item) => {
                   const active = location.pathname === item.path;
@@ -117,10 +120,8 @@ export function PageShell({
                       to={item.path}
                       title={item.label}
                       className={cn(
-                        'flex items-center gap-[10px] overflow-hidden rounded-[10px] border-l-2 border-transparent px-[11px] py-[9px] text-[13px] font-medium transition-all duration-150',
-                        active
-                          ? 'border-l-[#63cab7] bg-[rgba(99,202,183,0.09)] pl-[9px] text-[#63cab7]'
-                          : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                        'nav-link-control overflow-hidden',
+                        active && 'nav-link-control-active'
                       )}
                     >
                       <span className="flex w-[15px] shrink-0 items-center justify-center">
@@ -141,14 +142,15 @@ export function PageShell({
                 })}
               </nav>
 
-              <p
+              <div
                 className={cn(
-                  'mb-2 mt-6 h-[18px] px-[11px] text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600 transition-opacity duration-150',
+                  'mb-3 mt-6 overflow-hidden px-[11px] transition-opacity duration-150',
                   expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
                 )}
               >
-                管理端
-              </p>
+                <p className="shell-kicker">Admin</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">模型、用户与系统级观测面板。</p>
+              </div>
               <nav className="flex flex-col gap-[2px]">
                 {adminItems.map((item) => {
                   const active = location.pathname === item.path;
@@ -159,10 +161,8 @@ export function PageShell({
                       to={item.path}
                       title={item.label}
                       className={cn(
-                        'flex items-center gap-[10px] overflow-hidden rounded-[10px] border-l-2 border-transparent px-[11px] py-[9px] text-[13px] font-medium transition-all duration-150',
-                        active
-                          ? 'border-l-[#63cab7] bg-[rgba(99,202,183,0.09)] pl-[9px] text-[#63cab7]'
-                          : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                        'nav-link-control overflow-hidden',
+                        active && 'nav-link-control-active'
                       )}
                     >
                       <span className="flex w-[15px] shrink-0 items-center justify-center">
@@ -185,12 +185,18 @@ export function PageShell({
             </div>
 
             <div className={cn('mt-auto pt-3', expanded ? 'border-t border-[rgba(99,202,183,0.08)]' : '')}>
+              <div className={cn('mb-3 overflow-hidden px-[11px] transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
+                <p className="text-[11px] font-medium text-slate-300">{isAdminRoute ? '当前位于管理端' : '当前位于工作台'}</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                  {isAdminRoute ? '适合系统配置与运营管理。' : '适合发起调研、追踪流程与查看结果。'}
+                </p>
+              </div>
               <button
                 type="button"
                 title="退出登录"
                 onClick={() => void handleLogout()}
                 disabled={loggingOut}
-                className="flex w-full items-center gap-2 rounded-[10px] px-[11px] py-2 text-left text-[13px] text-slate-500 transition-colors duration-150 hover:text-slate-300 disabled:cursor-wait disabled:opacity-70"
+                className="flex w-full items-center gap-2 rounded-2xl border border-transparent px-[11px] py-2.5 text-left text-[13px] text-slate-500 transition-colors duration-150 hover:border-[rgba(99,202,183,0.14)] hover:bg-white/[0.03] hover:text-slate-300 disabled:cursor-wait disabled:opacity-70"
               >
                 <span className="flex w-[14px] shrink-0 items-center justify-center">
                   <LogOut size={14} strokeWidth={1.6} />
@@ -206,10 +212,10 @@ export function PageShell({
         <div
           className="flex min-h-screen flex-col px-5 py-5 sm:px-6 lg:pl-[68px] lg:pr-8 lg:py-8 xl:pr-10"
         >
-          <div className="mb-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/75 p-4 backdrop-blur-xl lg:hidden">
+          <div className="shell-mobile-nav mb-4 lg:hidden">
             <div className="flex items-center justify-between gap-4">
               <Link to="/welcome" className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]">
+                <div className="brand-mark h-10 w-10 rounded-[18px]">
                   <span className="text-[11px] font-extrabold tracking-[0.22em] text-[#63cab7]">8F</span>
                 </div>
                 <div>
@@ -221,13 +227,22 @@ export function PageShell({
                 type="button"
                 onClick={() => void handleLogout()}
                 disabled={loggingOut}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(99,202,183,0.18)] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-[rgba(99,202,183,0.35)] hover:text-slate-100 disabled:cursor-wait disabled:opacity-70"
+                className="button-secondary rounded-full px-3 py-1.5 text-xs disabled:cursor-wait disabled:opacity-70"
               >
                 <LogOut size={13} strokeWidth={1.7} />
                 {loggingOut ? '退出中...' : '退出登录'}
               </button>
             </div>
-            <nav className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="shell-kicker">{isAdminRoute ? 'Admin Surface' : 'Workspace Surface'}</p>
+                <p className="mt-2 max-w-[36rem] text-sm leading-6 text-slate-400">
+                  {isAdminRoute ? '保留管理入口的快速切换与状态识别。' : '保留核心工作流入口，并在移动端维持更完整的导航信息。'}
+                </p>
+              </div>
+            </div>
+            <div className="shell-divider mt-4" />
+            <nav className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {navItems.map((item) => {
                 const active = location.pathname === item.path;
                 return (
@@ -235,10 +250,8 @@ export function PageShell({
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-all duration-150',
-                      active
-                        ? 'border-[rgba(99,202,183,0.24)] bg-[rgba(99,202,183,0.09)] text-[#63cab7]'
-                        : 'border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                      'nav-link-control',
+                      active && 'nav-link-control-active'
                     )}
                   >
                     <item.icon size={15} strokeWidth={active ? 2.1 : 1.7} />
@@ -247,7 +260,7 @@ export function PageShell({
                 );
               })}
             </nav>
-            <nav className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <nav className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {adminItems.map((item) => {
                 const active = location.pathname === item.path;
                 return (
@@ -255,10 +268,8 @@ export function PageShell({
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-all duration-150',
-                      active
-                        ? 'border-[rgba(99,202,183,0.24)] bg-[rgba(99,202,183,0.09)] text-[#63cab7]'
-                        : 'border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                      'nav-link-control',
+                      active && 'nav-link-control-active'
                     )}
                   >
                     <item.icon size={15} strokeWidth={active ? 2.1 : 1.7} />
@@ -270,21 +281,48 @@ export function PageShell({
           </div>
 
           <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1340px] flex-col gap-7">
-            <header className="border-b border-[rgba(99,202,183,0.1)] pb-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
-                    {title}
-                  </h1>
-                  {subtitle ? (
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{subtitle}</p>
-                  ) : null}
+            <header className="shell-header surface-grid">
+              <div className="relative z-10 flex flex-col gap-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="shell-kicker">{isAdminRoute ? 'Administration' : 'Research Workflow'}</p>
+                    <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
+                      {title}
+                    </h1>
+                    {subtitle ? (
+                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
+                    ) : (
+                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500">
+                        统一的任务、流程与研究资产界面。
+                      </p>
+                    )}
+                  </div>
+                  {action ? <div className="shrink-0 self-start">{action}</div> : null}
                 </div>
-                {action ? <div className="shrink-0">{action}</div> : null}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="metric-chip">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Module</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-100">{isAdminRoute ? 'Admin Control' : 'Research Console'}</p>
+                  </div>
+                  <div className="metric-chip">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Path</p>
+                    <p className="mt-2 truncate text-sm font-semibold text-slate-100">{location.pathname}</p>
+                  </div>
+                  <div className="metric-chip">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
+                    <p className="mt-2 text-sm font-semibold text-[#63cab7]">Ready for action</p>
+                  </div>
+                </div>
               </div>
             </header>
 
-            <main className="min-w-0 flex-1">{children}</main>
+            <main className="min-w-0 flex-1">
+              <div className="rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[rgba(7,17,31,0.18)] p-1">
+                <div className="min-w-0 flex-1 rounded-[28px] border border-[rgba(255,255,255,0.03)] bg-transparent p-0 sm:p-1">
+                  {children}
+                </div>
+              </div>
+            </main>
           </div>
         </div>
       </div>

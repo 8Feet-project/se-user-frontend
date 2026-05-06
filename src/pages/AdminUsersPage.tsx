@@ -343,7 +343,7 @@ export function AdminUsersPage() {
               <div className="mt-2">
                 <MultiSelect
                   options={grantablePermissionOptions}
-                  defaultValue={form.permissions}
+                  value={form.permissions}
                   onValueChange={(values) => setForm((prev) => ({ ...prev, permissions: values }))}
                   placeholder="请选择要授予的权限"
                   className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"
@@ -512,7 +512,7 @@ export function AdminUsersPage() {
                   <div className="mt-4">
                     <MultiSelect
                       options={grantablePermissionOptions}
-                      defaultValue={selectedUserGrantablePermissions}
+                      value={selectedUserGrantablePermissions}
                       onValueChange={(values) =>
                         setSelectedUser((prev) => {
                           if (!prev) {

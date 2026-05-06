@@ -142,6 +142,7 @@ import type {
   ModelsAvailableResponse,
   MoveFavoriteItemRequest,
   MoveFavoriteItemResponse,
+  ObjectType,
   PasswordResetConfirmRequest,
   PasswordResetConfirmResponse,
   PasswordResetRequest,
@@ -164,6 +165,7 @@ import type {
   ResearchHistoryDetail,
   ResearchHistoryReloadResponse,
   ResearchHistoryResponse,
+  ResearchTaskListItem,
   ResearchTaskStatusResponse,
   ResearchTasksResponse,
   ResetAdminUserPasswordResponse,
@@ -198,6 +200,105 @@ import type {
 } from '../types';
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
+
+type StringLikeId = string | number;
+
+function toStringId(value: StringLikeId | null | undefined): string {
+  return value == null ? '' : String(value);
+}
+
+function normalizeObjectType(value: string | undefined): ObjectType | undefined {
+  if (!value) {
+    return undefined;
+  }
+  switch (value.toLowerCase()) {
+    case 'company':
+      return 'company';
+    case 'stock':
+      return 'stock';
+    case 'product':
+    case 'commodity':
+      return 'commodity';
+    default:
+      return undefined;
+  }
+}
+
+function buildResearchTaskPayload(payload: CreateResearchTaskRequest) {
+  return {
+    title: payload.title,
+    object_name: payload.object_name,
+    object_type: payload.object_type,
+    time_range: payload.time_range,
+    source_authority: payload.source_authority,
+    source_types: payload.source_types,
+    search_params: payload.search_params,
+    llm_config_id: payload.llm_config_id,
+    model_id: payload.model_id,
+    multi_model_ids: payload.multi_model_ids,
+    enable_cross_validation: payload.enable_cross_validation,
+  };
+}
+
+type BackendResearchTaskListItem = Partial<ResearchTaskListItem> & {
+  id?: StringLikeId;
+  task_id?: StringLikeId;
+  object_type?: string;
+};
+
+function mapResearchTaskListItem(item: BackendResearchTaskListItem): ResearchTaskListItem {
+  return {
+    task_id: toStringId(item.task_id ?? item.id),
+    object_name: item.object_name ?? '',
+    object_type: normalizeObjectType(item.object_type) ?? 'company',
+    status: item.status ?? 'pending',
+    created_at: item.created_at ?? '',
+  };
+}
+
+type BackendCrossValidationResult = Omit<Partial<CrossValidationResultResponse>, 'model_outputs' | 'used_models'> & {
+  difference_points?: string[];
+  disagreements?: string[];
+  model_outputs?: Array<{
+    model_id?: StringLikeId;
+    summary?: string;
+    conclusion?: string;
+  }>;
+  results?: Array<{
+    model_id?: StringLikeId;
+    model?: StringLikeId;
+    summary?: string;
+    conclusion?: string;
+  }>;
+  used_models?: Array<StringLikeId>;
+};
+
+function mapCrossValidationResult(
+  payload: BackendCrossValidationResult
+): CrossValidationResultResponse {
+  const outputs =
+    payload.model_outputs?.map((item) => ({
+      model_id: toStringId(item.model_id),
+      summary: item.summary ?? item.conclusion ?? '',
+    })) ??
+    payload.results?.map((item) => ({
+      model_id: toStringId(item.model_id ?? item.model),
+      summary: item.summary ?? item.conclusion ?? '',
+    })) ??
+    [];
+
+  return {
+    task_id: payload.task_id ? toStringId(payload.task_id) : undefined,
+    status: payload.status,
+    consensus_points: payload.consensus_points ?? [],
+    difference_points: payload.difference_points ?? payload.disagreements ?? [],
+    model_outputs: outputs,
+    used_models: payload.used_models?.map((item) => toStringId(item)) ?? outputs.map((item) => item.model_id),
+    consensus_summary: payload.consensus_summary,
+    consensus_score: payload.consensus_score,
+    updated_at: payload.updated_at,
+  };
+}
 
 type BackendAdminModelItem = Partial<AdminModelItem> & {
   id?: number | string;
@@ -442,7 +543,7 @@ export async function createResearchTask(
   }
   return request<CreateResearchTaskResponse>('/research/tasks', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(buildResearchTaskPayload(payload)),
   });
 }
 
@@ -473,7 +574,14 @@ export async function getResearchTasks(params: {
   if (useMock) {
     return mockGetResearchTasks();
   }
-  return request<ResearchTasksResponse>('/research/tasks', {}, params);
+  const response = await request<{
+    list: BackendResearchTaskListItem[];
+    total: number;
+  }>('/research/tasks', {}, params);
+  return {
+    list: response.list.map(mapResearchTaskListItem),
+    total: response.total,
+  };
 }
 
 export async function getResearchTaskStatus(taskId: string): Promise<ResearchTaskStatusResponse> {
@@ -539,10 +647,16 @@ export async function triggerCrossValidation(
   if (useMock) {
     return mockTriggerCrossValidation(taskId, payload);
   }
-  return request<TriggerCrossValidationResponse>(`/research/tasks/${taskId}/cross-validation`, {
+  const response = await request<TriggerCrossValidationResponse>(`/research/tasks/${taskId}/cross-validation`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  return {
+    ...response,
+    task_id: toStringId(response.task_id),
+    result_id: response.result_id ?? response.run_id,
+    run_id: response.run_id ?? response.result_id,
+  };
 }
 
 export async function getCrossValidationResult(
@@ -551,7 +665,10 @@ export async function getCrossValidationResult(
   if (useMock) {
     return mockGetCrossValidationResult(taskId);
   }
-  return request<CrossValidationResultResponse>(`/research/tasks/${taskId}/cross-validation/result`);
+  const response = await request<BackendCrossValidationResult>(
+    `/research/tasks/${taskId}/cross-validation/result`
+  );
+  return mapCrossValidationResult(response);
 }
 
 export async function getTaskEvents(taskId: string): Promise<TaskEvent[]> {
@@ -892,7 +1009,26 @@ export async function getMessages(params: {
   if (useMock) {
     return mockGetMessages(params);
   }
-  return request<MessagesResponse>('/messages/', {}, params);
+  const query = {
+    page: params.page,
+    page_size: params.page_size,
+    only_unread:
+      params.read_status === 'unread'
+        ? true
+        : params.read_status === 'read'
+          ? false
+          : undefined,
+  };
+  const response = await request<MessagesResponse>('/messages/', {}, query);
+  if (params.read_status === 'read') {
+    const list = response.list.filter((item) => item.read_status);
+    return {
+      ...response,
+      list,
+      total: list.length,
+    };
+  }
+  return response;
 }
 
 export async function markMessageRead(messageId: string): Promise<MarkMessageReadResponse> {
@@ -1043,7 +1179,11 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
   if (useMock) {
     return mockGetCurrentUserPermissions();
   }
-  return request<CurrentUserPermissionsResponse>('/admin/permissions/current');
+  const response = await request<CurrentUserPermissionsResponse>('/admin/permissions/current');
+  return {
+    ...response,
+    user_id: response.user_id == null ? undefined : Number(response.user_id),
+  };
 }
 
 export async function getAdminDashboardOverview(): Promise<AdminDashboardOverviewResponse> {

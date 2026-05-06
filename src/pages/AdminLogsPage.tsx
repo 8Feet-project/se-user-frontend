@@ -423,7 +423,7 @@ export function AdminLogsPage() {
             <div className="mt-2">
               <MultiSelect
                 options={levelOptions}
-                defaultValue={filters.levels}
+                value={filters.levels}
                 onValueChange={(values) => setFilters((prev) => ({ ...prev, levels: values as AdminLogLevel[] }))}
                 placeholder="请选择日志级别"
                 className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"
@@ -435,7 +435,7 @@ export function AdminLogsPage() {
             <div className="mt-2">
               <MultiSelect
                 options={userOptions}
-                defaultValue={filters.users}
+                value={filters.users}
                 onValueChange={(values) => setFilters((prev) => ({ ...prev, users: values }))}
                 placeholder="请选择操作人"
                 className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"
@@ -447,7 +447,7 @@ export function AdminLogsPage() {
             <div className="mt-2">
               <MultiSelect
                 options={modelOptions}
-                defaultValue={filters.modelIds}
+                value={filters.modelIds}
                 onValueChange={(values) => setFilters((prev) => ({ ...prev, modelIds: values }))}
                 placeholder="请选择模型"
                 className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"
@@ -459,7 +459,7 @@ export function AdminLogsPage() {
             <div className="mt-2">
               <MultiSelect
                 options={moduleOptions}
-                defaultValue={filters.modules}
+                value={filters.modules}
                 onValueChange={(values) =>
                   setFilters((prev) => ({ ...prev, modules: values as Array<'user_action' | 'system_auto'> }))
                 }
@@ -473,7 +473,7 @@ export function AdminLogsPage() {
             <div className="mt-2">
               <MultiSelect
                 options={objectTypeOptions}
-                defaultValue={filters.objectTypes}
+                value={filters.objectTypes}
                 onValueChange={(values) => setFilters((prev) => ({ ...prev, objectTypes: values as Array<'company' | 'stock' | 'commodity'> }))}
                 placeholder="请选择对象类型"
                 className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-950/80 text-slate-100"

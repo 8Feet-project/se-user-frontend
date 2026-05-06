@@ -135,6 +135,54 @@ export function TaskProcessPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const replaceTaskParam = (nextTaskId: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    const currentTaskId = nextParams.get('task_id') ?? '';
+
+    if (nextTaskId) {
+      if (currentTaskId === nextTaskId) {
+        return;
+      }
+      nextParams.set('task_id', nextTaskId);
+    } else if (!currentTaskId) {
+      return;
+    } else {
+      nextParams.delete('task_id');
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const loadTaskCandidates = async () => {
+    const response = await getResearchTasks({ page: 1, page_size: 20 });
+    setTasks(response.list);
+    return response.list;
+  };
+
+  const loadTaskData = async (targetTaskId: string) => {
+    const [statusResult, workflowResult, factsResult, eventsResult] = await Promise.all([
+      getResearchTaskStatus(targetTaskId),
+      getResearchTaskWorkflow(targetTaskId),
+      getTaskFacts(targetTaskId),
+      getTaskEvents(targetTaskId),
+    ]);
+
+    setStatus(statusResult);
+    setWorkflow(workflowResult);
+    setFacts(factsResult);
+    setEvents(eventsResult);
+
+    try {
+      setLoadingCrossValidationResult(true);
+      const cvResult = await getCrossValidationResult(targetTaskId);
+      setCrossValidationResult(cvResult);
+    } catch {
+      setCrossValidationResult(null);
+    } finally {
+      setLoadingCrossValidationResult(false);
+    }
+  };
+
   useEffect(() => {
     if (!queryTaskId) {
       return;
@@ -143,31 +191,37 @@ export function TaskProcessPage() {
   }, [queryTaskId]);
 
   useEffect(() => {
-    const loadTaskCandidates = async () => {
+    const initializeTasks = async () => {
       try {
-        const response = await getResearchTasks({ page: 1, page_size: 20 });
-        setTasks(response.list);
-
-        if (queryTaskId && response.list.some((item) => item.task_id === queryTaskId)) {
+        const list = await loadTaskCandidates();
+        if (queryTaskId) {
           setTaskId(queryTaskId);
           return;
         }
 
-        const runningTask = response.list.find((item) =>
+        const runningTask = list.find((item) =>
           ['pending', 'searching', 'data_ready', 'analyzing', 'waiting_user'].includes(item.status)
         );
-        const nextTaskId = runningTask?.task_id ?? response.list[0]?.task_id ?? '';
+        const nextTaskId = runningTask?.task_id ?? list[0]?.task_id ?? '';
         setTaskId(nextTaskId);
         if (nextTaskId) {
-          setSearchParams({ task_id: nextTaskId }, { replace: true });
+          replaceTaskParam(nextTaskId);
         }
       } catch (error) {
         setMessage(error instanceof Error ? error.message : '加载任务列表失败');
       }
     };
 
-    void loadTaskCandidates();
-  }, [queryTaskId, setSearchParams]);
+    void initializeTasks();
+  }, []);
+
+  useEffect(() => {
+    if (!queryTaskId || queryTaskId === taskId) {
+      return;
+    }
+
+    setTaskId(queryTaskId);
+  }, [queryTaskId, taskId]);
 
   useEffect(() => {
     if (!taskId) {
@@ -185,27 +239,8 @@ export function TaskProcessPage() {
 
     const loadData = async () => {
       try {
-        const [statusResult, workflowResult, factsResult, eventsResult] = await Promise.all([
-          getResearchTaskStatus(taskId),
-          getResearchTaskWorkflow(taskId),
-          getTaskFacts(taskId),
-          getTaskEvents(taskId),
-        ]);
-        setStatus(statusResult);
-        setWorkflow(workflowResult);
-        setFacts(factsResult);
-        setEvents(eventsResult);
+        await loadTaskData(taskId);
         setMessage('');
-
-        try {
-          setLoadingCrossValidationResult(true);
-          const cvResult = await getCrossValidationResult(taskId);
-          setCrossValidationResult(cvResult);
-        } catch {
-          setCrossValidationResult(null);
-        } finally {
-          setLoadingCrossValidationResult(false);
-        }
       } catch (error) {
         setMessage(error instanceof Error ? error.message : '加载任务执行态失败');
       }
@@ -232,7 +267,7 @@ export function TaskProcessPage() {
     try {
       setSubmitting(true);
       const result = await cancelResearchTask(taskId);
-      setStatus((prev) => (prev ? { ...prev, status: result.status } : prev));
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
       setMessage(`任务已更新为${statusText(result.status)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '取消任务失败');
@@ -253,6 +288,7 @@ export function TaskProcessPage() {
         report_mode: 'full',
       });
       setAnalyzeResult(result);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
       setMessage(`分析任务已启动，当前状态：${statusText(result.status)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '启动分析失败');
@@ -270,6 +306,7 @@ export function TaskProcessPage() {
       setSubmitting(true);
       const result = await retryAnalysis(taskId, { model_id: 'model-gpt-4.1' });
       setRetryResult(result);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
       setMessage(`已发起重试，当前状态：${statusText(result.status)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '重试分析失败');
@@ -287,6 +324,7 @@ export function TaskProcessPage() {
       setSubmitting(true);
       const result = await triggerCrossValidation(taskId);
       setCrossValidationTrigger(result);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
       setMessage(`交叉验证已触发，当前状态：${result.status}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '启动交叉验证失败');
@@ -358,14 +396,7 @@ export function TaskProcessPage() {
         comment: interventionComment.trim() || undefined,
       });
       setInterventionResult(result);
-      const [statusResult, workflowResult, eventsResult] = await Promise.all([
-        getResearchTaskStatus(taskId),
-        getResearchTaskWorkflow(taskId),
-        getTaskEvents(taskId),
-      ]);
-      setStatus(statusResult);
-      setWorkflow(workflowResult);
-      setEvents(eventsResult);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
       setMessage(`人工介入已提交，结果：${result.result}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '提交人工介入失败');
@@ -442,11 +473,7 @@ export function TaskProcessPage() {
                     onChange={(event) => {
                       const nextTaskId = event.target.value;
                       setTaskId(nextTaskId);
-                      if (nextTaskId) {
-                        setSearchParams({ task_id: nextTaskId }, { replace: true });
-                      } else {
-                        setSearchParams({}, { replace: true });
-                      }
+                      replaceTaskParam(nextTaskId);
                     }}
                   >
                     <option value="">请选择任务</option>
