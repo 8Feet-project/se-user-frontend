@@ -21,6 +21,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '@/types';
 
 const objectTypes = ['', 'company', 'stock', 'commodity'] as const;
+const defaultSourceAuthority = 'high';
+const defaultSourceTypes = ['news', 'report'];
 
 const chineseDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -46,8 +48,6 @@ export function TaskLaunchPage() {
   const [objectName, setObjectName] = useState('');
   const [objectType, setObjectType] = useState<(typeof objectTypes)[number]>('');
   const [timeRange, setTimeRange] = useState('30d');
-  const [sourceAuthority, setSourceAuthority] = useState('high');
-  const [sourceTypesText, setSourceTypesText] = useState('news,report');
   const [modelId, setModelId] = useState('');
   const [enableCrossValidation, setEnableCrossValidation] = useState(false);
   const [multiModelIds, setMultiModelIds] = useState<string[]>([]);
@@ -140,11 +140,8 @@ export function TaskLaunchPage() {
         object_name: objectName.trim(),
         object_type: objectType || undefined,
         time_range: timeRange,
-        source_authority: sourceAuthority,
-        source_types: sourceTypesText
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        source_authority: defaultSourceAuthority,
+        source_types: defaultSourceTypes,
         model_id: modelId || undefined,
         multi_model_ids: multiModelIds,
         enable_cross_validation: enableCrossValidation,
@@ -199,15 +196,6 @@ export function TaskLaunchPage() {
     [availableModels, recommendedModelId]
   );
 
-  const activeSourceTypes = useMemo(
-    () =>
-      sourceTypesText
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    [sourceTypesText]
-  );
-
   return (
     <PageShell
       title="发起调研"
@@ -242,7 +230,7 @@ export function TaskLaunchPage() {
             <p className="page-kicker">Research Launch</p>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-100">创建调研任务</h2>
             <p className="text-sm leading-7 text-slate-400">
-              通过对象类型、时间范围、信源要求与模型策略，把一次临时查询整理成标准化调研任务。
+              通过对象类型、时间范围与模型策略，把一次临时查询整理成标准化调研任务。
             </p>
           </section>
 
@@ -287,25 +275,6 @@ export function TaskLaunchPage() {
                 <option value="90d">近 90 天</option>
                 <option value="1y">近 1 年</option>
               </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="task-source-authority">信源权威度</Label>
-              <Select id="task-source-authority" value={sourceAuthority} onChange={(event) => setSourceAuthority(event.target.value)}>
-                <option value="high">高权威</option>
-                <option value="medium">平衡</option>
-                <option value="low">广覆盖</option>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="task-source-types">信源类型（逗号分隔）</Label>
-              <Input
-                id="task-source-types"
-                value={sourceTypesText}
-                onChange={(event) => setSourceTypesText(event.target.value)}
-                placeholder="例如：news,report"
-              />
             </div>
 
             <div>
@@ -383,16 +352,6 @@ export function TaskLaunchPage() {
                 {recommendedModel ? `${recommendedModel.model_name} (${recommendedModel.provider})` : recommendedModelId || '等待对象类型选择'}
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-400">{recommendationReason || '选择对象类型后，系统会根据研究场景提供模型路由建议。'}</p>
-            </div>
-            <div className="panel-subtle p-4">
-              <p className="text-sm font-semibold text-slate-100">当前信源策略</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {activeSourceTypes.length > 0 ? (
-                  activeSourceTypes.map((type) => <span key={type} className="data-pill">{type}</span>)
-                ) : (
-                  <span className="text-sm text-slate-500">暂无信源类型</span>
-                )}
-              </div>
             </div>
           </Card>
 
