@@ -342,7 +342,7 @@ export function TaskLaunchPage() {
               <p className="mt-2 text-sm text-[#63cab7]">
                 {recommendedModel ? `${recommendedModel.model_name} (${recommendedModel.provider})` : recommendedModelId || '等待对象类型选择'}
               </p>
-              <p className="mt-3 text-sm leading-6 text-slate-400">{recommendationReason || '选择对象类型后，系统会根据研究场景提供模型路由建议。'}</p>
+              {recommendationReason ? <p className="mt-3 text-sm leading-6 text-slate-400">{recommendationReason}</p> : null}
             </div>
           </Card>
 
