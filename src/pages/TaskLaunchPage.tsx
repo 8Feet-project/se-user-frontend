@@ -352,7 +352,7 @@ export function TaskLaunchPage() {
               <Clock3 size={16} className="text-[#63cab7]" />
               <h3 className="text-xl font-semibold text-slate-100">近期任务</h3>
             </div>
-            <div className="max-h-[15rem] space-y-3 overflow-y-auto pr-1">
+            <div className="max-h-[18rem] space-y-3 overflow-y-auto pr-1">
               {researchTasks.length > 0 ? (
                 researchTasks.map((task) => (
                   <div key={task.task_id} className="panel-subtle p-4">
