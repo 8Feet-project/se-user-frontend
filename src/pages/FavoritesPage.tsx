@@ -61,6 +61,31 @@ export function FavoritesPage() {
     [folders, selectedFolderId]
   );
 
+  const folderNameById = useMemo(
+    () => new Map(folders.map((folder) => [folder.folder_id, folder.folder_name])),
+    [folders]
+  );
+
+  const reportTitleById = useMemo(
+    () => new Map(reports.map((report) => [report.report_id, report.title])),
+    [reports]
+  );
+
+  const modelNameById = useMemo(
+    () => new Map(models.map((model) => [model.model_id, `${model.model_name}（${model.provider}）`])),
+    [models]
+  );
+
+  const getFavoriteDisplayName = (item: FavoriteItem) => {
+    if (item.favorite_type === 'report') {
+      return reportTitleById.get(item.target_id) || item.remark || '未命名报告';
+    }
+    if (item.favorite_type === 'model') {
+      return modelNameById.get(item.target_id) || item.remark || '未命名模型';
+    }
+    return item.remark || '未命名洞察';
+  };
+
   const loadFolders = async () => {
     const response = await getFavoriteFolders();
     setFolders(response.folders);
@@ -309,7 +334,7 @@ export function FavoritesPage() {
               <option value="">请选择收藏对象</option>
               {favoriteTargets.map((target) => (
                 <option key={`${favoriteType}-${target.id}`} value={target.id}>
-                  {target.label}（{target.id}）
+                  {target.label}
                 </option>
               ))}
             </Select>
@@ -347,10 +372,9 @@ export function FavoritesPage() {
                     <div>
                       <p className="text-sm font-semibold text-slate-100">
                         {favoriteTypeLabel(item.favorite_type)}
-                        <span className="ml-2 font-normal text-slate-500">{item.target_id}</span>
+                        <span className="ml-2 font-normal text-slate-300">{getFavoriteDisplayName(item)}</span>
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">{item.favorite_id}</p>
-                      <p className="text-xs text-slate-500">目录：{item.folder_id ?? '-'}</p>
+                      <p className="mt-1 text-xs text-slate-500">目录：{item.folder_id ? (folderNameById.get(item.folder_id) ?? '未分组') : '未分组'}</p>
                       {item.remark ? <p className="mt-2 text-sm text-slate-400">备注：{item.remark}</p> : null}
                     </div>
                   </div>
