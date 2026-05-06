@@ -41,13 +41,11 @@ export function PageShell({
   title,
   subtitle,
   action,
-  showHeaderMetrics = true,
   children,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
-  showHeaderMetrics?: boolean;
   children: ReactNode;
 }) {
   const location = useLocation();
@@ -273,24 +271,6 @@ export function PageShell({
                   </div>
                   {action ? <div className="shrink-0 self-start">{action}</div> : null}
                 </div>
-                {showHeaderMetrics ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="metric-chip">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Module</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-100">
-                        {isAdminRoute ? 'Admin Control' : 'Research Console'}
-                      </p>
-                    </div>
-                    <div className="metric-chip">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Path</p>
-                      <p className="mt-2 truncate text-sm font-semibold text-slate-100">{location.pathname}</p>
-                    </div>
-                    <div className="metric-chip">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
-                      <p className="mt-2 text-sm font-semibold text-[#63cab7]">Ready for action</p>
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </header>
 

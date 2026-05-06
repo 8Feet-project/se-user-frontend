@@ -550,7 +550,6 @@ export function TaskProcessPage() {
     <PageShell
       title="调研流程"
       subtitle="围绕当前任务、异常节点与事件回放组织的实时流程监控界面。先看系统卡在哪里，再决定是否介入、重试或继续生成报告。"
-      showHeaderMetrics={false}
       action={
         <div className="flex flex-wrap gap-2">
           {waitingNode ? (
