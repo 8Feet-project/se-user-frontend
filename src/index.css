@@ -96,6 +96,7 @@ body,
 }
 
 html {
+  font-size: 14px;
   scroll-behavior: smooth;
 }
 
@@ -274,6 +275,23 @@ select optgroup {
       var(--8feet-bg-gradient);
   }
 
+  .theme-auth-shell {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(99, 202, 183, 0.1), transparent 34%),
+      radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.08), transparent 32%),
+      var(--8feet-bg-gradient);
+  }
+
+  :root[data-theme='day'] .theme-auth-shell {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(45, 148, 136, 0.12), transparent 34%),
+      radial-gradient(circle at 100% 100%, rgba(104, 163, 219, 0.12), transparent 32%),
+      var(--8feet-bg-gradient);
+  }
+
   .app-shell::before {
     content: '';
     position: absolute;
@@ -417,6 +435,26 @@ select optgroup {
   :root[data-theme='day'] .theme-shell-frame-inner {
     background: rgba(255, 255, 255, 0.22) !important;
     border-color: rgba(255, 255, 255, 0.56) !important;
+  }
+
+  :root[data-theme='day'] .login-mode-tabs {
+    border-color: rgba(20, 125, 114, 0.12) !important;
+    background: rgba(255, 255, 255, 0.66) !important;
+  }
+
+  :root[data-theme='day'] .login-mode-tab {
+    color: var(--8feet-text-body) !important;
+  }
+
+  :root[data-theme='day'] .login-mode-tab:hover {
+    background: rgba(20, 125, 114, 0.06) !important;
+    color: var(--8feet-text-strong) !important;
+  }
+
+  :root[data-theme='day'] .login-mode-tab-active {
+    background: rgba(20, 125, 114, 0.12) !important;
+    color: var(--8feet-text-strong) !important;
+    box-shadow: inset 0 0 0 1px rgba(20, 125, 114, 0.22) !important;
   }
 
   .shell-kicker {

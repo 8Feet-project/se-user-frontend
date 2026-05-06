@@ -13,7 +13,7 @@ export function AuthShell({
   topActions?: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.1),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#081323_0%,#0c1c36_58%,#0a1628_100%)]">
+    <div className="theme-auth-shell relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,202,183,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(99,202,183,0.025)_1px,transparent_1px)] bg-[size:52px_52px] opacity-40" />
       <div className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#63cab7]/10 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[320px] w-[320px] rounded-full bg-sky-500/10 blur-[120px]" />

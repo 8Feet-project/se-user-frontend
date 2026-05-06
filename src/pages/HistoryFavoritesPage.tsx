@@ -125,12 +125,11 @@ export function HistoryFavoritesPage() {
   return (
     <PageShell
       title="历史记录"
-      subtitle="按 8Feet 的双栏信息结构重新组织历史调研：左侧看任务队列，右侧查看详情、数据集和重载结果。"
     >
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)]">
-        <Card className="space-y-6">
+        <Card className="flex flex-col gap-6 xl:max-h-[calc(100vh-15rem)] xl:overflow-hidden">
           <div className="flex flex-wrap gap-2">
             <span className="data-pill">
               <History size={14} className="text-[#63cab7]" />
@@ -145,12 +144,9 @@ export function HistoryFavoritesPage() {
           <div className="space-y-2">
             <p className="page-kicker">History Stream</p>
             <h2 className="text-2xl font-semibold text-slate-100">调研历史</h2>
-            <p className="text-sm leading-7 text-slate-400">
-              把过去的任务保留成可回溯的资产，你可以重新查看详情、重载结果，也可以直接跳转到流程页或报告页继续处理。
-            </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {tasks.length > 0 ? (
               tasks.map((task) => (
                 <div

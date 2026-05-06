@@ -142,11 +142,50 @@ export function AdminDashboardPage() {
       .sort((a, b) => b.call_count - a.call_count);
   }, [filteredModelTrend, modelUsage.model_usage_ranking]);
 
-  const distributionItems = [
-    { label: '公司', value: distribution.company_ratio, color: 'bg-sky-500' },
-    { label: '股票', value: distribution.stock_ratio, color: 'bg-violet-500' },
-    { label: '商品', value: distribution.commodity_ratio, color: 'bg-amber-500' },
-  ];
+  const distributionItems = useMemo(() => {
+    const rawItems = [
+      { label: '公司', value: distribution.company_ratio, color: 'bg-sky-500', chartColor: '#0ea5e9' },
+      { label: '股票', value: distribution.stock_ratio, color: 'bg-violet-500', chartColor: '#8b5cf6' },
+      { label: '商品', value: distribution.commodity_ratio, color: 'bg-amber-500', chartColor: '#f59e0b' },
+    ];
+    const total = rawItems.reduce((sum, item) => sum + Math.max(0, item.value), 0);
+    const shouldConvertRatio = total > 0 && total <= 1.0001;
+    const normalizedItems = rawItems.map((item) => {
+      const percentValue = shouldConvertRatio ? item.value * 100 : item.value;
+      const normalizedValue = Math.max(0, Math.min(100, percentValue));
+      return {
+        ...item,
+        value: normalizedValue,
+      };
+    });
+    const normalizedTotal = normalizedItems.reduce((sum, item) => sum + item.value, 0);
+
+    return normalizedItems.map((item) => {
+      const chartValue = normalizedTotal > 0 ? (item.value / normalizedTotal) * 100 : 0;
+      return {
+        ...item,
+        chartValue,
+        displayValue: formatPercentage(item.value),
+      };
+    });
+  }, [distribution.company_ratio, distribution.commodity_ratio, distribution.stock_ratio]);
+
+  const distributionChartBackground = useMemo(() => {
+    let offset = 0;
+    const segments = distributionItems
+      .filter((item) => item.chartValue > 0)
+      .map((item) => {
+        const start = offset;
+        offset += item.chartValue;
+        return `${item.chartColor} ${start}% ${offset}%`;
+      });
+
+    if (segments.length === 0) {
+      return 'rgba(148, 163, 184, 0.18)';
+    }
+
+    return `conic-gradient(${segments.join(', ')})`;
+  }, [distributionItems]);
 
   const maxActiveUsers = useMemo(() => {
     return Math.max(1, ...filteredOverviewTrend.map((item) => item.value));
@@ -323,18 +362,45 @@ export function AdminDashboardPage() {
             <EmptyState text="所选时间范围内暂无运行数据" />
           ) : (
             <>
-              <div className="mt-6 space-y-5">
-                {distributionItems.map((item) => (
-                  <div key={item.label} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300">{item.label}</span>
-                      <span className="font-medium text-white">{item.value}%</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-white/[0.06]">
-                      <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
+              <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr] lg:items-center">
+                <div className="flex justify-center">
+                  <div
+                    role="img"
+                    aria-label={distributionItems.map((item) => `${item.label}${item.displayValue}`).join('，')}
+                    className="relative h-48 w-48 rounded-full shadow-[0_20px_60px_rgba(14,165,233,0.16)]"
+                    style={{ background: distributionChartBackground }}
+                  >
+                    <div className="absolute inset-[22%] rounded-full border border-[rgba(99,202,183,0.12)] bg-[#07111f] shadow-[inset_0_1px_24px_rgba(15,23,42,0.55)]" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-xs uppercase tracking-[0.24em] text-slate-500">Object Mix</span>
+                      <span className="mt-2 text-2xl font-semibold text-white">100%</span>
+                      <span className="mt-1 text-xs text-slate-400">调研对象</span>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="space-y-4">
+                  {distributionItems.map((item) => (
+                    <div key={item.label} className="rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-3 w-3 rounded-full shadow-[0_0_16px_rgba(255,255,255,0.12)]"
+                            style={{ backgroundColor: item.chartColor }}
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-slate-200">{item.label}</p>
+                            <p className="text-xs text-slate-500">图形占比 {formatPercentage(item.chartValue)}</p>
+                          </div>
+                        </div>
+                        <span className="text-lg font-semibold text-white">{item.displayValue}</span>
+                      </div>
+                      <div className="mt-4 h-2 rounded-full bg-white/[0.06]">
+                        <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.chartValue}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="mt-6 rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4 text-sm leading-6 text-slate-400">
                 当前调研对象以公司与股票为主，商品调研占比较低，可作为模型路由与提示词优化的依据。
@@ -459,6 +525,10 @@ function endOfDay(date: string) {
   const d = new Date(`${date}T00:00:00`);
   d.setHours(23, 59, 59, 999);
   return d;
+}
+
+function formatPercentage(value: number) {
+  return `${Number(value.toFixed(2)).toString()}%`;
 }
 
 function EmptyState({ text }: { text: string }) {

@@ -96,6 +96,20 @@ export function AdminModelsPage() {
     return models.find((item) => item.model_id === selectedModelId) ?? null;
   }, [models, selectedModelId]);
 
+  const visibleModels = useMemo(() => {
+    if (!selectedModelId) {
+      return models;
+    }
+
+    const selectedIndex = models.findIndex((item) => item.model_id === selectedModelId);
+    if (selectedIndex <= 0) {
+      return models;
+    }
+
+    const selected = models[selectedIndex];
+    return [selected, ...models.slice(0, selectedIndex), ...models.slice(selectedIndex + 1)];
+  }, [models, selectedModelId]);
+
   useEffect(() => {
     if (!selectedModel) {
       setForm(defaultForm);
@@ -354,7 +368,7 @@ export function AdminModelsPage() {
             </Badge>
           </div>
           <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: 'calc(100vh - 330px)' }}>
-            {models.map((item) => {
+            {visibleModels.map((item) => {
               const active = item.model_id === selectedModelId;
               return (
                 <button

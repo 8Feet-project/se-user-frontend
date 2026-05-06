@@ -152,7 +152,7 @@ export function LoginPage() {
         </div>
 
         <div className="mt-8">
-          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/40 p-1">
+          <div className="login-mode-tabs grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/40 p-1">
             {loginModes.map((item) => {
               const isActive = item.value === loginMode;
 
@@ -165,9 +165,9 @@ export function LoginPage() {
                     setMessage('');
                   }}
                   className={cn(
-                    'rounded-xl px-4 py-3 text-left transition',
+                    'login-mode-tab rounded-xl px-4 py-3 text-left transition',
                     isActive
-                      ? 'bg-[rgba(99,202,183,0.12)] text-slate-50 shadow-[inset_0_0_0_1px_rgba(99,202,183,0.3)]'
+                      ? 'login-mode-tab-active bg-[rgba(99,202,183,0.12)] text-slate-50 shadow-[inset_0_0_0_1px_rgba(99,202,183,0.3)]'
                       : 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-200',
                   )}
                 >
