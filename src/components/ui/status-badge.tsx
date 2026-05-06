@@ -17,6 +17,10 @@ const statusMap: Record<string, { label: string; className: string }> = {
     label: '数据就绪',
     className: 'border-teal-700/40 bg-teal-900/30 text-teal-400',
   },
+  waiting_user: {
+    label: '待人工决策',
+    className: 'border-amber-700/40 bg-amber-900/30 text-amber-300',
+  },
   pending: {
     label: '待处理',
     className: 'border-slate-700 bg-slate-800 text-slate-400',
@@ -32,6 +36,10 @@ const statusMap: Record<string, { label: string; className: string }> = {
   running: {
     label: '进行中',
     className: 'border-blue-700/40 bg-blue-900/30 text-blue-400 animate-pulse',
+  },
+  skipped: {
+    label: '已跳过',
+    className: 'border-slate-700/70 bg-slate-900/50 text-slate-400',
   },
   enabled: {
     label: '已启用',

@@ -41,11 +41,13 @@ export function PageShell({
   title,
   subtitle,
   action,
+  showHeaderMetrics = true,
   children,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  showHeaderMetrics?: boolean;
   children: ReactNode;
 }) {
   const location = useLocation();
@@ -78,7 +80,7 @@ export function PageShell({
         >
           <div
             className={cn(
-              'flex h-full w-full flex-col overflow-hidden px-[10px] py-6 transition-[width,background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-in-out',
+              'flex h-full min-h-0 w-full flex-col overflow-hidden px-[10px] py-6 transition-[width,background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-in-out',
               expanded
                 ? 'shell-sidebar-panel surface-grid'
                 : 'border-r border-transparent bg-transparent shadow-none backdrop-blur-none'
@@ -100,16 +102,7 @@ export function PageShell({
               </Link>
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <div
-                className={cn(
-                  'mb-3 overflow-hidden px-[11px] transition-opacity duration-150',
-                  expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
-                )}
-              >
-                <p className="shell-kicker">Workspace</p>
-                <p className="mt-2 text-xs leading-5 text-slate-500">统一入口、流程追踪与结果资产沉淀。</p>
-              </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
               <nav className="flex flex-col gap-[2px]">
                 {navItems.map((item) => {
                   const active = location.pathname === item.path;
@@ -142,15 +135,6 @@ export function PageShell({
                 })}
               </nav>
 
-              <div
-                className={cn(
-                  'mb-3 mt-6 overflow-hidden px-[11px] transition-opacity duration-150',
-                  expanded ? 'opacity-100' : 'pointer-events-none opacity-0'
-                )}
-              >
-                <p className="shell-kicker">Admin</p>
-                <p className="mt-2 text-xs leading-5 text-slate-500">模型、用户与系统级观测面板。</p>
-              </div>
               <nav className="flex flex-col gap-[2px]">
                 {adminItems.map((item) => {
                   const active = location.pathname === item.path;
@@ -184,13 +168,7 @@ export function PageShell({
               </nav>
             </div>
 
-            <div className={cn('mt-auto pt-3', expanded ? 'border-t border-[rgba(99,202,183,0.08)]' : '')}>
-              <div className={cn('mb-3 overflow-hidden px-[11px] transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
-                <p className="text-[11px] font-medium text-slate-300">{isAdminRoute ? '当前位于管理端' : '当前位于工作台'}</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                  {isAdminRoute ? '适合系统配置与运营管理。' : '适合发起调研、追踪流程与查看结果。'}
-                </p>
-              </div>
+            <div className={cn('mt-3 shrink-0 pt-3', expanded ? 'border-t border-[rgba(99,202,183,0.08)]' : '')}>
               <button
                 type="button"
                 title="退出登录"
@@ -299,20 +277,24 @@ export function PageShell({
                   </div>
                   {action ? <div className="shrink-0 self-start">{action}</div> : null}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="metric-chip">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Module</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-100">{isAdminRoute ? 'Admin Control' : 'Research Console'}</p>
+                {showHeaderMetrics ? (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="metric-chip">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Module</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-100">
+                        {isAdminRoute ? 'Admin Control' : 'Research Console'}
+                      </p>
+                    </div>
+                    <div className="metric-chip">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Path</p>
+                      <p className="mt-2 truncate text-sm font-semibold text-slate-100">{location.pathname}</p>
+                    </div>
+                    <div className="metric-chip">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
+                      <p className="mt-2 text-sm font-semibold text-[#63cab7]">Ready for action</p>
+                    </div>
                   </div>
-                  <div className="metric-chip">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Path</p>
-                    <p className="mt-2 truncate text-sm font-semibold text-slate-100">{location.pathname}</p>
-                  </div>
-                  <div className="metric-chip">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
-                    <p className="mt-2 text-sm font-semibold text-[#63cab7]">Ready for action</p>
-                  </div>
-                </div>
+                ) : null}
               </div>
             </header>
 

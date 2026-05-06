@@ -311,7 +311,6 @@ export function ReportPreviewPage() {
   return (
     <PageShell
       title="调研报告"
-      subtitle="查看、导出和继续追问 AI 生成的调研报告，引用区与追问流全部按 8Feet 的卡片层级重新组织。"
       action={
         <Button variant="secondary" disabled={exporting || !reportId} onClick={() => void handleExportReport()}>
           <Download size={16} />
@@ -377,6 +376,9 @@ export function ReportPreviewPage() {
             )}
           </Card>
 
+        </div>
+
+        <div className="space-y-6">
           <Card className="space-y-5">
             <div className="flex items-center gap-2">
               <MessageSquareMore size={16} className="text-[#63cab7]" />
@@ -427,9 +429,7 @@ export function ReportPreviewPage() {
               <div className="panel-subtle p-5 text-sm text-slate-500">暂时没有追问记录。</div>
             )}
           </Card>
-        </div>
 
-        <div className="space-y-6">
           <Card variant="glow" className="space-y-5">
             <div className="flex items-center gap-2">
               <Quote size={16} className="text-[#63cab7]" />

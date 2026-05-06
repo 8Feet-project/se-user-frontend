@@ -381,9 +381,9 @@ export function TaskLaunchPage() {
               <Clock3 size={16} className="text-[#63cab7]" />
               <h3 className="text-xl font-semibold text-slate-100">近期任务</h3>
             </div>
-            <div className="space-y-3">
+            <div className="max-h-[25rem] space-y-3 overflow-y-auto pr-1">
               {researchTasks.length > 0 ? (
-                researchTasks.slice(0, 5).map((task) => (
+                researchTasks.map((task) => (
                   <div key={task.task_id} className="panel-subtle p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
