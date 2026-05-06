@@ -306,22 +306,21 @@ export function TaskLaunchPage() {
                 maxCount={3}
               />
               {availableModels.length === 0 ? <p className="mt-2 text-xs text-slate-500">暂无可用模型</p> : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  id="task-enable-cross-validation"
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setEnableCrossValidation((prev) => !prev)}
+                  disabled={submitting}
+                >
+                  <Sparkles size={14} />
+                  {enableCrossValidation ? '关闭交叉验证' : '启用交叉验证'}
+                </Button>
+                {enableCrossValidation ? <span className="text-xs text-[#63cab7]">已启用多模型交叉验证</span> : null}
+              </div>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              id="task-enable-cross-validation"
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setEnableCrossValidation((prev) => !prev)}
-              disabled={submitting}
-            >
-              <Sparkles size={14} />
-              {enableCrossValidation ? '关闭交叉验证' : '启用交叉验证'}
-            </Button>
-            {enableCrossValidation ? <span className="text-xs text-[#63cab7]">已启用多模型交叉验证</span> : null}
           </div>
 
           {message ? <div className="message-strip">{message}</div> : null}
