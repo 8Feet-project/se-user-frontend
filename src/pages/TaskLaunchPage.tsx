@@ -338,7 +338,6 @@ export function TaskLaunchPage() {
               <h3 className="text-xl font-semibold text-slate-100">模型路由建议</h3>
             </div>
             <div className="panel-subtle p-4">
-              <p className="text-sm font-semibold text-slate-100">推荐模型</p>
               <p className="mt-2 text-sm text-[#63cab7]">
                 {recommendedModel ? `${recommendedModel.model_name} (${recommendedModel.provider})` : recommendedModelId || '等待对象类型选择'}
               </p>
