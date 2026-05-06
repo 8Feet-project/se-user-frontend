@@ -1,4 +1,4 @@
-﻿import { FolderKanban, MoveRight, Star } from 'lucide-react';
+﻿import { FolderKanban, MoveRight, Plus, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -16,6 +16,7 @@ import {
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -43,6 +44,8 @@ export function FavoritesPage() {
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
+  const [isCreateItemDialogOpen, setIsCreateItemDialogOpen] = useState(false);
 
   const favoriteTargets = useMemo(() => {
     if (favoriteType === 'report') {
@@ -140,6 +143,7 @@ export function FavoritesPage() {
       setSubmitting(true);
       const response = await createFavoriteFolder({ folder_name: folderName.trim() });
       setFolderName('');
+      setIsCreateFolderDialogOpen(false);
       setMessage(`目录已创建：${response.folder_name}`);
       await loadFolders();
     } catch (error) {
@@ -205,6 +209,7 @@ export function FavoritesPage() {
       });
       setTargetId('');
       setRemark('');
+      setIsCreateItemDialogOpen(false);
       setMessage('已加入收藏夹。');
       await loadItems(selectedFolderId || undefined);
     } catch (error) {
@@ -250,18 +255,24 @@ export function FavoritesPage() {
   };
 
   return (
-    <PageShell
-      title="收藏夹"
-    >
+    <PageShell title="收藏夹">
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
         <Card className="space-y-6">
-          <div className="flex items-center gap-2">
-            <FolderKanban size={16} className="text-[#63cab7]" />
-            <h2 className="text-2xl font-semibold text-slate-100">收藏目录</h2>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <FolderKanban size={16} className="text-[#63cab7]" />
+                <h2 className="text-2xl font-semibold text-slate-100">收藏目录</h2>
+              </div>
+              <p className="mt-2 text-sm text-slate-400">支持目录查询、创建、重命名与删除，用统一的卡片层级管理沉淀内容。</p>
+            </div>
+            <Button size="sm" onClick={() => setIsCreateFolderDialogOpen(true)}>
+              <Plus size={14} />
+              新增目录
+            </Button>
           </div>
-          <p className="text-sm text-slate-400">支持目录查询、创建、重命名与删除，用统一的卡片层级管理沉淀内容。</p>
 
           <div className="grid gap-3">
             <Label htmlFor="favorite-folder-select">当前目录</Label>
@@ -284,25 +295,16 @@ export function FavoritesPage() {
             </Select>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-3">
-              <Label htmlFor="new-folder-name">新目录名称</Label>
-              <Input id="new-folder-name" value={folderName} onChange={(event) => setFolderName(event.target.value)} placeholder="例如：周报收藏" />
-              <Button size="sm" onClick={handleCreateFolder} disabled={submitting}>
-                创建目录
+          <div className="space-y-3">
+            <Label htmlFor="edit-folder-name">修改目录名称</Label>
+            <Input id="edit-folder-name" value={editingFolderName} onChange={(event) => setEditingFolderName(event.target.value)} placeholder="输入新的目录名称" />
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={handleUpdateFolder} disabled={submitting}>
+                保存修改
               </Button>
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="edit-folder-name">修改目录名称</Label>
-              <Input id="edit-folder-name" value={editingFolderName} onChange={(event) => setEditingFolderName(event.target.value)} placeholder="输入新的目录名称" />
-              <div className="flex gap-2">
-                <Button size="sm" variant="secondary" onClick={handleUpdateFolder} disabled={submitting}>
-                  保存修改
-                </Button>
-                <Button size="sm" variant="secondary" onClick={handleDeleteFolder} disabled={submitting}>
-                  删除目录
-                </Button>
-              </div>
+              <Button size="sm" variant="secondary" onClick={handleDeleteFolder} disabled={submitting}>
+                删除目录
+              </Button>
             </div>
           </div>
 
@@ -313,39 +315,16 @@ export function FavoritesPage() {
         </Card>
 
         <Card variant="glow" className="space-y-6">
-          <div className="flex items-center gap-2">
-            <Star size={16} className="text-[#63cab7]" />
-            <h3 className="text-xl font-semibold text-slate-100">收藏条目</h3>
-          </div>
-          <p className="text-sm text-slate-400">支持新增收藏、指定目录、备注说明以及跨目录移动。</p>
-
-          <div className="grid gap-3">
-            <Label htmlFor="favorite-type">收藏类型</Label>
-            <Select id="favorite-type" value={favoriteType} onChange={(event) => setFavoriteType(event.target.value as FavoriteType)}>
-              {favoriteTypes.map((type) => (
-                <option key={type} value={type}>
-                  {favoriteTypeLabel(type)}
-                </option>
-              ))}
-            </Select>
-
-            <Label htmlFor="favorite-target-id">收藏对象</Label>
-            <Select id="favorite-target-id" value={targetId} onChange={(event) => setTargetId(event.target.value)}>
-              <option value="">请选择收藏对象</option>
-              {favoriteTargets.map((target) => (
-                <option key={`${favoriteType}-${target.id}`} value={target.id}>
-                  {target.label}
-                </option>
-              ))}
-            </Select>
-            {favoriteTargets.length === 0 ? (
-              <p className="text-xs text-amber-300">当前类型暂无可选对象，请从报告页或历史页直接点击“收藏”。</p>
-            ) : null}
-
-            <Label htmlFor="favorite-remark">备注（可选）</Label>
-            <Input id="favorite-remark" value={remark} onChange={(event) => setRemark(event.target.value)} placeholder="例如：高价值参考样本" />
-
-            <Button onClick={handleCreateItem} disabled={submitting}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Star size={16} className="text-[#63cab7]" />
+                <h3 className="text-xl font-semibold text-slate-100">收藏条目</h3>
+              </div>
+              <p className="mt-2 text-sm text-slate-400">支持新增收藏、指定目录、备注说明以及跨目录移动。</p>
+            </div>
+            <Button size="sm" onClick={() => setIsCreateItemDialogOpen(true)}>
+              <Plus size={14} />
               新增收藏
             </Button>
           </div>
@@ -393,6 +372,107 @@ export function FavoritesPage() {
           </div>
         </Card>
       </div>
+
+      <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增目录</DialogTitle>
+            <DialogDescription>创建一个新的收藏目录，用来归档报告、洞察和常用模型。</DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreateFolder();
+            }}
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="favorite-folder-name-dialog">目录名称</Label>
+              <Input
+                id="favorite-folder-name-dialog"
+                value={folderName}
+                onChange={(event) => setFolderName(event.target.value)}
+                placeholder="例如：周报收藏"
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary" disabled={submitting}>
+                  取消
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={submitting}>
+                创建目录
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreateItemDialogOpen} onOpenChange={setIsCreateItemDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>新增收藏</DialogTitle>
+            <DialogDescription>
+              当前会保存到{selectedFolder?.folder_name ? `“${selectedFolder.folder_name}”` : '当前视图'}，你也可以先切换目录再发起收藏。
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreateItem();
+            }}
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="favorite-type-dialog">收藏类型</Label>
+              <Select id="favorite-type-dialog" value={favoriteType} onChange={(event) => setFavoriteType(event.target.value as FavoriteType)}>
+                {favoriteTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {favoriteTypeLabel(type)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="favorite-target-id-dialog">收藏对象</Label>
+              <Select id="favorite-target-id-dialog" value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+                <option value="">请选择收藏对象</option>
+                {favoriteTargets.map((target) => (
+                  <option key={`${favoriteType}-${target.id}`} value={target.id}>
+                    {target.label}
+                  </option>
+                ))}
+              </Select>
+              {favoriteTargets.length === 0 ? (
+                <p className="text-xs text-amber-300">当前类型暂无可选对象，请从报告页或历史页直接点击“收藏”。</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="favorite-remark-dialog">备注（可选）</Label>
+              <Input
+                id="favorite-remark-dialog"
+                value={remark}
+                onChange={(event) => setRemark(event.target.value)}
+                placeholder="例如：高价值参考样本"
+              />
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary" disabled={submitting}>
+                  取消
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={submitting}>
+                新增收藏
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
