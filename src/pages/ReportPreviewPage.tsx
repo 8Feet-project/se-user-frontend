@@ -1,4 +1,6 @@
 ﻿import { Download, ExternalLink, FileText, MessageSquareMore, Quote, Star } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -23,6 +25,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 import { downloadReport } from '@/lib/exportReport';
 import type { ReportCitation, ReportCitationDetail, ReportDetail, ReportListItem, ReportQaItem } from '@/types';
+
+import './ReportPreviewPage.css';
 
 const isValidReportId = (value: string | null | undefined) => Boolean(value?.trim());
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -56,6 +60,7 @@ export function ReportPreviewPage() {
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx' | 'md' | 'html'>('pdf');
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
+  const reportMarkdown = report?.content_markdown?.trim() || report?.content || '';
 
   const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -369,7 +374,11 @@ export function ReportPreviewPage() {
                   <FileText size={16} className="text-[#63cab7]" />
                   正文内容
                 </div>
-                <div className="whitespace-pre-wrap text-sm leading-7 text-slate-300">{report.content}</div>
+                <div className="report-markdown text-sm text-slate-300">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {reportMarkdown}
+                  </ReactMarkdown>
+                </div>
               </div>
             ) : (
               <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂无报告内容，请先从任务流程或历史记录进入具体报告。'}</div>

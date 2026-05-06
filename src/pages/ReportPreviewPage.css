@@ -1,0 +1,131 @@
+.report-markdown {
+  color: rgb(203 213 225);
+  line-height: 1.9;
+}
+
+.report-markdown > * + * {
+  margin-top: 1rem;
+}
+
+.report-markdown h1,
+.report-markdown h2,
+.report-markdown h3,
+.report-markdown h4,
+.report-markdown h5,
+.report-markdown h6 {
+  color: rgb(241 245 249);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.report-markdown h1 {
+  font-size: 1.875rem;
+  margin-top: 1.75rem;
+}
+
+.report-markdown h2 {
+  font-size: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.report-markdown h3 {
+  font-size: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.report-markdown p,
+.report-markdown li {
+  color: rgb(203 213 225);
+}
+
+.report-markdown a {
+  color: rgb(99 202 183);
+  text-decoration: underline;
+  text-decoration-color: rgba(99, 202, 183, 0.4);
+  text-underline-offset: 0.2em;
+  word-break: break-word;
+}
+
+.report-markdown strong {
+  color: rgb(241 245 249);
+  font-weight: 600;
+}
+
+.report-markdown ul,
+.report-markdown ol {
+  padding-left: 1.5rem;
+}
+
+.report-markdown ul {
+  list-style: disc;
+}
+
+.report-markdown ol {
+  list-style: decimal;
+}
+
+.report-markdown li + li {
+  margin-top: 0.35rem;
+}
+
+.report-markdown blockquote {
+  border-left: 3px solid rgba(99, 202, 183, 0.45);
+  padding-left: 1rem;
+  color: rgb(148 163 184);
+}
+
+.report-markdown hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 1.5rem 0;
+}
+
+.report-markdown code {
+  border: 1px solid rgba(99, 202, 183, 0.18);
+  border-radius: 0.5rem;
+  background: rgba(7, 17, 31, 0.72);
+  color: rgb(190 242 100);
+  font-size: 0.875em;
+  padding: 0.15rem 0.4rem;
+}
+
+.report-markdown pre {
+  overflow-x: auto;
+  border: 1px solid rgba(99, 202, 183, 0.12);
+  border-radius: 1rem;
+  background: rgba(7, 17, 31, 0.88);
+  padding: 1rem 1.1rem;
+}
+
+.report-markdown pre code {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.report-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-markdown thead {
+  background: rgba(99, 202, 183, 0.08);
+}
+
+.report-markdown th,
+.report-markdown td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.report-markdown th {
+  color: rgb(241 245 249);
+  font-weight: 600;
+}

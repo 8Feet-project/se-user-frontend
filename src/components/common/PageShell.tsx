@@ -269,11 +269,7 @@ export function PageShell({
                     </h1>
                     {subtitle ? (
                       <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
-                    ) : (
-                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500">
-                        统一的任务、流程与研究资产界面。
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                   {action ? <div className="shrink-0 self-start">{action}</div> : null}
                 </div>
