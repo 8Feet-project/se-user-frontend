@@ -266,7 +266,6 @@ export function FavoritesPage() {
                 <FolderKanban size={16} className="text-[#63cab7]" />
                 <h2 className="text-2xl font-semibold text-slate-100">收藏目录</h2>
               </div>
-              <p className="mt-2 text-sm text-slate-400">支持目录查询、创建、重命名与删除，用统一的卡片层级管理沉淀内容。</p>
             </div>
             <Button size="sm" onClick={() => setIsCreateFolderDialogOpen(true)}>
               <Plus size={14} />
@@ -321,7 +320,6 @@ export function FavoritesPage() {
                 <Star size={16} className="text-[#63cab7]" />
                 <h3 className="text-xl font-semibold text-slate-100">收藏条目</h3>
               </div>
-              <p className="mt-2 text-sm text-slate-400">支持新增收藏、指定目录、备注说明以及跨目录移动。</p>
             </div>
             <Button size="sm" onClick={() => setIsCreateItemDialogOpen(true)}>
               <Plus size={14} />
