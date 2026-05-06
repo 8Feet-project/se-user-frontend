@@ -199,7 +199,7 @@ export function TaskLaunchPage() {
   return (
     <PageShell
       title="发起调研"
-      subtitle="输入调研对象与分析偏好，启动 AI 驱动的商业情报研究任务。整页视觉和交互均对齐 8Feet Design System。"
+      subtitle="输入调研对象与分析偏好，启动 AI 驱动的商业情报研究任务。"
       showHeaderMetrics={false}
       action={
         <Button variant="secondary" onClick={handleCreateTask} disabled={submitting}>
@@ -336,7 +336,6 @@ export function TaskLaunchPage() {
             <Button onClick={handleCreateTask} size="lg" disabled={submitting}>
               {submitting ? '创建中...' : '创建调研任务'}
             </Button>
-            <p className="text-sm text-slate-500">当前会使用严格深色表单、teal 强调色与圆角分层卡片，和设计系统保持一致。</p>
           </div>
         </Card>
 
