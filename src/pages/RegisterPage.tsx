@@ -204,7 +204,7 @@ export function RegisterPage() {
               {submitting ? '注册中...' : '注册并继续'}
             </Button>
             {registerSucceeded ? (
-              <Link to="/" className="w-full sm:w-auto">
+              <Link to="/launch" className="w-full sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto">
                   进入任务发起页
                 </Button>

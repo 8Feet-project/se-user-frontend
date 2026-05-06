@@ -25,7 +25,7 @@ const features = [
 ];
 
 const quickLinks = [
-  { icon: ClipboardList, label: '发起调研', sub: '输入对象，立即进入标准化任务流程', path: '/' },
+  { icon: ClipboardList, label: '发起调研', sub: '输入对象，立即进入标准化任务流程', path: '/launch' },
   { icon: GitBranch, label: '查看流程', sub: '实时跟踪节点状态与事件流', path: '/process' },
   { icon: FileText, label: '调研报告', sub: '查看引用、导出内容并继续追问', path: '/report' },
 ];
@@ -50,7 +50,7 @@ export function WelcomePage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm text-slate-400 transition hover:text-slate-200">登录</Link>
-            <Link to="/" className="inline-flex items-center gap-2 rounded-2xl border border-[rgba(99,202,183,0.24)] bg-[rgba(99,202,183,0.08)] px-4 py-2.5 text-sm font-medium text-[#63cab7] transition hover:bg-[rgba(99,202,183,0.14)]">
+            <Link to="/launch" className="inline-flex items-center gap-2 rounded-2xl border border-[rgba(99,202,183,0.24)] bg-[rgba(99,202,183,0.08)] px-4 py-2.5 text-sm font-medium text-[#63cab7] transition hover:bg-[rgba(99,202,183,0.14)]">
               进入工作台
               <ArrowRight size={15} />
             </Link>
@@ -76,7 +76,7 @@ export function WelcomePage() {
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <Link to="/" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#63cab7] px-8 py-3.5 text-sm font-semibold text-[#07111f] shadow-[0_0_32px_rgba(99,202,183,0.24)] transition hover:bg-[#7dd8c9]">
+                <Link to="/launch" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#63cab7] px-8 py-3.5 text-sm font-semibold text-[#07111f] shadow-[0_0_32px_rgba(99,202,183,0.24)] transition hover:bg-[#7dd8c9]">
                   立即开始调研
                   <ArrowRight size={16} />
                 </Link>

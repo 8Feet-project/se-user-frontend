@@ -171,7 +171,7 @@ export function AdminLayout() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild>
-              <Link to="/">返回用户端</Link>
+              <Link to="/launch">返回用户端</Link>
             </Button>
             <Button type="button" variant="secondary" onClick={() => void handleLogout()} disabled={loggingOut}>
               <LogOut className="h-4 w-4" />
@@ -241,7 +241,7 @@ export function AdminLayout() {
 
           <div className="mt-6 flex gap-3 border-t border-[rgba(99,202,183,0.1)] pt-5">
             <Button asChild variant="secondary" className="flex-1 rounded-2xl border-[rgba(99,202,183,0.2)] bg-white/[0.06] text-slate-100 hover:bg-white/[0.1]">
-              <Link to="/">返回用户端</Link>
+              <Link to="/launch">返回用户端</Link>
             </Button>
             <Button
               type="button"

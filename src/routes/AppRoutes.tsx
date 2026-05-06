@@ -21,6 +21,7 @@ import { WelcomePage } from '@/pages/WelcomePage';
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/welcome" replace />} />
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -36,7 +37,7 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="logs" element={<AdminLogsPage />} />
       </Route>
-      <Route path="/" element={<TaskLaunchPage />} />
+      <Route path="/launch" element={<TaskLaunchPage />} />
       <Route path="/process" element={<TaskProcessPage />} />
       <Route path="/report" element={<ReportPreviewPage />} />
       <Route path="/history" element={<HistoryFavoritesPage />} />

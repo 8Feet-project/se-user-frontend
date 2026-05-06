@@ -256,7 +256,7 @@ export function LoginPage() {
                 </Button>
                 {loginSucceeded ? (
                   <Button variant="secondary" asChild className="w-full sm:w-auto">
-                    <Link to="/" className="w-full sm:w-auto">
+                    <Link to="/launch" className="w-full sm:w-auto">
                       进入系统
                     </Link>
                   </Button>

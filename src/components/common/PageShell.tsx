@@ -18,7 +18,7 @@ import { logoutCurrentSession } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { label: '发起任务', path: '/', icon: ClipboardList },
+  { label: '发起任务', path: '/launch', icon: ClipboardList },
   { label: '调研流程', path: '/process', icon: GitBranch },
   { label: '调研报告', path: '/report', icon: FileText },
   { label: '历史记录', path: '/history', icon: History },
