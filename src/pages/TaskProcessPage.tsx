@@ -66,6 +66,68 @@ const ACTIVE_TASK_STATUSES = new Set([
 
 type RealtimeState = 'idle' | 'connecting' | 'connected' | 'polling';
 
+function formatPayloadPreview(value: unknown, maxLength = 180) {
+  if (value === undefined || value === null || value === '') {
+    return '暂无';
+  }
+  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  const compact = text.replace(/\s+/g, ' ').trim();
+  if (!compact) {
+    return '暂无';
+  }
+  return compact.length > maxLength ? `${compact.slice(0, maxLength)}...` : compact;
+}
+
+function formatPayloadBlock(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    return '暂无';
+  }
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+}
+
+function toolPayloadFromNode(node: VisibleWorkflowNode) {
+  if (node.node_kind !== 'tool_call') {
+    return null;
+  }
+
+  const callNode = node.source_nodes.find((item) => item.node_kind === 'tool_call') ?? node;
+  const returnNode = node.source_nodes.find((item) => item.node_kind === 'tool_return') ?? null;
+  return {
+    input: callNode.payload?.input,
+    output: returnNode?.payload?.output,
+  };
+}
+
+function toolPayloadFromEvent(event: VisibleTaskEvent) {
+  if (event.node_kind !== 'tool_call') {
+    return null;
+  }
+
+  const callEvent = event.source_events.find((item) => item.node_kind === 'tool_call') ?? event;
+  const returnEvent = event.source_events.find((item) => item.node_kind === 'tool_return') ?? null;
+  return {
+    input: callEvent.payload?.input,
+    output: returnEvent?.payload?.output,
+  };
+}
+
+function ToolPayloadDisclosure({ label, value }: { label: string; value: unknown }) {
+  return (
+    <details className="group rounded-2xl border border-white/10 bg-black/15 px-3 py-2">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 text-xs text-slate-400 marker:hidden">
+        <span className="shrink-0 font-medium text-slate-300">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-slate-500 group-open:hidden">
+          {formatPayloadPreview(value)}
+        </span>
+        <span className="shrink-0 text-slate-500">{'展开'}</span>
+      </summary>
+      <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/8 bg-black/20 p-3 text-xs leading-5 text-slate-300">
+        {formatPayloadBlock(value)}
+      </pre>
+    </details>
+  );
+}
+
 function statusText(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['status']) {
   switch (status) {
     case 'completed':
@@ -305,7 +367,7 @@ function mergeWorkflowNodes(nodes: WorkflowNode[]) {
         "未知工具";
       const mergedSummary =
         pairNode.summary ||
-        `已完成工具 ${toolName} 的调用与返回。`;
+        `工具 ${toolName} 已返回结果。`;
       const mergedDescription =
         pairNode.description || node.description;
       const mergedMetrics = [...(node.metrics ?? []), ...(pairNode.metrics ?? [])];
@@ -372,7 +434,7 @@ function mergeTaskEvents(events: TaskEvent[]) {
           message:
             pairEvent.message ||
             event.message ||
-            `已完成工具 ${toolName} 的调用与返回。`,
+            `工具 ${toolName} 已返回结果。`,
           node_status:
             pairEvent.node_status === "failed"
               ? "failed"
@@ -877,28 +939,6 @@ export function TaskProcessPage() {
         crossValidationResult.model_outputs.length > 0 ||
         crossValidationResult.used_models.length > 0)
   );
-  const nextNodeById = useMemo(() => {
-    const nodeMap = new Map(workflowNodes.map((node) => [node.node_id, node]));
-    const nextMap = new Map<string, WorkflowNode | null>();
-
-    for (const node of timelineNodes) {
-      const sourceIds = new Set(node.source_node_ids);
-      const edge = (workflow?.edges ?? []).find((candidate) => sourceIds.has(candidate.from) && !sourceIds.has(candidate.to));
-      if (!edge) {
-        nextMap.set(node.node_id, null);
-        continue;
-      }
-
-      const nextVisibleNode =
-        timelineNodes.find((candidate) => candidate.source_node_ids.includes(edge.to)) ??
-        nodeMap.get(edge.to) ??
-        null;
-      nextMap.set(node.node_id, nextVisibleNode);
-    }
-
-    return nextMap;
-  }, [workflow, workflowNodes, timelineNodes]);
-
   return (
     <PageShell
       title="调研流程"
@@ -999,7 +1039,7 @@ export function TaskProcessPage() {
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-sm font-medium text-slate-300">任务推进程度</p>
-                  <p className="text-sm text-slate-400">最后同步：{latestEvent ? formatTime(latestEvent.timestamp) : '--'}</p>
+                  <p className="text-sm text-slate-400">{latestEvent ? formatTime(latestEvent.timestamp) : '--'}</p>
                 </div>
                 <div className="mt-4 h-2 rounded-full bg-white/[0.06]">
                   <div
@@ -1080,7 +1120,7 @@ export function TaskProcessPage() {
                     <h3 className="text-xl font-semibold text-slate-100">流程时间线</h3>
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    以节点为单位查看任务当前走到哪里、下一步去哪里，以及哪里需要人工判断。
+                    以节点为单位查看任务当前走到哪里，以及哪里需要人工判断。
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs text-slate-400">
@@ -1100,7 +1140,7 @@ export function TaskProcessPage() {
                     {timelineNodes.map((step, index) => {
                       const isCurrent = step.source_node_ids.includes(workflow?.current_node ?? "");
                       const isWaiting = step.source_node_ids.includes(workflow?.waiting_intervention_node_id ?? "");
-                      const nextNode = nextNodeById.get(step.node_id);
+                      const toolPayload = toolPayloadFromNode(step);
                       const markerClass =
                         step.node_status === 'completed'
                           ? 'border-emerald-500/30 bg-emerald-500/14 text-emerald-300'
@@ -1138,33 +1178,28 @@ export function TaskProcessPage() {
                           >
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-base font-semibold text-slate-100">{step.node_name}</p>
-                                  <StatusBadge status={step.node_status} />
-                                  {step.node_type ? <span className="data-pill">{nodeTypeText(step.node_type)}</span> : null}
-                                  {step.node_kind === "tool_call" ? <span className="data-pill">工具执行</span> : null}
-                                  {isCurrent ? <span className="data-pill">当前节点</span> : null}
-                                  {isWaiting ? <span className="data-pill">等待人工</span> : null}
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <p className="text-base font-semibold text-slate-100">{step.node_name}</p>
+                                    <StatusBadge status={step.node_status} />
+                                    {step.node_type ? <span className="data-pill">{nodeTypeText(step.node_type)}</span> : null}
+                                    {step.node_kind === "tool_call" ? <span className="data-pill">工具执行</span> : null}
+                                    {isCurrent ? <span className="data-pill">当前节点</span> : null}
+                                    {isWaiting ? <span className="data-pill">等待人工</span> : null}
+                                  </div>
+                                  <span className="shrink-0 text-xs text-slate-500">{formatTime(step.updated_at)}</span>
                                 </div>
 
                                 <p className="mt-3 text-sm leading-6 text-slate-300">
                                   {step.summary ?? step.description ?? '该节点尚未返回更多说明。'}
                                 </p>
 
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                                  <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">节点 ID</p>
-                                    <p className="mt-1 text-sm text-slate-300">{step.node_id}</p>
+                                {toolPayload ? (
+                                  <div className="mt-4 space-y-2">
+                                    <ToolPayloadDisclosure label="输入" value={toolPayload.input} />
+                                    <ToolPayloadDisclosure label="输出" value={toolPayload.output} />
                                   </div>
-                                  <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">最后同步</p>
-                                    <p className="mt-1 text-sm text-slate-300">{formatTime(step.updated_at)}</p>
-                                  </div>
-                                  <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">下一步</p>
-                                    <p className="mt-1 text-sm text-slate-300">{nextNode?.node_name ?? '流程结束'}</p>
-                                  </div>
-                                </div>
+                                ) : null}
 
                                 {step.metrics?.length ? (
                                   <div className="mt-4 flex flex-wrap gap-2">
@@ -1173,11 +1208,6 @@ export function TaskProcessPage() {
                                         {metric.label}：{metric.value}
                                       </span>
                                     ))}
-                                  </div>
-                                ) : null}
-                                {step.source_node_ids.length > 1 ? (
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    <span className="data-pill">已收敛技术子节点：{step.source_node_ids.length}</span>
                                   </div>
                                 ) : null}
                               </div>
@@ -1274,6 +1304,7 @@ export function TaskProcessPage() {
                 {groupedEvents.slice(0, 8).map((event, index) => {
                   const meta = eventMeta(event.level);
                   const EventIcon = meta.icon;
+                  const toolPayload = toolPayloadFromEvent(event);
 
                   return (
                     <div key={event.event_id ?? `${event.node_id}-${event.timestamp}`} className="relative pl-8">
@@ -1287,7 +1318,6 @@ export function TaskProcessPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold text-slate-100">{event.title ?? event.node_name}</p>
                           <span className="data-pill">{meta.label}</span>
-                          {event.source_event_ids.length > 1 ? <span className="data-pill">已分组</span> : null}
                           <StatusBadge status={event.node_status} />
                         </div>
                         <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -1296,8 +1326,13 @@ export function TaskProcessPage() {
                         <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
                           <span className="data-pill">节点：{event.node_name}</span>
                           <span className="data-pill">时间：{formatTime(event.timestamp)}</span>
-                          {event.source_event_ids.length > 1 ? <span className="data-pill">原始事件：{event.source_event_ids.length}</span> : null}
                         </div>
+                        {toolPayload ? (
+                          <div className="mt-3 space-y-2">
+                            <ToolPayloadDisclosure label="输入" value={toolPayload.input} />
+                            <ToolPayloadDisclosure label="输出" value={toolPayload.output} />
+                          </div>
+                        ) : null}
                         {Object.keys(event.metrics).length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {Object.entries(event.metrics).map(([key, value]) => (

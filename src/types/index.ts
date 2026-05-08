@@ -346,6 +346,7 @@ export interface WorkflowNode {
   node_status: WorkflowNodeStatus;
   description?: string;
   summary?: string;
+  payload?: Record<string, unknown>;
   started_at?: string;
   finished_at?: string;
   updated_at?: string;
@@ -381,6 +382,7 @@ export interface TaskEvent {
   title?: string;
   message?: string;
   metrics: Record<string, string | number>;
+  payload?: Record<string, unknown>;
   timestamp: string;
 }
 
