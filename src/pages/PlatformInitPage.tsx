@@ -6,11 +6,21 @@ import { getPlatformInitStatus, platformInitialize } from '@/api/client';
 import { AuthShell } from '@/components/common/AuthShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { PlatformInitStatusResponse } from '@/types';
 
 export function PlatformInitPage() {
   const [initStatus, setInitStatus] = useState<PlatformInitStatusResponse | null>(null);
+  const [siteName, setSiteName] = useState('8Feet 本地开发平台');
+  const [adminEmail, setAdminEmail] = useState('admin@example.com');
   const [message, setMessage] = useState('');
+  const [createdAccount, setCreatedAccount] = useState<{
+    username?: string;
+    adminEmail?: string;
+    tempPassword?: string | null;
+    mailSent?: boolean;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const loadStatus = async () => {
@@ -29,16 +39,34 @@ export function PlatformInitPage() {
   }, []);
 
   const handleInitialize = async () => {
+    const trimmedSiteName = siteName.trim();
+    const trimmedAdminEmail = adminEmail.trim();
+
+    if (!trimmedSiteName || !trimmedAdminEmail) {
+      setMessage('请先填写平台名称和管理员邮箱。');
+      return;
+    }
+
     try {
       setSubmitting(true);
-      const response = await platformInitialize();
-      const nextMessage = response.initialized
-        ? response.super_admin_user_id == null
-          ? '初始化完成，但后端未返回超级管理员 ID。'
-          : `初始化完成，超级管理员 ID：${response.super_admin_user_id}`
-        : '初始化请求已提交，但后端未返回已初始化状态。';
+      const response = await platformInitialize({
+        site_name: trimmedSiteName,
+        admin_email: trimmedAdminEmail,
+      });
+      const nextMessage = response.message
+        ?? (response.initialized
+          ? response.super_admin_user_id == null
+            ? '初始化完成，但后端未返回超级管理员 ID。'
+            : `初始化完成，超级管理员 ID：${response.super_admin_user_id}`
+          : '初始化请求已提交，但后端未返回已初始化状态。');
 
       await loadStatus();
+      setCreatedAccount({
+        username: response.username,
+        adminEmail: response.admin_email ?? trimmedAdminEmail,
+        tempPassword: response.temp_password,
+        mailSent: response.mail_sent,
+      });
       setMessage(nextMessage);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '初始化失败';
@@ -75,7 +103,7 @@ export function PlatformInitPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100">初始化契约</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">当前版本由后端预置初始化参数，前端仅负责触发初始化并回显状态。</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">填写平台名称和管理员邮箱，由后端创建首个超级管理员账号。</p>
                 </div>
               </div>
             </div>
@@ -86,7 +114,7 @@ export function PlatformInitPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100">状态复核</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">支持随时刷新初始化状态，避免重复执行高风险操作。</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">初始化状态以是否存在超级管理员为准，避免普通用户占位造成误判。</p>
                 </div>
               </div>
             </div>
@@ -114,7 +142,7 @@ export function PlatformInitPage() {
           <p className="page-kicker">平台初始化</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">8Feet 平台初始化配置</h1>
           <p className="text-sm leading-7 text-slate-400">
-            当前后端契约不再从前端收集平台名称、默认模型和管理员邮箱，本页专注于执行初始化与复核实际状态。
+            首次启动时创建超级管理员账号。初始化完成后，请使用返回的用户名和临时密码登录，再尽快修改密码。
           </p>
         </div>
 
@@ -125,16 +153,50 @@ export function PlatformInitPage() {
         ) : null}
 
         <div className="mt-8 rounded-[24px] border border-white/10 bg-slate-950/40 p-5">
-          <p className="text-sm font-semibold text-slate-100">当前前后端对齐后的初始化方式</p>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            平台初始化请求会发送空配置对象，由后端使用服务端预置参数完成初始化，不再假设前端能够配置 site_name、default_model_id、admin_email。
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            如果后端返回了超级管理员 ID，页面会直接展示；如果返回 null，也会按无 ID 的结果给出提示，避免把空值误当成字符串使用。
-          </p>
+          <div className="grid gap-5">
+            <div>
+              <Label htmlFor="platform-site-name">平台名称</Label>
+              <Input
+                id="platform-site-name"
+                value={siteName}
+                onChange={(event) => {
+                  setSiteName(event.target.value);
+                  setMessage('');
+                }}
+                disabled={initialized || submitting}
+                placeholder="例如：8Feet 本地开发平台"
+              />
+            </div>
+            <div>
+              <Label htmlFor="platform-admin-email">超级管理员邮箱</Label>
+              <Input
+                id="platform-admin-email"
+                type="email"
+                value={adminEmail}
+                onChange={(event) => {
+                  setAdminEmail(event.target.value);
+                  setMessage('');
+                }}
+                disabled={initialized || submitting}
+                placeholder="admin@example.com"
+              />
+            </div>
+          </div>
         </div>
 
         {message ? <div className="message-strip mt-6">{message}</div> : null}
+
+        {createdAccount ? (
+          <div className="mt-6 rounded-[24px] border border-[rgba(99,202,183,0.28)] bg-[rgba(99,202,183,0.08)] p-5 text-sm text-slate-200">
+            <p className="font-semibold text-slate-100">超级管理员账号</p>
+            <div className="mt-3 grid gap-2 text-slate-300">
+              <p>用户名：{createdAccount.username ?? '未返回'}</p>
+              <p>邮箱：{createdAccount.adminEmail ?? '未返回'}</p>
+              <p>临时密码：{createdAccount.tempPassword ?? '请检查初始化邮件或后端日志'}</p>
+              <p>邮件发送：{createdAccount.mailSent ? '已发送' : '未发送或未配置 SMTP'}</p>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button onClick={handleInitialize} disabled={submitting || initialized}>

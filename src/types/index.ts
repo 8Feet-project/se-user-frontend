@@ -142,6 +142,10 @@ export interface PlatformInitializeResponse {
   site_name?: string;
   default_model_id?: string | null;
   admin_email?: string;
+  username?: string;
+  mail_sent?: boolean;
+  created?: boolean;
+  temp_password?: string | null;
 }
 
 export interface UserProfile {
