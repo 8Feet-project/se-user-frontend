@@ -384,6 +384,14 @@ export interface TaskEvent {
   timestamp: string;
 }
 
+export interface TaskRealtimeMessage {
+  type: 'connection_ack' | 'task_update' | 'pong' | string;
+  task_id: string;
+  reason: string;
+  payload?: Record<string, unknown>;
+  timestamp: string;
+}
+
 export interface TaskInterventionDetailResponse {
   task_id?: string;
   node_id: string;

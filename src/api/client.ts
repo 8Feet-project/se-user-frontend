@@ -678,6 +678,28 @@ export async function getTaskEvents(taskId: string): Promise<TaskEvent[]> {
   return request<TaskEvent[]>(`/research/tasks/${taskId}/events`);
 }
 
+export function buildResearchTaskRealtimeUrl(taskId: string): string | null {
+  if (useMock || typeof window === 'undefined' || !taskId) {
+    return null;
+  }
+
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    return null;
+  }
+
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? '';
+  const baseUrl = new URL(apiBaseUrl || window.location.origin, window.location.origin);
+  baseUrl.protocol = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  baseUrl.pathname = baseUrl.pathname.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+  baseUrl.search = '';
+  baseUrl.hash = '';
+
+  const pathPrefix = baseUrl.pathname === '/' ? '' : baseUrl.pathname;
+  const params = new URLSearchParams({ token });
+  return `${baseUrl.origin}${pathPrefix}/ws/research/tasks/${encodeURIComponent(taskId)}/?${params.toString()}`;
+}
+
 export async function getTaskIntervention(
   taskId: string,
   nodeId: string

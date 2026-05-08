@@ -13,10 +13,11 @@ import {
   Sparkles,
   Workflow,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   analyzeTask,
+  buildResearchTaskRealtimeUrl,
   cancelResearchTask,
   getCrossValidationResult,
   getResearchTaskStatus,
@@ -48,11 +49,22 @@ import type {
   TaskFactsResponse,
   TaskInterventionAction,
   TaskInterventionDetailResponse,
+  TaskRealtimeMessage,
   TaskWorkflowResponse,
   TriggerCrossValidationResponse,
   WorkflowNode,
   WorkflowNodeStatus,
 } from '@/types';
+
+const ACTIVE_TASK_STATUSES = new Set([
+  'pending',
+  'searching',
+  'data_ready',
+  'analyzing',
+  'waiting_user',
+]);
+
+type RealtimeState = 'idle' | 'connecting' | 'connected' | 'polling';
 
 function statusText(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['status']) {
   switch (status) {
@@ -179,6 +191,32 @@ function crossValidationStatusText(status?: CrossValidationResultResponse['statu
       return '失败';
     default:
       return '未触发';
+  }
+}
+
+function realtimeStateText(state: RealtimeState) {
+  switch (state) {
+    case 'connecting':
+      return '连接中';
+    case 'connected':
+      return '实时同步';
+    case 'polling':
+      return '轮询同步';
+    default:
+      return '未连接';
+  }
+}
+
+function realtimeStateTone(state: RealtimeState) {
+  switch (state) {
+    case 'connected':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100';
+    case 'connecting':
+      return 'border-sky-500/30 bg-sky-500/10 text-sky-100';
+    case 'polling':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-100';
+    default:
+      return 'border-white/10 bg-white/[0.06] text-slate-300';
   }
 }
 
@@ -390,6 +428,10 @@ export function TaskProcessPage() {
   const [submittingIntervention, setSubmittingIntervention] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [realtimeState, setRealtimeState] = useState<RealtimeState>('idle');
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const realtimeRefreshInFlightRef = useRef(false);
+  const realtimeRefreshQueuedRef = useRef(false);
 
   const replaceTaskParam = (nextTaskId: string) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -409,13 +451,13 @@ export function TaskProcessPage() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const loadTaskCandidates = async () => {
+  const loadTaskCandidates = useCallback(async () => {
     const response = await getResearchTasks({ page: 1, page_size: 20 });
     setTasks(response.list);
     return response.list;
-  };
+  }, []);
 
-  const loadTaskData = async (targetTaskId: string) => {
+  const loadTaskData = useCallback(async (targetTaskId: string) => {
     const [statusResult, workflowResult, factsResult, eventsResult] = await Promise.all([
       getResearchTaskStatus(targetTaskId),
       getResearchTaskWorkflow(targetTaskId),
@@ -437,7 +479,45 @@ export function TaskProcessPage() {
     } finally {
       setLoadingCrossValidationResult(false);
     }
-  };
+  }, []);
+
+  const refreshTaskSnapshot = useCallback(async (targetTaskId: string, includeCandidates = false) => {
+    if (!targetTaskId) {
+      return;
+    }
+    if (realtimeRefreshInFlightRef.current) {
+      realtimeRefreshQueuedRef.current = true;
+      return;
+    }
+
+    realtimeRefreshInFlightRef.current = true;
+    try {
+      if (includeCandidates) {
+        await Promise.all([loadTaskCandidates(), loadTaskData(targetTaskId)]);
+      } else {
+        await loadTaskData(targetTaskId);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '同步任务进展失败');
+    } finally {
+      realtimeRefreshInFlightRef.current = false;
+      if (realtimeRefreshQueuedRef.current) {
+        realtimeRefreshQueuedRef.current = false;
+        void refreshTaskSnapshot(targetTaskId, includeCandidates);
+      }
+    }
+  }, [loadTaskCandidates, loadTaskData]);
+
+  const scheduleRealtimeRefresh = useCallback((targetTaskId: string, includeCandidates = false) => {
+    if (realtimeRefreshTimerRef.current !== null) {
+      window.clearTimeout(realtimeRefreshTimerRef.current);
+    }
+
+    realtimeRefreshTimerRef.current = window.setTimeout(() => {
+      realtimeRefreshTimerRef.current = null;
+      void refreshTaskSnapshot(targetTaskId, includeCandidates);
+    }, 350);
+  }, [refreshTaskSnapshot]);
 
   useEffect(() => {
     if (!queryTaskId) {
@@ -503,7 +583,84 @@ export function TaskProcessPage() {
     };
 
     void loadData();
-  }, [taskId]);
+  }, [loadTaskData, taskId]);
+
+  useEffect(() => () => {
+    if (realtimeRefreshTimerRef.current !== null) {
+      window.clearTimeout(realtimeRefreshTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!taskId) {
+      setRealtimeState('idle');
+      return;
+    }
+
+    const realtimeUrl = buildResearchTaskRealtimeUrl(taskId);
+    if (!realtimeUrl) {
+      setRealtimeState('polling');
+      return;
+    }
+
+    let closedByEffect = false;
+    const socket = new WebSocket(realtimeUrl);
+    setRealtimeState('connecting');
+
+    socket.onopen = () => {
+      if (!closedByEffect) {
+        setRealtimeState('connected');
+      }
+    };
+
+    socket.onmessage = (event) => {
+      let payload: TaskRealtimeMessage | null = null;
+      try {
+        payload = JSON.parse(String(event.data)) as TaskRealtimeMessage;
+      } catch {
+        payload = null;
+      }
+      if (payload?.task_id && payload.task_id !== taskId) {
+        return;
+      }
+      if (payload?.type === 'connection_ack' || payload?.type === 'pong') {
+        return;
+      }
+      scheduleRealtimeRefresh(taskId, true);
+    };
+
+    socket.onerror = () => {
+      if (!closedByEffect) {
+        setRealtimeState('polling');
+      }
+    };
+
+    socket.onclose = () => {
+      if (!closedByEffect) {
+        setRealtimeState('polling');
+      }
+    };
+
+    return () => {
+      closedByEffect = true;
+      socket.close();
+    };
+  }, [scheduleRealtimeRefresh, taskId]);
+
+  useEffect(() => {
+    if (!taskId || realtimeState === 'connected') {
+      return;
+    }
+    if (status && !ACTIVE_TASK_STATUSES.has(status.status)) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      scheduleRealtimeRefresh(taskId, true);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [realtimeState, scheduleRealtimeRefresh, status, taskId]);
 
   const waitingNode = useMemo(
     () => workflow?.nodes.find((node) => node.node_id === workflow.waiting_intervention_node_id) ?? null,
@@ -790,6 +947,9 @@ export function TaskProcessPage() {
                   <span className={`rounded-full border px-3 py-1 text-sm font-medium ${statusTone(status?.status)}`}>
                     {taskId ? statusText(status?.status) : '未选择任务'}
                   </span>
+                  <span className={`rounded-full border px-3 py-1 text-sm font-medium ${realtimeStateTone(realtimeState)}`}>
+                    {realtimeStateText(realtimeState)}
+                  </span>
                   {status?.waiting_intervention ? <span className="data-pill">等待人工决策</span> : null}
                 </div>
               </div>
@@ -832,6 +992,7 @@ export function TaskProcessPage() {
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">过程信号</p>
                   <p className="mt-3 text-lg font-semibold text-slate-100">{sortedEvents.length}</p>
                   <p className="mt-1 text-sm text-slate-400">待人工 {waitingCount} · 异常 {failedCount}</p>
+                  <p className="mt-1 text-sm text-slate-500">同步：{realtimeStateText(realtimeState)}</p>
                 </div>
               </div>
 
