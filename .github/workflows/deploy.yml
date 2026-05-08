@@ -126,11 +126,9 @@ jobs:
             "DEPLOY_APP_DIR='${DEPLOY_APP_DIR}' DEPLOY_STATIC_DIR='${DEPLOY_STATIC_DIR}' DEPLOY_REF='${DEPLOY_REF}' SMOKE_URL='${SMOKE_URL}' bash -s" <<'REMOTE_DEPLOY'
           set -euo pipefail
           cd "${DEPLOY_APP_DIR}"
-          git fetch --no-tags origin
-          git checkout "${DEPLOY_REF}"
-          if git show-ref --verify --quiet "refs/remotes/origin/${DEPLOY_REF}"; then
-            git pull --ff-only --no-tags origin "${DEPLOY_REF}"
-          fi
+          git fetch --no-tags origin "${DEPLOY_REF}"
+          git checkout --force --detach FETCH_HEAD
+          git reset --hard FETCH_HEAD
           if [ -n "${DEPLOY_STATIC_DIR}" ]; then
             npm ci
             npm run build
