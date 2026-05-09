@@ -335,6 +335,27 @@ export interface WorkflowNodeMetric {
   value: string | number;
 }
 
+export interface WorkflowToolCall {
+  tool_name: string;
+  execution_id?: string | null;
+  status?: WorkflowNodeStatus | string;
+  input?: unknown;
+  output?: unknown;
+  started_at?: string;
+  finished_at?: string;
+  source_node_ids?: string[];
+}
+
+export interface WorkflowNodePayload {
+  event_type?: string;
+  text?: string;
+  input?: unknown;
+  output?: unknown;
+  planning?: string;
+  tools?: WorkflowToolCall[];
+  source_node_ids?: string[];
+}
+
 export interface WorkflowNode {
   node_id: string;
   node_name: string;
@@ -346,7 +367,7 @@ export interface WorkflowNode {
   node_status: WorkflowNodeStatus;
   description?: string;
   summary?: string;
-  payload?: Record<string, unknown>;
+  payload?: WorkflowNodePayload;
   started_at?: string;
   finished_at?: string;
   updated_at?: string;

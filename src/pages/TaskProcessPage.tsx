@@ -54,6 +54,7 @@ import type {
   TriggerCrossValidationResponse,
   WorkflowNode,
   WorkflowNodeStatus,
+  WorkflowToolCall,
 } from '@/types';
 
 const ACTIVE_TASK_STATUSES = new Set([
@@ -125,6 +126,38 @@ function ToolPayloadDisclosure({ label, value }: { label: string; value: unknown
         {formatPayloadBlock(value)}
       </pre>
     </details>
+  );
+}
+
+function agentStepTools(node: VisibleWorkflowNode): WorkflowToolCall[] {
+  if (node.node_kind !== 'agent_step') {
+    return [];
+  }
+  return Array.isArray(node.payload?.tools) ? node.payload.tools : [];
+}
+
+function agentStepPlanning(node: VisibleWorkflowNode) {
+  if (node.node_kind !== 'agent_step') {
+    return '';
+  }
+  return String(node.payload?.planning || node.summary || node.description || '').trim();
+}
+
+function ToolCallCard({ tool, index }: { tool: WorkflowToolCall; index: number }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-100">{tool.tool_name || `工具 ${index + 1}`}</p>
+          <p className="mt-1 text-xs text-slate-500">{tool.finished_at ? formatTime(tool.finished_at) : '执行中'}</p>
+        </div>
+        <StatusBadge status={(tool.status as WorkflowNodeStatus) || 'running'} />
+      </div>
+      <div className="mt-3 space-y-2">
+        <ToolPayloadDisclosure label="输入" value={tool.input} />
+        <ToolPayloadDisclosure label="输出" value={tool.output} />
+      </div>
+    </div>
   );
 }
 
@@ -389,7 +422,7 @@ function mergeWorkflowNodes(nodes: WorkflowNode[]) {
 
     visibleNodes.push({
       ...node,
-      source_node_ids: [node.node_id],
+      source_node_ids: node.payload?.source_node_ids?.length ? node.payload.source_node_ids : [node.node_id],
       source_nodes: [node],
     });
   }
@@ -1141,6 +1174,9 @@ export function TaskProcessPage() {
                       const isCurrent = step.source_node_ids.includes(workflow?.current_node ?? "");
                       const isWaiting = step.source_node_ids.includes(workflow?.waiting_intervention_node_id ?? "");
                       const toolPayload = toolPayloadFromNode(step);
+                      const stepTools = agentStepTools(step);
+                      const planningText = agentStepPlanning(step);
+                      const isAgentStep = step.node_kind === 'agent_step';
                       const markerClass =
                         step.node_status === 'completed'
                           ? 'border-emerald-500/30 bg-emerald-500/14 text-emerald-300'
@@ -1183,6 +1219,8 @@ export function TaskProcessPage() {
                                     <p className="text-base font-semibold text-slate-100">{step.node_name}</p>
                                     <StatusBadge status={step.node_status} />
                                     {step.node_type ? <span className="data-pill">{nodeTypeText(step.node_type)}</span> : null}
+                                    {isAgentStep ? <span className="data-pill">Agent 动作</span> : null}
+                                    {isAgentStep ? <span className="data-pill">工具 {stepTools.length}</span> : null}
                                     {step.node_kind === "tool_call" ? <span className="data-pill">工具执行</span> : null}
                                     {isCurrent ? <span className="data-pill">当前节点</span> : null}
                                     {isWaiting ? <span className="data-pill">等待人工</span> : null}
@@ -1190,9 +1228,28 @@ export function TaskProcessPage() {
                                   <span className="shrink-0 text-xs text-slate-500">{formatTime(step.updated_at)}</span>
                                 </div>
 
-                                <p className="mt-3 text-sm leading-6 text-slate-300">
-                                  {step.summary ?? step.description ?? '该节点尚未返回更多说明。'}
-                                </p>
+                                {planningText ? (
+                                  <div className="mt-3 rounded-2xl border border-[rgba(99,202,183,0.14)] bg-[rgba(99,202,183,0.05)] px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Agent 思路</p>
+                                    <p className="mt-2 text-sm leading-6 text-slate-300">{planningText}</p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                                    {step.summary ?? step.description ?? '该节点尚未返回更多说明。'}
+                                  </p>
+                                )}
+
+                                {stepTools.length > 0 ? (
+                                  <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                                    {stepTools.map((tool, toolIndex) => (
+                                      <ToolCallCard
+                                        key={`${step.node_id}-${tool.execution_id ?? toolIndex}`}
+                                        tool={tool}
+                                        index={toolIndex}
+                                      />
+                                    ))}
+                                  </div>
+                                ) : null}
 
                                 {toolPayload ? (
                                   <div className="mt-4 space-y-2">
