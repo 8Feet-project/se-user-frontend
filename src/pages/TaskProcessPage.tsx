@@ -841,6 +841,10 @@ export function TaskProcessPage() {
     () => [...(facts?.sources ?? [])].sort((left, right) => right.count - left.count),
     [facts]
   );
+  const sortedReferences = useMemo(
+    () => [...(facts?.references ?? [])].sort((left, right) => (left.index_number ?? 0) - (right.index_number ?? 0)),
+    [facts]
+  );
   const maxSourceCount = sortedSources[0]?.count ?? 1;
   const hasCrossValidationResult = Boolean(
     crossValidationResult &&
@@ -1230,40 +1234,84 @@ export function TaskProcessPage() {
           <Card className="space-y-5">
             <div className="flex items-center gap-2">
               <Database size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">事实与来源</h3>
+              <h3 className="text-xl font-semibold text-slate-100">参考信息</h3>
             </div>
 
             {facts ? (
               <div className="space-y-4">
                 <div className="panel-subtle p-4 text-sm text-slate-300">
-                  <p><span className="text-slate-500">数据条目：</span>{facts.fact_count}</p>
+                  <p><span className="text-slate-500">参考条目：</span>{sortedReferences.length || facts.fact_count}</p>
                   <p><span className="text-slate-500">数据版本：</span>{facts.dataset_version}</p>
                   <p><span className="text-slate-500">关键实体：</span>{facts.top_entities.join('、') || '暂无'}</p>
                 </div>
 
-                {sortedSources.length > 0 ? (
-                  <div className="space-y-3">
-                    {sortedSources.map((source) => (
-                      <div key={source.source_name} className="panel-subtle p-3">
-                        <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
-                          <span>{source.source_name}</span>
-                          <span className="font-medium text-slate-100">{source.count}</span>
+                {sortedReferences.length > 0 ? (
+                  <div className="max-h-[34rem] space-y-3 overflow-y-auto pr-1">
+                    {sortedReferences.map((reference, index) => {
+                      const number = reference.index_number && reference.index_number > 0 ? reference.index_number : index + 1;
+                      return (
+                        <div key={reference.reference_id || `${reference.url}-${index}`} className="panel-subtle p-3">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-[rgba(99,202,183,0.25)] bg-[rgba(99,202,183,0.09)] px-2 text-xs font-semibold text-[#8ce5d6]">
+                              {number}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium leading-6 text-slate-100">{reference.title}</p>
+                              {reference.cite_key ? <p className="mt-1 break-all text-xs text-slate-500">@{reference.cite_key}</p> : null}
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {reference.source_platform ? <span className="data-pill">{reference.source_platform}</span> : null}
+                            {reference.source_type ? <span className="data-pill">{reference.source_type}</span> : null}
+                            {reference.authority_score !== undefined && reference.authority_score !== null ? (
+                              <span className="data-pill">权威度 {reference.authority_score}</span>
+                            ) : null}
+                          </div>
+                          {reference.url ? (
+                            <a className="mt-3 block break-all text-xs leading-5 text-[#63cab7]/80 hover:text-[#63cab7]" href={reference.url} target="_blank" rel="noopener noreferrer">
+                              {reference.url}
+                            </a>
+                          ) : null}
+                          {reference.evidence_path ? (
+                            <p className="mt-2 break-all text-xs leading-5 text-slate-500">
+                              Evidence：{reference.evidence_path}
+                            </p>
+                          ) : null}
+                          {reference.summary ? (
+                            <details className="mt-3 rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                              <summary className="cursor-pointer text-xs text-slate-400">查看摘要</summary>
+                              <p className="mt-2 text-xs leading-5 text-slate-300">{reference.summary}</p>
+                            </details>
+                          ) : null}
                         </div>
-                        <div className="mt-3 h-2 rounded-full bg-white/[0.06]">
-                          <div
-                            className="h-2 rounded-full bg-gradient-to-r from-[#63cab7] to-sky-400"
-                            style={{ width: `${Math.max(12, (source.count / maxSourceCount) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="panel-subtle p-4 text-sm text-slate-500">暂无来源分布数据。</div>
+                  sortedSources.length > 0 ? (
+                    <div className="space-y-3">
+                      {sortedSources.map((source) => (
+                        <div key={source.source_name} className="panel-subtle p-3">
+                          <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
+                            <span>{source.source_name}</span>
+                            <span className="font-medium text-slate-100">{source.count}</span>
+                          </div>
+                          <div className="mt-3 h-2 rounded-full bg-white/[0.06]">
+                            <div
+                              className="h-2 rounded-full bg-gradient-to-r from-[#63cab7] to-sky-400"
+                              style={{ width: `${Math.max(12, (source.count / maxSourceCount) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="panel-subtle p-4 text-sm text-slate-500">暂无参考信息。</div>
+                  )
                 )}
               </div>
             ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">暂无事实层数据。</div>
+              <div className="panel-subtle p-4 text-sm text-slate-500">暂无参考信息。</div>
             )}
           </Card>
 

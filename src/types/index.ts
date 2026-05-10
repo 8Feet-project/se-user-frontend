@@ -271,6 +271,20 @@ export interface TaskFactsResponse {
   task_id: string;
   fact_count: number;
   sources: Array<{ source_name: string; count: number }>;
+  references?: Array<{
+    reference_id: string;
+    cite_key?: string;
+    index_number?: number;
+    title: string;
+    url?: string;
+    source_platform?: string;
+    source_type?: string;
+    authority_score?: number | string;
+    authority_tier?: string;
+    summary?: string;
+    evidence_path?: string;
+    accessed_at?: string;
+  }>;
   top_entities: string[];
   dataset_version: string;
 }
