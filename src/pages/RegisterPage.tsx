@@ -103,10 +103,10 @@ export function RegisterPage() {
       aside={
         <Card variant="glow" className="p-8 sm:p-10">
           <div className="space-y-3">
-            <p className="page-kicker">Create Account</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">把调研团队带进统一平台。</h2>
+            <p className="page-kicker">账号注册</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">创建 8Feet 账号</h2>
             <p className="text-sm leading-7 text-slate-400">
-              注册完成后，你可以直接进入 8Feet 的深色工作台，使用同一套设计语言管理任务、流程、报告与收藏资产。
+              注册需要用户名、昵称、邮箱验证码和密码。注册成功后会自动写入登录状态。
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function RegisterPage() {
           <p className="page-kicker">新建账号</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">开始使用 8Feet 调研平台</h1>
           <p className="text-sm leading-7 text-slate-400">
-            完成账号注册后，你就可以体验任务发起、流程跟踪、报告追问与历史资产沉淀等完整功能。
+            填写账号信息并完成邮箱验证。普通账号默认进入用户端工作台。
           </p>
         </div>
 

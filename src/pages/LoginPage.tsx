@@ -16,18 +16,18 @@ type LoginMode = 'username' | 'email';
 const highlights = [
   {
     icon: Sparkles,
-    title: 'AI 深度调研工作流',
-    desc: '从任务创建、信息检索到报告生成，统一在一套工作台里完成。',
+    title: '任务发起',
+    desc: '填写调研对象、对象类型、时间范围和模型选择后创建任务。',
   },
   {
     icon: GitBranch,
-    title: '过程可追踪',
-    desc: '随时查看节点状态、事件流与人工干预入口，分析过程不再黑盒。',
+    title: '流程查看',
+    desc: '查看任务状态、节点日志、参考信息和需要人工处理的节点。',
   },
   {
     icon: FileText,
-    title: '报告可追问',
-    desc: '报告支持继续提问、引用溯源与多格式导出，方便团队复用。',
+    title: '报告管理',
+    desc: '阅读报告正文，查看引用，按支持的格式导出结果。',
   },
 ];
 
@@ -117,10 +117,10 @@ export function LoginPage() {
         <Card variant="glow" className="relative overflow-hidden p-8 sm:p-10">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#63cab7]/40 to-transparent" />
           <div className="space-y-4">
-            <p className="page-kicker">8Feet Design System</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">让商业情报研究进入统一工作流。</h2>
+            <p className="page-kicker">8Feet</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">智能调研平台</h2>
             <p className="text-sm leading-7 text-slate-400">
-              深海军蓝基底、AI teal 强调色、可追踪流程与可溯源报告，正是这套设计系统要传达的产品气质。
+              登录后进入用户端工作台。普通用户只能看到业务页面，管理员会额外看到管理后台入口。
             </p>
           </div>
 
@@ -147,7 +147,7 @@ export function LoginPage() {
           <p className="page-kicker">账户入口</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">登录 8Feet 智能调研平台</h1>
           <p className="text-sm leading-7 text-slate-400">
-            选择用户名登录或邮箱登录，继续查看任务流程、报告内容与团队沉淀下来的调研资产。
+            使用用户名或邮箱登录。登录状态失效时，系统会回到首页并要求重新登录。
           </p>
         </div>
 

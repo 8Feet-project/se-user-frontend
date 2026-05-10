@@ -148,7 +148,7 @@ export function AlertsMessagesPage() {
   return (
     <PageShell
       title="提醒消息"
-      subtitle="把监控对象、推送频率和已读状态拆成更清晰的双栏结构，让提醒配置和消息流彼此独立但风格统一。"
+      subtitle="配置对象提醒，查看站内消息和已读状态。"
     >
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
@@ -158,7 +158,7 @@ export function AlertsMessagesPage() {
             <Radar size={16} className="text-[#63cab7]" />
             <h2 className="text-2xl font-semibold text-slate-100">提醒配置</h2>
           </div>
-          <p className="text-sm text-slate-400">支持对象监控、推送频率、站内通知和邮件通知，保持深色表单与显式操作按钮的统一规范。</p>
+          <p className="text-sm text-slate-400">支持对象监控、推送频率、站内通知和邮件通知。</p>
 
           <div className="grid gap-4">
             <div>

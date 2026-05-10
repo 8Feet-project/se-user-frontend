@@ -88,10 +88,10 @@ export function PlatformInitPage() {
       aside={
         <Card variant="glow" className="p-8 sm:p-10">
           <div className="space-y-3">
-            <p className="page-kicker">Platform Bootstrap</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">首屏配置也遵循同一套设计语言。</h2>
+            <p className="page-kicker">平台初始化</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">首次启动配置</h2>
             <p className="text-sm leading-7 text-slate-400">
-              平台初始化不是一次性的“后台页面”，它同样应该有清晰的字段分层、风险提示和状态反馈，和整个产品保持一致。
+              创建平台名称和首个超级管理员账号。初始化完成后请使用返回的账号登录。
             </p>
           </div>
 

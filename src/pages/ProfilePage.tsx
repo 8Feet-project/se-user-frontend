@@ -83,7 +83,7 @@ export function ProfilePage() {
   return (
     <PageShell
       title="个人中心"
-      subtitle="把个人资料和账号安全拆成两张独立面板，延续 8Feet 的深色输入、玻璃卡片和清晰层级。"
+      subtitle="查看账号状态，维护个人资料和登录密码。"
     >
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
@@ -94,10 +94,10 @@ export function ProfilePage() {
               {profile?.nickname?.slice(0, 1) ?? profile?.username?.slice(0, 1) ?? '8'}
             </div>
             <div>
-              <p className="page-kicker">Profile Settings</p>
+              <p className="page-kicker">个人资料</p>
               <h2 className="mt-1 text-2xl font-semibold text-slate-100">个人资料</h2>
               <p className="mt-2 text-sm leading-7 text-slate-400">
-                支持更新昵称、邮箱、手机号与头像链接，资料区和安全区拆开之后更接近设计系统里的专业工作台感。
+                支持更新昵称、邮箱、手机号与头像链接。
               </p>
             </div>
           </div>

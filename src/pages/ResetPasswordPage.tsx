@@ -74,10 +74,10 @@ export function ResetPasswordPage() {
       aside={
         <Card variant="glow" className="p-8 sm:p-10">
           <div className="space-y-3">
-            <p className="page-kicker">Password Recovery</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">重置流程也应该清晰可追踪。</h2>
+            <p className="page-kicker">密码重置</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-100">找回账号密码</h2>
             <p className="text-sm leading-7 text-slate-400">
-              我们沿用设计系统里的深色表单、清晰分层和动作型文案，让恢复账号这件事足够明确、也足够稳妥。
+              先提交用户名或邮箱发起重置，再使用后端返回或发送的重置令牌设置新密码。
             </p>
           </div>
 
@@ -124,7 +124,7 @@ export function ResetPasswordPage() {
           <p className="page-kicker">密码恢复</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">重置 8Feet 账户密码</h1>
           <p className="text-sm leading-7 text-slate-400">
-            先发起重置请求，再填写 reset_token 与新密码完成确认。整个流程沿用 8Feet 的深色表单规范与动作型提示文案。
+            先发起重置请求，再填写 reset_token 与新密码完成确认。
           </p>
         </div>
 

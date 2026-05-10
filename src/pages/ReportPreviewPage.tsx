@@ -445,7 +445,7 @@ export function ReportPreviewPage() {
             </div>
 
             <div className="space-y-3">
-              <p className="page-kicker">Report Preview</p>
+              <p className="page-kicker">报告预览</p>
               <h2 className="text-2xl font-semibold tracking-tight text-slate-100">{report?.title ?? '调研报告'}</h2>
               {report ? (
                 <div className="flex flex-wrap gap-2">

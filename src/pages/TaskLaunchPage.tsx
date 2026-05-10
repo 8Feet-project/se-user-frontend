@@ -216,7 +216,7 @@ export function TaskLaunchPage() {
           </div>
 
           <section className="space-y-3">
-            <p className="page-kicker">Research Launch</p>
+            <p className="page-kicker">任务发起</p>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-100">创建调研任务</h2>
           </section>
 

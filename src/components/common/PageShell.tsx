@@ -92,9 +92,7 @@ export function PageShell({
                   className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}
                 >
                   <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-[3px] text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                    Intel Research
-                  </p>
+                  <p className="mt-[3px] text-xs text-slate-500">调研平台</p>
                 </div>
               </Link>
             </div>
@@ -202,7 +200,7 @@ export function PageShell({
                 </div>
                 <div>
                   <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-slate-500">Intel Research</p>
+                  <p className="mt-1 text-xs text-slate-500">调研平台</p>
                 </div>
               </Link>
               <button
@@ -217,7 +215,7 @@ export function PageShell({
             </div>
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
-                <p className="shell-kicker">{isAdminRoute ? 'Admin Surface' : 'Workspace Surface'}</p>
+                <p className="shell-kicker">{isAdminRoute ? '管理端' : '用户端'}</p>
               <p className="mt-2 max-w-[36rem] text-sm leading-6 text-slate-400">
                   {isAdminRoute ? '管理端入口与用户端分开显示。' : '选择需要进入的业务页面。'}
                 </p>
@@ -269,7 +267,7 @@ export function PageShell({
               <div className="relative z-10 flex flex-col gap-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
-                    <p className="shell-kicker">{isAdminRoute ? 'Administration' : 'Research Workflow'}</p>
+                    <p className="shell-kicker">{isAdminRoute ? '管理端' : '用户端'}</p>
                     <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
                       {title}
                     </h1>

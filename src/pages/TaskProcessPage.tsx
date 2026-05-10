@@ -1222,7 +1222,7 @@ export function TaskProcessPage() {
   return (
     <PageShell
       title="调研流程"
-      subtitle="围绕当前任务、异常节点与事件回放组织的实时流程监控界面。先看系统卡在哪里，再决定是否介入、重试或继续生成报告。"
+      subtitle="查看当前任务状态、流程节点、参考信息和可执行操作。"
       action={
         <div className="flex flex-wrap gap-2">
           {waitingNode ? (
@@ -1250,7 +1250,7 @@ export function TaskProcessPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Workflow size={16} className="text-[#63cab7]" />
-                <p className="page-kicker">Live Workflow</p>
+                <p className="page-kicker">任务状态</p>
               </div>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">

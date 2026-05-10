@@ -142,7 +142,7 @@ export function HistoryFavoritesPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="page-kicker">History Stream</p>
+            <p className="page-kicker">历史记录</p>
             <h2 className="text-2xl font-semibold text-slate-100">调研历史</h2>
           </div>
 
