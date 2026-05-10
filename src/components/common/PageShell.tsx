@@ -9,12 +9,11 @@ import {
   History,
   LayoutDashboard,
   LogOut,
-  Settings,
-  ShieldPlus,
   User,
 } from 'lucide-react';
 
 import { logoutCurrentSession } from '@/api/client';
+import { getStoredUserRole, isAdminRole } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 import { ThemeToggle } from './ThemeToggle';
@@ -30,10 +29,7 @@ const navItems = [
 ];
 
 const adminItems = [
-  { label: '管理总览', path: '/admin/dashboard', icon: LayoutDashboard },
-  { label: '模型配置', path: '/admin/models', icon: Settings },
-  { label: '用户管理', path: '/admin/users', icon: ShieldPlus },
-  { label: '系统日志', path: '/admin/logs', icon: FileText },
+  { label: '管理后台', path: '/admin/dashboard', icon: LayoutDashboard },
 ];
 
 // 模块级变量：跨页面导航保持 hover 状态，避免重新挂载时从 false 开始造成展开动画闪烁
@@ -54,6 +50,7 @@ export function PageShell({
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(_sidebarHovered);
   const [loggingOut, setLoggingOut] = useState(false);
+  const canShowAdminEntry = isAdminRole(getStoredUserRole());
 
   const handleMouseEnter = () => { _sidebarHovered = true; setExpanded(true); };
   const handleMouseLeave = () => { _sidebarHovered = false; setExpanded(false); };
@@ -140,37 +137,39 @@ export function PageShell({
                 })}
               </nav>
 
-              <nav className="flex flex-col gap-[2px]">
-                {adminItems.map((item) => {
-                  const active = location.pathname === item.path;
+              {canShowAdminEntry ? (
+                <nav className="mt-4 flex flex-col gap-[2px] border-t border-[rgba(99,202,183,0.08)] pt-4">
+                  {adminItems.map((item) => {
+                    const active = location.pathname === item.path;
 
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      title={item.label}
-                      className={cn(
-                        'nav-link-control overflow-hidden',
-                        active && 'nav-link-control-active'
-                      )}
-                    >
-                      <span className="flex w-[15px] shrink-0 items-center justify-center">
-                        <item.icon
-                          size={15}
-                          strokeWidth={active ? 2.1 : 1.7}
-                          className={active ? 'text-[#63cab7]' : 'opacity-50'}
-                        />
-                      </span>
-                      <span className={cn('min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
-                        {item.label}
-                      </span>
-                      {active ? (
-                        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full bg-[#63cab7] shadow-[0_0_6px_#63cab7] transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')} />
-                      ) : null}
-                    </Link>
-                  );
-                })}
-              </nav>
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        title={item.label}
+                        className={cn(
+                          'nav-link-control overflow-hidden',
+                          active && 'nav-link-control-active'
+                        )}
+                      >
+                        <span className="flex w-[15px] shrink-0 items-center justify-center">
+                          <item.icon
+                            size={15}
+                            strokeWidth={active ? 2.1 : 1.7}
+                            className={active ? 'text-[#63cab7]' : 'opacity-50'}
+                          />
+                        </span>
+                        <span className={cn('min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}>
+                          {item.label}
+                        </span>
+                        {active ? (
+                          <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full bg-[#63cab7] shadow-[0_0_6px_#63cab7] transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')} />
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              ) : null}
             </div>
 
             <div className={cn('mt-3 shrink-0 pt-3', expanded ? 'border-t border-[rgba(99,202,183,0.08)]' : '')}>
@@ -219,8 +218,8 @@ export function PageShell({
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
                 <p className="shell-kicker">{isAdminRoute ? 'Admin Surface' : 'Workspace Surface'}</p>
-                <p className="mt-2 max-w-[36rem] text-sm leading-6 text-slate-400">
-                  {isAdminRoute ? '保留管理入口的快速切换与状态识别。' : '保留核心工作流入口，并在移动端维持更完整的导航信息。'}
+              <p className="mt-2 max-w-[36rem] text-sm leading-6 text-slate-400">
+                  {isAdminRoute ? '管理端入口与用户端分开显示。' : '选择需要进入的业务页面。'}
                 </p>
               </div>
             </div>
@@ -243,24 +242,26 @@ export function PageShell({
                 );
               })}
             </nav>
-            <nav className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {adminItems.map((item) => {
-                const active = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={cn(
-                      'nav-link-control',
-                      active && 'nav-link-control-active'
-                    )}
-                  >
-                    <item.icon size={15} strokeWidth={active ? 2.1 : 1.7} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            {canShowAdminEntry ? (
+              <nav className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {adminItems.map((item) => {
+                  const active = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={cn(
+                        'nav-link-control',
+                        active && 'nav-link-control-active'
+                      )}
+                    >
+                      <item.icon size={15} strokeWidth={active ? 2.1 : 1.7} />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            ) : null}
           </div>
 
           <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1340px] flex-col gap-7">

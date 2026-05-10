@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { saveAuthSession } from '@/lib/auth';
 
 const steps = [
   {
@@ -62,8 +63,7 @@ export function RegisterPage() {
         phone: phone.trim() || undefined,
         invite_code: inviteCode.trim() || undefined,
       });
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('refresh_token', response.refresh_token);
+      saveAuthSession(response);
       setRegisterSucceeded(true);
       setMessage(`注册成功，用户 ID：${response.user_id}`);
     } catch (error) {

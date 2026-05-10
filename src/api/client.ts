@@ -80,6 +80,7 @@ import {
   mockVerifyEmail,
 } from './mock';
 import { request } from './http';
+import { clearAuthSession } from '../lib/auth';
 import type {
   AdminDashboardOverviewResponse,
   AdminLogDetail,
@@ -422,8 +423,7 @@ export async function logoutCurrentSession(): Promise<void> {
       await logout({ refresh_token: refreshToken });
     }
   } finally {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearAuthSession();
   }
 }
 

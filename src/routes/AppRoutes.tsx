@@ -17,6 +17,7 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { TaskLaunchPage } from '@/pages/TaskLaunchPage';
 import { TaskProcessPage } from '@/pages/TaskProcessPage';
 import { WelcomePage } from '@/pages/WelcomePage';
+import { RequireAdmin, RequireAuth } from './RouteGuards';
 
 export function AppRoutes() {
   return (
@@ -27,20 +28,20 @@ export function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/platform-init" element={<PlatformInitPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/favorites" element={<FavoritesPage />} />
-      <Route path="/alerts" element={<AlertsMessagesPage />} />
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+      <Route path="/favorites" element={<RequireAuth><FavoritesPage /></RequireAuth>} />
+      <Route path="/alerts" element={<RequireAuth><AlertsMessagesPage /></RequireAuth>} />
+      <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboardPage />} />
         <Route path="models" element={<AdminModelsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="logs" element={<AdminLogsPage />} />
       </Route>
-      <Route path="/launch" element={<TaskLaunchPage />} />
-      <Route path="/process" element={<TaskProcessPage />} />
-      <Route path="/report" element={<ReportPreviewPage />} />
-      <Route path="/history" element={<HistoryFavoritesPage />} />
+      <Route path="/launch" element={<RequireAuth><TaskLaunchPage /></RequireAuth>} />
+      <Route path="/process" element={<RequireAuth><TaskProcessPage /></RequireAuth>} />
+      <Route path="/report" element={<RequireAuth><ReportPreviewPage /></RequireAuth>} />
+      <Route path="/history" element={<RequireAuth><HistoryFavoritesPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/welcome" replace />} />
     </Routes>
   );

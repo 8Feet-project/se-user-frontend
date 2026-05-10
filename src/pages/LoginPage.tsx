@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { saveAuthSession, takeAuthNotice } from '@/lib/auth';
 
 type LoginMode = 'username' | 'email';
 
@@ -62,7 +63,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(() => takeAuthNotice());
   const [submitting, setSubmitting] = useState(false);
 
   const activeLoginMode = loginModes.find((item) => item.value === loginMode) ?? loginModes[0];
@@ -87,8 +88,7 @@ export function LoginPage() {
     try {
       setSubmitting(true);
       const response = await login(payload);
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('refresh_token', response.refresh_token);
+      saveAuthSession(response);
       navigate('/launch', { replace: true });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '登录失败';

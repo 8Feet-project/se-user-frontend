@@ -1,7 +1,33 @@
 import type { ApiResponse } from '../types';
+import { redirectToWelcome } from '../lib/auth';
 
 const API_PREFIX = '/api/v1';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? '';
+
+export class ApiRequestError extends Error {
+  code?: number;
+  status?: number;
+
+  constructor(message: string, options: { code?: number; status?: number } = {}) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.code = options.code;
+    this.status = options.status;
+  }
+}
+
+function isApiResponse<T>(value: ApiResponse<T> | T): value is ApiResponse<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'code' in value &&
+    'data' in value
+  );
+}
+
+function handleAuthFailure(message?: string) {
+  redirectToWelcome(message || '登录状态已失效，请重新登录。');
+}
 
 function buildUrl(path: string, query?: Record<string, string | number | boolean | undefined>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -46,19 +72,24 @@ export async function request<T>(
 
   const parsed = (await response.json()) as ApiResponse<T> | T;
   if (!response.ok) {
-    const message = (parsed as ApiResponse<T>).message ?? 'Request failed';
-    throw new Error(message);
+    const wrapped = isApiResponse(parsed) ? parsed : null;
+    const message = wrapped?.message ?? 'Request failed';
+    if (response.status === 401 || wrapped?.code === 401) {
+      handleAuthFailure();
+    }
+    throw new ApiRequestError(message, { code: wrapped?.code, status: response.status });
   }
 
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'code' in parsed &&
-    'data' in parsed
-  ) {
-    const wrapped = parsed as ApiResponse<T>;
+  if (isApiResponse(parsed)) {
+    const wrapped = parsed;
     if (wrapped.code !== 0) {
-      throw new Error(wrapped.message || 'Request failed');
+      if (wrapped.code === 401) {
+        handleAuthFailure();
+      }
+      throw new ApiRequestError(wrapped.message || 'Request failed', {
+        code: wrapped.code,
+        status: response.status,
+      });
     }
     return wrapped.data;
   }
