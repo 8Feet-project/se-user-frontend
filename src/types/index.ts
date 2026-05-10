@@ -640,8 +640,14 @@ export interface ReportListItem {
 
 export interface ReportCitation {
   citation_id: string;
+  index_number?: number;
+  cite_key?: string;
   source_title: string;
   source_url: string;
+  source_type?: string;
+  source_platform?: string;
+  accessed_at?: string;
+  bibtex?: string;
 }
 
 export interface ReportCitationsResponse {
@@ -675,6 +681,7 @@ export interface ReportVersionItem {
 export interface ExportReportRequest {
   format: 'pdf' | 'docx' | 'md' | 'html';
   include_citations?: boolean;
+  report_mode?: 'brief' | 'full';
 }
 
 export interface ExportReportResponse {
@@ -760,6 +767,7 @@ export interface ReportDetail {
   content_brief?: string;
   report_mode?: 'brief' | 'full';
   citations: ReportCitation[];
+  references_bibtex?: string;
   created_at: string;
 }
 

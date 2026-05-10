@@ -760,11 +760,21 @@ export async function reloadResearchHistory(
   });
 }
 
-export async function getReportDetail(reportId: string): Promise<ReportDetail> {
+export async function getReportDetail(
+  reportId: string,
+  reportMode: 'brief' | 'full' = 'full'
+): Promise<ReportDetail> {
   if (useMock) {
-    return { ...mockReportDetail, report_id: reportId || mockReportDetail.report_id };
+    return {
+      ...mockReportDetail,
+      report_id: reportId || mockReportDetail.report_id,
+      report_mode: reportMode,
+      content: reportMode === 'brief'
+        ? mockReportDetail.content_brief || mockReportDetail.summary || mockReportDetail.content
+        : mockReportDetail.content_markdown || mockReportDetail.content,
+    };
   }
-  return request<ReportDetail>(`/reports/${reportId}`);
+  return request<ReportDetail>(`/reports/${reportId}`, {}, { report_mode: reportMode });
 }
 
 export async function getReports(params: {

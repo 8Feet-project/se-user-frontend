@@ -141,20 +141,39 @@ export const mockReportDetail: ReportDetail = {
   report_id: 'report-001',
   task_id: 'task-001',
   title: '腾讯控股深度调研报告',
+  summary: '围绕业务结构、增长质量、竞争格局与风险因素展开。',
   content:
-    '报告围绕业务结构、增长质量、竞争格局与风险因素展开，形成可执行的投资与经营观察结论。',
+    '# 腾讯控股深度调研报告\n\n## 摘要\n\n报告围绕业务结构、增长质量、竞争格局与风险因素展开，形成可执行的投资与经营观察结论[@tencent_annual]。\n\n## 核心发现\n\n腾讯控股收入结构保持多元，游戏、广告和金融科技业务共同支撑现金流[@industry_analysis]。',
+  content_markdown:
+    '# 腾讯控股深度调研报告\n\n## 摘要\n\n报告围绕业务结构、增长质量、竞争格局与风险因素展开，形成可执行的投资与经营观察结论[@tencent_annual]。\n\n## 核心发现\n\n腾讯控股收入结构保持多元，游戏、广告和金融科技业务共同支撑现金流[@industry_analysis]。',
+  content_brief: '## 摘要\n\n腾讯控股保持多元业务结构，现金流质量较稳定[@tencent_annual]。',
+  report_mode: 'full',
   citations: [
     {
       citation_id: 'citation-001',
+      index_number: 1,
+      cite_key: 'tencent_annual',
       source_title: '腾讯控股年度报告',
       source_url: 'https://example.com/tencent-annual-report',
+      source_platform: 'example.com',
+      source_type: 'annual_report',
+      accessed_at: '2026-03-29T16:00:00+08:00',
+      bibtex: '@misc{tencent_annual,\n  title = {腾讯控股年度报告},\n  url = {https://example.com/tencent-annual-report}\n}',
     },
     {
       citation_id: 'citation-002',
+      index_number: 2,
+      cite_key: 'industry_analysis',
       source_title: '行业竞争格局研究',
       source_url: 'https://example.com/industry-analysis',
+      source_platform: 'example.com',
+      source_type: 'industry_report',
+      accessed_at: '2026-03-29T16:10:00+08:00',
+      bibtex: '@misc{industry_analysis,\n  title = {行业竞争格局研究},\n  url = {https://example.com/industry-analysis}\n}',
     },
   ],
+  references_bibtex:
+    '@misc{tencent_annual,\n  title = {腾讯控股年度报告},\n  url = {https://example.com/tencent-annual-report}\n}\n\n@misc{industry_analysis,\n  title = {行业竞争格局研究},\n  url = {https://example.com/industry-analysis}\n}',
   created_at: '2026-03-29T08:00:00Z',
 };
 

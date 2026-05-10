@@ -1,7 +1,7 @@
 ﻿import { Download, ExternalLink, FileText, MessageSquareMore, Quote, Star } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import {
@@ -31,6 +31,8 @@ import './ReportPreviewPage.css';
 
 const isValidReportId = (value: string | null | undefined) => Boolean(value?.trim());
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+type ReportMode = 'brief' | 'full';
+const CITE_MARK_RE = /\[@([A-Za-z0-9_.:-]+)\]/g;
 
 function triggerDownload(url: string) {
   const a = document.createElement('a');
@@ -42,12 +44,43 @@ function triggerDownload(url: string) {
   document.body.removeChild(a);
 }
 
+function formatDateTime(value?: string) {
+  if (!value) {
+    return '--';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+function citationNumber(citation: ReportCitation, fallbackIndex: number) {
+  return citation.index_number && citation.index_number > 0 ? citation.index_number : fallbackIndex + 1;
+}
+
+function citeKeyForCitation(citation: ReportCitation) {
+  return citation.cite_key?.trim() || citation.citation_id;
+}
+
+function replaceCitationsWithFootnotes(markdown: string, citations: ReportCitation[]) {
+  const byKey = new Map(citations.map((citation, index) => [citeKeyForCitation(citation), citationNumber(citation, index)]));
+  return (markdown || '').replace(CITE_MARK_RE, (_match, citeKey: string) => {
+    const number = byKey.get(citeKey);
+    if (!number) {
+      return `[@${citeKey}]`;
+    }
+    return `[[${number}]](#reference-${number})`;
+  });
+}
+
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const reportIdFromUrl = searchParams.get('report_id');
   const taskIdFromUrl = searchParams.get('task_id');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [reportId, setReportId] = useState(isValidReportId(reportIdFromUrl) ? reportIdFromUrl ?? '' : '');
+  const [reportMode, setReportMode] = useState<ReportMode>('full');
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [citations, setCitations] = useState<ReportCitation[]>([]);
   const [citationDetail, setCitationDetail] = useState<ReportCitationDetail | null>(null);
@@ -62,7 +95,25 @@ export function ReportPreviewPage() {
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
-  const reportMarkdown = report?.content_markdown?.trim() || report?.content || '';
+  const reportMarkdown = useMemo(() => {
+    if (!report) {
+      return '';
+    }
+    return (report.content || '').trim()
+      || (reportMode === 'brief' ? report.content_brief : report.content_markdown)?.trim()
+      || report.content_markdown?.trim()
+      || '';
+  }, [report, reportMode]);
+  const renderedReportMarkdown = useMemo(
+    () => replaceCitationsWithFootnotes(reportMarkdown, citations),
+    [reportMarkdown, citations]
+  );
+  const sortedCitations = useMemo(
+    () => [...citations].sort((left, right) => citationNumber(left, 0) - citationNumber(right, 0)),
+    [citations]
+  );
+  const referencesBibtex = report?.references_bibtex?.trim()
+    || sortedCitations.map((citation) => citation.bibtex?.trim()).filter(Boolean).join('\n\n');
 
   const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -158,7 +209,7 @@ export function ReportPreviewPage() {
     const loadData = async () => {
       try {
         const [detail, qaResponse, citationResponse] = await Promise.all([
-          getReportDetail(reportId),
+          getReportDetail(reportId, reportMode),
           getReportQa(reportId),
           getReportCitations(reportId),
         ]);
@@ -173,7 +224,7 @@ export function ReportPreviewPage() {
     };
 
     void loadData();
-  }, [reportId]);
+  }, [reportId, reportMode]);
 
   useEffect(() => {
     if (!reportId) {
@@ -311,7 +362,11 @@ export function ReportPreviewPage() {
         return;
       }
 
-      const exportTask = await exportReport(report.report_id, { format: exportFormat, include_citations: true });
+      const exportTask = await exportReport(report.report_id, {
+        format: exportFormat,
+        include_citations: true,
+        report_mode: reportMode,
+      });
       setMessage(`导出任务已创建：${exportTask.export_id}，正在生成下载链接...`);
 
       for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -352,7 +407,7 @@ export function ReportPreviewPage() {
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
         <div className="space-y-8">
           <Card className="space-y-6">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_140px_auto] lg:items-end">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_140px_140px_auto] lg:items-end">
               <div>
                 <Label htmlFor="report-selector">切换报告</Label>
                 <Select id="report-selector" value={reportId} onChange={(event) => handleChangeReport(event.target.value)} disabled={reports.length === 0}>
@@ -362,6 +417,13 @@ export function ReportPreviewPage() {
                       {item.title} ({item.report_id})
                     </option>
                   ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="report-mode">报告版本</Label>
+                <Select id="report-mode" value={reportMode} onChange={(event) => setReportMode(event.target.value as ReportMode)} size="sm" disabled={!reportId}>
+                  <option value="full">详版</option>
+                  <option value="brief">简版</option>
                 </Select>
               </div>
               <div>
@@ -385,7 +447,8 @@ export function ReportPreviewPage() {
                 <div className="flex flex-wrap gap-2">
                   <span className="data-pill">报告 ID：{report.report_id}</span>
                   <span className="data-pill">来源任务：{report.task_id}</span>
-                  <span className="data-pill">创建时间：{report.created_at}</span>
+                  <span className="data-pill">{reportMode === 'brief' ? '简版' : '详版'}</span>
+                  <span className="data-pill">创建时间：{formatDateTime(report.created_at)}</span>
                   <Button type="button" size="sm" variant="secondary" disabled={favoriting || isFavorited} onClick={() => void handleFavoriteReport()}>
                     <Star size={14} />
                     {favoriting ? '收藏中...' : isFavorited ? '已收藏' : '收藏'}
@@ -401,8 +464,36 @@ export function ReportPreviewPage() {
                   正文内容
                 </div>
                 <div className="report-markdown text-sm text-slate-300">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {reportMarkdown}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a({ href, children, node: _node, ...props }) {
+                        if (href?.startsWith('#reference-')) {
+                          return (
+                            <a
+                              href={href}
+                              className="report-citation-link"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                const target = document.querySelector(href || '');
+                                target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                target?.classList.add('reference-highlight');
+                                window.setTimeout(() => target?.classList.remove('reference-highlight'), 1400);
+                              }}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        return (
+                          <a href={href} {...props}>
+                            {children}
+                          </a>
+                        );
+                      },
+                    }}
+                  >
+                    {renderedReportMarkdown}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -471,34 +562,62 @@ export function ReportPreviewPage() {
               <h3 className="text-xl font-semibold text-slate-100">引用信息</h3>
             </div>
             <div className="space-y-4 text-sm leading-7 text-slate-400">
-              {citations.length ? (
-                citations.map((citation) => (
-                  <div key={citation.citation_id} className="panel-subtle p-4">
-                    <p className="font-medium text-slate-100">{citation.source_title}</p>
-                    {citation.source_url ? (
-                      <a className="mt-2 inline-flex items-center gap-1 break-all text-xs text-[#63cab7]/80 hover:text-[#63cab7]" href={citation.source_url} target="_blank" rel="noopener noreferrer">
-                        {citation.source_url}
-                        <ExternalLink size={12} />
-                      </a>
-                    ) : (
-                      <p className="mt-2 text-xs text-amber-300">来源不足</p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant="secondary" onClick={() => void handleShowCitationDetail(citation)} disabled={loadingCitationId === citation.citation_id}>
-                        {loadingCitationId === citation.citation_id ? '加载中...' : '查看详情'}
-                      </Button>
+              {sortedCitations.length ? (
+                sortedCitations.map((citation, index) => {
+                  const number = citationNumber(citation, index);
+                  return (
+                    <div key={citation.citation_id} id={`reference-${number}`} className="panel-subtle scroll-mt-24 p-4 transition-colors duration-300">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-[rgba(99,202,183,0.28)] bg-[rgba(99,202,183,0.1)] px-2 text-xs font-semibold text-[#8ce5d6]">
+                          {number}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-100">{citation.source_title}</p>
+                          {citation.cite_key ? <p className="mt-1 break-all text-xs text-slate-500">@{citation.cite_key}</p> : null}
+                        </div>
+                      </div>
                       {citation.source_url ? (
-                        <Button type="button" size="sm" variant="secondary" onClick={() => triggerDownload(citation.source_url)}>
-                          打开来源
+                        <a className="mt-2 inline-flex items-center gap-1 break-all text-xs text-[#63cab7]/80 hover:text-[#63cab7]" href={citation.source_url} target="_blank" rel="noopener noreferrer">
+                          {citation.source_url}
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <p className="mt-2 text-xs text-amber-300">来源不足</p>
+                      )}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="button" size="sm" variant="secondary" onClick={() => void handleShowCitationDetail(citation)} disabled={loadingCitationId === citation.citation_id}>
+                          {loadingCitationId === citation.citation_id ? '加载中...' : '查看详情'}
                         </Button>
-                      ) : null}
+                        {citation.source_url ? (
+                          <Button type="button" size="sm" variant="secondary" onClick={() => triggerDownload(citation.source_url)}>
+                            打开来源
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="panel-subtle p-4 text-sm text-amber-300">来源不足</div>
               )}
             </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-[#63cab7]" />
+              <h3 className="text-xl font-semibold text-slate-100">BibTeX</h3>
+            </div>
+            {referencesBibtex ? (
+              <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                <summary className="cursor-pointer text-sm font-medium text-slate-200">展开 BibTeX</summary>
+                <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/8 bg-black/20 p-4 text-xs leading-5 text-slate-300">
+                  {referencesBibtex}
+                </pre>
+              </details>
+            ) : (
+              <div className="panel-subtle p-4 text-sm text-slate-500">暂无 BibTeX 数据。</div>
+            )}
           </Card>
 
           <Card className="space-y-4">
@@ -510,7 +629,13 @@ export function ReportPreviewPage() {
               <div className="panel-subtle space-y-3 p-4 text-sm leading-7 text-slate-300">
                 <p className="font-medium text-slate-100">{citationDetail.source_title}</p>
                 <p><span className="text-slate-500">类型：</span>{citationDetail.source_type ?? '未知'}</p>
-                <p><span className="text-slate-500">发布时间：</span>{citationDetail.published_at ?? '未知'}</p>
+                <p><span className="text-slate-500">发布时间：</span>{formatDateTime(citationDetail.published_at) || '未知'}</p>
+                {citationDetail.cite_key ? <p><span className="text-slate-500">Cite key：</span>@{citationDetail.cite_key}</p> : null}
+                {citationDetail.bibtex ? (
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/8 bg-black/20 p-3 text-xs leading-5 text-slate-300">
+                    {citationDetail.bibtex}
+                  </pre>
+                ) : null}
                 {citationDetail.excerpt ? <p><span className="text-slate-500">摘录：</span>{citationDetail.excerpt}</p> : null}
                 {citationDetail.source_url ? (
                   <a className="inline-flex items-center gap-1 break-all text-[#63cab7] hover:text-[#8ce5d6]" href={citationDetail.source_url} target="_blank" rel="noopener noreferrer">

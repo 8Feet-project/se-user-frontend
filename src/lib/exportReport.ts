@@ -17,7 +17,9 @@ function buildMarkdown(report: ReportDetail): string {
     lines.push('## 引用来源');
     lines.push('');
     report.citations.forEach((c, i) => {
-      lines.push(`${i + 1}. [${c.source_title}](${c.source_url})`);
+      const number = c.index_number && c.index_number > 0 ? c.index_number : i + 1;
+      const key = c.cite_key ? ` @${c.cite_key}` : '';
+      lines.push(`${number}. [${c.source_title}](${c.source_url})${key}`);
     });
   }
 
@@ -31,7 +33,7 @@ function buildHtml(report: ReportDetail): string {
       ? `<hr/><h2>引用来源</h2><ol>${report.citations
           .map(
             (c) =>
-              `<li><a href="${encodeURI(c.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.source_title)}</a></li>`
+              `<li><a href="${encodeURI(c.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.source_title)}</a>${c.cite_key ? ` <code>@${escapeHtml(c.cite_key)}</code>` : ''}</li>`
           )
           .join('')}</ol>`
       : '';
