@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Check,
   CornerDownLeft,
-  Clock3,
   Layers3,
   Plus,
   Search,
@@ -25,11 +24,9 @@ import {
   getResearchTasks,
 } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusBadge } from '@/components/ui/status-badge';
-import type { FavoriteItem, ModelAvailableItem, ResearchTaskListItem } from '@/types';
+import type { FavoriteItem, ModelAvailableItem } from '@/types';
 
 const objectTypes = ['company', 'stock', 'commodity'] as const;
 const defaultSourceAuthority = 'high';
@@ -52,36 +49,6 @@ const timeRangeOptions = [
   { value: '1y', label: '近 1 年' },
 ];
 
-const quickLaunchItems: Array<{
-  label: string;
-  objectName: string;
-  objectType: (typeof objectTypes)[number];
-  timeRange: string;
-}> = [
-  { label: '腾讯控股', objectName: '腾讯控股', objectType: 'stock', timeRange: '30d' },
-  { label: '比亚迪', objectName: '比亚迪', objectType: 'company', timeRange: '90d' },
-  { label: '原油期货', objectName: '原油期货', objectType: 'commodity', timeRange: '30d' },
-];
-
-const chineseDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
-
-function formatTaskCreatedAt(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return chineseDateTimeFormatter.format(date);
-}
-
 export function TaskLaunchPage() {
   const navigate = useNavigate();
   const [objectName, setObjectName] = useState('');
@@ -94,8 +61,6 @@ export function TaskLaunchPage() {
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<ModelAvailableItem[]>([]);
   const [recommendedModelId, setRecommendedModelId] = useState('');
-  const [researchTasks, setResearchTasks] = useState<ResearchTaskListItem[]>([]);
-  const [baseDataLoaded, setBaseDataLoaded] = useState(false);
   const [baseDataWarning, setBaseDataWarning] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -108,7 +73,7 @@ export function TaskLaunchPage() {
       const [favoritesResult, modelsResult, tasksResult] = await Promise.allSettled([
         getFavoriteItems({ favorite_type: 'model', page: 1, page_size: 100 }),
         getModelsAvailable(),
-        getResearchTasks({ page: 1, page_size: 10 }),
+        getResearchTasks({ page: 1, page_size: 1 }),
       ]);
 
       const warnings: string[] = [];
@@ -133,14 +98,12 @@ export function TaskLaunchPage() {
       }
 
       if (tasksResult.status === 'fulfilled') {
-        setResearchTasks(tasksResult.value.list);
+        // 仅用于验证任务服务可访问，发起页不再展示近期任务。
       } else {
-        setResearchTasks([]);
         warnings.push('最近任务加载失败');
       }
 
       setBaseDataWarning(warnings.join('；'));
-      setBaseDataLoaded(true);
     };
 
     void loadBaseData();
@@ -191,8 +154,6 @@ export function TaskLaunchPage() {
         enable_cross_validation: enableCrossValidation,
       });
       setMessage('任务已创建，正在进入流程页。');
-      const tasksResponse = await getResearchTasks({ page: 1, page_size: 10 });
-      setResearchTasks(tasksResponse.list);
       navigate(`/process?task_id=${response.task_id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '创建失败';
@@ -200,13 +161,6 @@ export function TaskLaunchPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleQuickLaunch = (item: (typeof quickLaunchItems)[number]) => {
-    setObjectName(item.objectName);
-    setObjectType(item.objectType);
-    setTimeRange(item.timeRange);
-    setMessage('');
   };
 
   const handleToggleCrossValidation = () => {
@@ -305,213 +259,204 @@ export function TaskLaunchPage() {
   const currentTimeRange = timeRangeOptions.find((item) => item.value === timeRange)?.label ?? timeRange;
 
   return (
-    <PageShell title="发起调研">
-      <div className="flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-3 py-8 sm:px-5 lg:py-12">
-        <div className="w-full max-w-[900px]">
-          <h2 className="mb-9 text-center text-4xl font-semibold tracking-normal text-slate-100 sm:text-5xl">8Feet</h2>
+    <PageShell title="发起调研" hideHeader contentFrame={false}>
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center px-3 pb-12 pt-4 sm:px-5">
+        <div className="w-full max-w-[920px]">
+          <h2 className="mb-7 text-center text-4xl font-semibold tracking-normal text-slate-100 sm:text-5xl">8Feet</h2>
+
+          <div className="mb-6 flex justify-center">
+            <div className="grid rounded-full border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] p-1 shadow-[var(--8feet-shadow-soft)] sm:grid-cols-3">
+              {objectTypeOptions.map((item) => {
+                const active = objectType === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setObjectType(item.value)}
+                    className={`h-11 rounded-full px-7 text-sm font-medium transition ${
+                      active
+                        ? 'bg-slate-100 text-slate-950 shadow-[0_10px_24px_rgba(0,0,0,0.18)]'
+                        : 'text-slate-400 hover:text-slate-100'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <form onSubmit={handleCreateTask} className="space-y-4">
-            <div className="overflow-visible rounded-[32px] border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] shadow-[var(--8feet-shadow-panel)]">
+            <div className="relative overflow-visible rounded-[32px] border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] shadow-[var(--8feet-shadow-panel)]">
               <Label htmlFor="task-object-name" className="sr-only">
                 调研对象
               </Label>
-              <div className="flex min-h-[11rem] flex-col px-5 pb-4 pt-5 sm:min-h-[12rem] sm:px-6 sm:pt-6">
+              <div className="flex min-h-[12.5rem] flex-col px-5 pb-4 pt-5 sm:min-h-[13.5rem] sm:px-6 sm:pt-6">
                 <Input
                   id="task-object-name"
                   value={objectName}
                   onChange={(event) => setObjectName(event.target.value)}
-                  placeholder="输入调研对象"
+                  placeholder={currentObjectType.placeholder}
                   className="h-auto min-h-[5.5rem] border-0 bg-transparent px-0 py-0 text-lg text-slate-100 shadow-none placeholder:text-slate-500 focus-visible:ring-0 sm:text-xl"
                 />
 
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedModels.map((model) => (
+                    <span
+                      key={model.model_id}
+                      className="group/model inline-flex h-8 items-center gap-2 rounded-xl border border-[var(--8feet-line-soft)] bg-white/[0.04] px-3 text-xs font-medium text-slate-300"
+                    >
+                      {model.model_name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSelectedModel(model.model_id)}
+                        className="hidden rounded-full text-slate-500 transition hover:text-slate-100 group-hover/model:inline-flex"
+                        aria-label={`取消选择 ${model.model_name}`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
                 <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-expanded={plusMenuOpen}
+                        aria-controls="launch-plus-menu"
+                        onClick={() => {
+                          setPlusMenuOpen((prev) => !prev);
+                          setModelMenuOpen(false);
+                        }}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-300 transition hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100"
+                      >
+                        <Plus size={19} />
+                      </button>
+                      {plusMenuOpen ? (
+                        <div
+                          id="launch-plus-menu"
+                          className="absolute bottom-12 left-0 z-30 w-64 rounded-2xl border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.24)]"
+                        >
+                          <p className="px-3 py-2 text-xs font-medium text-slate-500">时间范围</p>
+                          {timeRangeOptions.map((item) => (
+                            <button
+                              key={item.value}
+                              type="button"
+                              onClick={() => {
+                                setTimeRange(item.value);
+                                setPlusMenuOpen(false);
+                              }}
+                              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.05] hover:text-slate-100"
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <CalendarDays size={15} className="text-[#63cab7]" />
+                                {item.label}
+                              </span>
+                              {timeRange === item.value ? <Check size={15} className="text-[#63cab7]" /> : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
                     <button
                       type="button"
-                      aria-expanded={settingsOpen}
-                      aria-controls="launch-advanced-settings"
-                      onClick={() => setSettingsOpen((prev) => !prev)}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-300 transition hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100"
+                      onClick={handleToggleCrossValidation}
+                      className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition ${
+                        enableCrossValidation
+                          ? 'border-[var(--8feet-line-accent-strong)] bg-[var(--8feet-teal-dim)] text-[#63cab7]'
+                          : 'border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-300 hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100'
+                      }`}
                     >
-                      <Plus size={19} />
+                      <Sparkles size={16} />
+                      交叉验证
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setSettingsOpen((prev) => !prev)}
-                      className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--8feet-line-soft)] bg-white/[0.04] px-4 text-sm text-slate-300 transition hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100"
-                    >
-                      <Bot size={16} />
-                      Agent
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSettingsOpen((prev) => !prev)}
-                      className="inline-flex h-10 items-center gap-2 rounded-full border border-transparent px-3 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-100"
-                    >
-                      <SlidersHorizontal size={15} />
-                      设置
-                    </button>
+
+                    <span className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-slate-500">
+                      <Layers3 size={15} />
+                      {currentTimeRange}
+                    </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModelMenuOpen((prev) => !prev);
+                          setPlusMenuOpen(false);
+                        }}
+                        className="inline-flex h-10 max-w-[18rem] items-center gap-2 rounded-xl border border-transparent px-3 text-sm text-slate-300 transition hover:bg-white/[0.04] hover:text-slate-100"
+                      >
+                        <span className="truncate">
+                          {selectedModels.length > 0
+                            ? enableCrossValidation
+                              ? `${selectedModels.length} 个模型`
+                              : selectedModels[0].model_name
+                            : recommendedModel?.model_name ?? '选择模型'}
+                        </span>
+                        <ChevronDown size={15} className="shrink-0 text-slate-500" />
+                      </button>
+                      {modelMenuOpen ? (
+                        <div className="absolute bottom-12 right-0 z-30 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+                          <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-xs font-medium text-slate-500">
+                              {enableCrossValidation ? '选择多个模型' : '选择主模型'}
+                            </span>
+                            <span className="text-xs text-slate-500">{availableModels.length} 个可用</span>
+                          </div>
+                          <div className="max-h-72 overflow-y-auto pr-1">
+                            {availableModels.map((model) => {
+                              const selected = selectedModelIds.includes(model.model_id);
+                              const favored = favoriteModelIds.includes(model.model_id);
+                              return (
+                                <div key={model.model_id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-white/[0.04]">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleModelSelection(model.model_id)}
+                                    className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition ${
+                                      selected ? 'text-[#63cab7]' : 'text-slate-300 hover:text-slate-100'
+                                    }`}
+                                  >
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                                      {selected ? <Check size={16} /> : null}
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate">{model.model_name}</span>
+                                    <span className="shrink-0 text-xs text-slate-500">{model.provider}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={favoriteUpdatingModelId === model.model_id}
+                                    onClick={() => void handleToggleFavoriteModel(model)}
+                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${
+                                      favored ? 'text-amber-300 hover:text-amber-200' : 'text-slate-500 hover:text-slate-200'
+                                    }`}
+                                    aria-label={favored ? `取消收藏 ${model.model_name}` : `收藏 ${model.model_name}`}
+                                  >
+                                    <Star size={16} fill={favored ? 'currentColor' : 'none'} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
                     <button
-                      type="button"
-                      onClick={() => setSettingsOpen((prev) => !prev)}
-                      className="inline-flex h-10 max-w-[14rem] items-center gap-2 rounded-full px-3 text-sm text-slate-300 transition hover:bg-white/[0.04] hover:text-slate-100"
+                      type="submit"
+                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-950 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+                      disabled={submitting}
                     >
-                      <span className="truncate">
-                        {selectedModel?.model_name ?? recommendedModel?.model_name ?? '系统路由'}
-                      </span>
-                      <ChevronDown size={15} className="shrink-0 text-slate-500" />
+                      <CornerDownLeft size={16} />
+                      {submitting ? '创建中' : '发送'}
                     </button>
-                    <Button type="submit" size="icon" className="h-11 w-11 rounded-full" disabled={submitting} aria-label="开始调研">
-                      <SendHorizontal size={18} />
-                    </Button>
                   </div>
                 </div>
               </div>
             </div>
-
-            {settingsOpen ? (
-              <Card id="launch-advanced-settings" padding="md" className="space-y-5 rounded-[26px]">
-                <div className="flex flex-wrap items-center gap-2">
-                  {quickLaunchItems.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => handleQuickLaunch(item)}
-                      className="data-pill transition-colors duration-150 hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100"
-                    >
-                      <Search size={13} className="text-[#63cab7]" />
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="panel-subtle p-3">
-                    <Label htmlFor="task-object-type" className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-                      <Layers3 size={14} className="text-[#63cab7]" />
-                      对象类型
-                    </Label>
-                    <Select
-                      id="task-object-type"
-                      value={objectType}
-                      onChange={(event) => setObjectType(event.target.value as (typeof objectTypes)[number])}
-                      size="sm"
-                      className="rounded-xl"
-                    >
-                      <option value="">自动识别</option>
-                      <option value="company">公司</option>
-                      <option value="stock">股票</option>
-                      <option value="commodity">商品</option>
-                    </Select>
-                  </div>
-
-                  <div className="panel-subtle p-3">
-                    <Label htmlFor="task-time-range" className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-                      <CalendarDays size={14} className="text-[#63cab7]" />
-                      时间范围
-                    </Label>
-                    <Select
-                      id="task-time-range"
-                      value={timeRange}
-                      onChange={(event) => setTimeRange(event.target.value)}
-                      size="sm"
-                      className="rounded-xl"
-                    >
-                      <option value="7d">近 7 天</option>
-                      <option value="30d">近 30 天</option>
-                      <option value="90d">近 90 天</option>
-                      <option value="1y">近 1 年</option>
-                    </Select>
-                  </div>
-
-                  <div className="panel-subtle p-3">
-                    <Label htmlFor="task-model-id" className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-                      <Bot size={14} className="text-[#63cab7]" />
-                      主模型
-                    </Label>
-                    <Select
-                      id="task-model-id"
-                      value={modelId}
-                      onChange={(event) => setModelId(event.target.value)}
-                      size="sm"
-                      className="rounded-xl"
-                    >
-                      <option value="">系统路由</option>
-                      {availableModels.map((model) => (
-                        <option key={model.model_id} value={model.model_id}>
-                          {model.model_name} ({model.provider})
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="panel-subtle p-4">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-                    <div className="min-w-0 flex-1">
-                      <Label htmlFor="task-multi-model-ids" className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-                        <Sparkles size={14} className="text-[#63cab7]" />
-                        交叉验证
-                      </Label>
-                      <MultiSelect
-                        options={multiModelOptions}
-                        value={multiModelIds}
-                        onValueChange={setMultiModelIds}
-                        placeholder={availableModels.length === 0 ? '暂无可选辅助模型' : '选择辅助模型'}
-                        className="w-full rounded-xl"
-                        popoverClassName="theme-multiselect-panel border border-[rgba(99,202,183,0.18)] bg-[#0f1f35] text-slate-100 shadow-xl"
-                        hideSelectAll
-                        maxCount={3}
-                        disabled={availableModels.length === 0}
-                      />
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        id="task-enable-cross-validation"
-                        type="button"
-                        size="sm"
-                        variant={enableCrossValidation ? 'default' : 'secondary'}
-                        onClick={() => setEnableCrossValidation((prev) => !prev)}
-                        disabled={submitting}
-                      >
-                        <Sparkles size={14} />
-                        {enableCrossValidation ? '已开启' : '开启'}
-                      </Button>
-                      <Button type="button" size="sm" variant="secondary" onClick={handleFavoriteModel} disabled={submitting || !modelId}>
-                        <BookmarkPlus size={14} />
-                        收藏模型
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <span className="data-pill">
-                    <Bot size={14} className="text-[#63cab7]" />
-                    可用模型 {availableModels.length}
-                  </span>
-                  <span className="data-pill">
-                    <Star size={14} className="text-[#63cab7]" />
-                    收藏模型 {favoriteModelIds.length}
-                  </span>
-                  <span className="data-pill">
-                    <Sparkles size={14} className="text-[#63cab7]" />
-                    {recommendedModel
-                      ? `建议 ${recommendedModel.model_name}`
-                      : recommendedModelId
-                        ? `建议 ${recommendedModelId}`
-                        : '系统自动路由'}
-                  </span>
-                  {selectedModel && favoriteModelIds.includes(selectedModel.model_id) ? (
-                    <span className="data-pill text-[#63cab7]">已收藏 {selectedModel.model_name}</span>
-                  ) : null}
-                </div>
-              </Card>
-            ) : null}
 
             {baseDataWarning ? (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -521,38 +466,6 @@ export function TaskLaunchPage() {
 
             {message ? <div className="message-strip">{message}</div> : null}
           </form>
-
-          <section className="mt-8">
-            <div className="mb-3 flex items-center gap-2 px-1">
-              <Clock3 size={15} className="text-[#63cab7]" />
-              <h3 className="text-sm font-semibold text-slate-200">近期任务</h3>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {researchTasks.length > 0 ? (
-                researchTasks.slice(0, 4).map((task) => (
-                  <div key={task.task_id} className="panel-subtle p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-100">{task.object_name}</p>
-                        <p className="mt-2 text-xs text-slate-500">{formatTaskCreatedAt(task.created_at)}</p>
-                      </div>
-                      <StatusBadge status={task.status} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${task.task_id}`)}>
-                        查看流程
-                      </Button>
-                      <Button type="button" size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${task.task_id}`)}>
-                        查看报告
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : baseDataLoaded ? (
-                <div className="panel-subtle p-4 text-sm text-slate-500 lg:col-span-2">暂时没有任务记录。</div>
-              ) : null}
-            </div>
-          </section>
         </div>
       </div>
     </PageShell>
