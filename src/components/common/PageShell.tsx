@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { logoutCurrentSession } from '@/api/client';
+import { BrandLink } from '@/components/common/BrandLink';
 import { getStoredUserRole, isAdminRole } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
@@ -40,11 +41,15 @@ export function PageShell({
   subtitle,
   action,
   children,
+  hideHeader = false,
+  contentFrame = true,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
+  hideHeader?: boolean;
+  contentFrame?: boolean;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,17 +89,15 @@ export function PageShell({
             )}
           >
             <div className="mb-7 flex items-center gap-[10px] px-[3px]">
-              <Link to="/welcome" className="flex min-w-0 items-center gap-[10px] overflow-hidden">
-                <div className="brand-mark h-10 w-10 shrink-0 rounded-[18px]">
-                  <span className="text-[11px] font-extrabold tracking-[0.15em] text-[#63cab7]">8F</span>
-                </div>
-                <div
-                  className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}
-                >
-                  <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-[3px] text-xs text-slate-500">调研平台</p>
-                </div>
-              </Link>
+              <BrandLink
+                title="8Feet"
+                subtitle="调研平台"
+                className="gap-[10px] overflow-hidden"
+                badgeClassName="h-10 w-10 rounded-[18px]"
+                textClassName={cn('whitespace-nowrap transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0')}
+                titleClassName="text-[13px] font-semibold leading-none text-slate-100"
+                subtitleClassName="mt-[3px] text-xs text-slate-500"
+              />
             </div>
 
             <div
@@ -194,15 +197,14 @@ export function PageShell({
         >
           <div className="shell-mobile-nav mb-4 lg:hidden">
             <div className="flex items-center justify-between gap-4">
-              <Link to="/welcome" className="flex items-center gap-3">
-                <div className="brand-mark h-10 w-10 rounded-[18px]">
-                  <span className="text-[11px] font-extrabold tracking-[0.22em] text-[#63cab7]">8F</span>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold leading-none text-slate-100">8Feet</p>
-                  <p className="mt-1 text-xs text-slate-500">调研平台</p>
-                </div>
-              </Link>
+              <BrandLink
+                title="8Feet"
+                subtitle="调研平台"
+                className="gap-3"
+                badgeClassName="h-10 w-10 rounded-[18px]"
+                titleClassName="text-[13px] font-semibold leading-none text-slate-100"
+                subtitleClassName="mt-1 text-xs text-slate-500"
+              />
               <button
                 type="button"
                 onClick={() => void handleLogout()}
@@ -263,32 +265,43 @@ export function PageShell({
           </div>
 
           <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1340px] flex-col gap-7">
-            <header className="shell-header surface-grid">
-              <div className="relative z-10 flex flex-col gap-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="shell-kicker">{isAdminRoute ? '管理端' : '用户端'}</p>
-                    <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
-                      {title}
-                    </h1>
-                    {subtitle ? (
-                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 items-start gap-3 self-start">
-                    <ThemeToggle />
-                    {action}
+            {hideHeader ? (
+              <div className="flex justify-end gap-3">
+                <ThemeToggle />
+                {action}
+              </div>
+            ) : (
+              <header className="shell-header surface-grid">
+                <div className="relative z-10 flex flex-col gap-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="shell-kicker">{isAdminRoute ? '管理端' : '用户端'}</p>
+                      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100 sm:text-[1.75rem]">
+                        {title}
+                      </h1>
+                      {subtitle ? (
+                        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-start gap-3 self-start">
+                      <ThemeToggle />
+                      {action}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </header>
+              </header>
+            )}
 
             <main className="min-w-0 flex-1">
-              <div className="theme-shell-frame rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[rgba(7,17,31,0.18)] p-1">
-                <div className="theme-shell-frame-inner min-w-0 flex-1 rounded-[28px] border border-[rgba(255,255,255,0.03)] bg-transparent p-0 sm:p-1">
-                  {children}
+              {contentFrame ? (
+                <div className="theme-shell-frame rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[rgba(7,17,31,0.18)] p-1">
+                  <div className="theme-shell-frame-inner min-w-0 flex-1 rounded-[28px] border border-[rgba(255,255,255,0.03)] bg-transparent p-0 sm:p-1">
+                    {children}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                children
+              )}
             </main>
           </div>
         </div>

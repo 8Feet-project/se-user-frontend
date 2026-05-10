@@ -1,6 +1,7 @@
-﻿import { ArrowRight, ClipboardList, FileText, GitBranch } from 'lucide-react';
+import { ArrowRight, ClipboardList, FileText, GitBranch } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { BrandLink } from '@/components/common/BrandLink';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { hasAccessToken, takeAuthNotice } from '@/lib/auth';
 
@@ -19,15 +20,13 @@ export function WelcomePage() {
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1320px] flex-col px-5 py-5 sm:px-8 lg:px-10 lg:py-8">
         <header className="shell-header surface-grid">
           <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <Link to="/welcome" className="flex items-center gap-3">
-              <div className="brand-mark h-11 w-11 rounded-[18px]">
-                <span className="text-[11px] font-extrabold tracking-[0.22em] text-[#63cab7]">8F</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-100">8Feet</p>
-                <p className="mt-1 text-xs text-slate-500">智能调研平台</p>
-              </div>
-            </Link>
+            <BrandLink
+              title="8Feet"
+              subtitle="智能调研平台"
+              badgeClassName="h-11 w-11 rounded-[18px]"
+              titleClassName="text-sm font-semibold text-slate-100"
+              subtitleClassName="mt-1 text-xs text-slate-500"
+            />
             <div className="flex items-center gap-3">
               <ThemeToggle />
               <Link to="/login" className="text-sm text-slate-400 transition hover:text-slate-200">登录</Link>

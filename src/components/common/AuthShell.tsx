@@ -1,6 +1,6 @@
-﻿import { type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { type ReactNode } from 'react';
 
+import { BrandLink } from './BrandLink';
 import { ThemeToggle } from './ThemeToggle';
 
 export function AuthShell({
@@ -20,15 +20,13 @@ export function AuthShell({
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1180px] flex-col px-6 py-6 sm:px-10 lg:py-8">
         <header className="flex items-center justify-between gap-4">
-          <Link to="/welcome" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]">
-              <span className="text-[11px] font-extrabold tracking-[0.22em] text-[#63cab7]">8F</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-100">8Feet</p>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Research Platform</p>
-            </div>
-          </Link>
+          <BrandLink
+            title="8Feet"
+            subtitle="Research Platform"
+            badgeClassName="h-10 w-10 rounded-xl border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]"
+            titleClassName="text-sm font-semibold text-slate-100"
+            subtitleClassName="text-[10px] uppercase tracking-[0.22em] text-slate-500"
+          />
           <div className="flex items-center gap-3 text-sm text-slate-300">
             <ThemeToggle />
             {topActions}

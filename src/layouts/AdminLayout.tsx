@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Database, FileSearch, LogOut, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { logoutCurrentSession } from '../api/client';
+import { BrandLink } from '../components/common/BrandLink';
 import { Button } from '../components/ui/button';
 import { getStoredPermissions, getStoredUserRole } from '../lib/auth';
 import { cn } from '../lib/utils';
@@ -72,7 +73,11 @@ export function AdminLayout() {
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-6">
         <aside className="flex flex-col rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/82 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <div className="space-y-3 border-b border-[rgba(99,202,183,0.1)] pb-5">
-            <p className="text-xs uppercase tracking-[0.32em] text-slate-500">8Feet Admin</p>
+            <BrandLink
+              title="8Feet Admin"
+              badgeClassName="h-10 w-10 rounded-[18px] border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]"
+              titleClassName="text-xs uppercase tracking-[0.32em] text-slate-500"
+            />
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-tight text-white">系统管理后台</h1>
               <p className="text-sm leading-6 text-slate-400">
