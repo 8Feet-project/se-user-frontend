@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   Bot,
   CheckCircle2,
@@ -68,6 +69,46 @@ const ACTIVE_TASK_STATUSES = new Set([
 
 type RealtimeState = 'idle' | 'connecting' | 'connected' | 'polling';
 
+function useStreamingText(text: string, active: boolean) {
+  const [visibleText, setVisibleText] = useState(text);
+  const previousTextRef = useRef('');
+
+  useEffect(() => {
+    const fullText = text.trim();
+    if (!fullText) {
+      previousTextRef.current = '';
+      setVisibleText('');
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!active || prefersReducedMotion) {
+      previousTextRef.current = fullText;
+      setVisibleText(fullText);
+      return;
+    }
+
+    const previousText = previousTextRef.current;
+    const startIndex = fullText.startsWith(previousText) ? Math.min(previousText.length, fullText.length) : 0;
+    previousTextRef.current = fullText;
+    setVisibleText(fullText.slice(0, startIndex));
+
+    let cursor = startIndex;
+    const step = Math.max(1, Math.ceil(fullText.length / 72));
+    const intervalId = window.setInterval(() => {
+      cursor = Math.min(fullText.length, cursor + step);
+      setVisibleText(fullText.slice(0, cursor));
+      if (cursor >= fullText.length) {
+        window.clearInterval(intervalId);
+      }
+    }, 24);
+
+    return () => window.clearInterval(intervalId);
+  }, [active, text]);
+
+  return visibleText;
+}
+
 function formatPayloadPreview(value: unknown, maxLength = 180) {
   if (value === undefined || value === null || value === '') {
     return '暂无';
@@ -85,6 +126,87 @@ function formatPayloadBlock(value: unknown) {
     return '暂无';
   }
   return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+}
+
+function workflowNodeLiveText(node?: WorkflowNode | null) {
+  if (!node) {
+    return '';
+  }
+  const payloadText = typeof node.payload?.text === 'string' ? node.payload.text : '';
+  const planningText = node.node_kind === 'agent_step' ? agentStepPlanning(node as VisibleWorkflowNode) : '';
+  return String(payloadText || planningText || node.summary || node.description || node.node_name || '').trim();
+}
+
+function realtimeReasonText(reason?: string) {
+  switch (reason) {
+    case 'task_changed':
+      return '任务状态已同步';
+    case 'task_progress_changed':
+      return '流程进度已同步';
+    case 'step_log_created':
+      return '新增过程消息';
+    case 'step_log_updated':
+      return '过程消息已更新';
+    case 'references_changed':
+      return '引用来源已更新';
+    case 'cross_validation_progress_changed':
+      return '交叉验证已同步';
+    default:
+      return reason || '';
+  }
+}
+
+function LiveStreamPanel({
+  title,
+  text,
+  meta,
+  active,
+  compact = false,
+}: {
+  title: string;
+  text: string;
+  meta?: string;
+  active: boolean;
+  compact?: boolean;
+}) {
+  const fallbackText = active ? '等待下一条过程消息...' : '暂无过程消息。';
+  const visibleText = useStreamingText(text || fallbackText, active);
+
+  return (
+    <div
+      className={`rounded-2xl border ${
+        active ? 'border-sky-400/24 bg-sky-500/[0.06]' : 'border-white/10 bg-black/10'
+      } ${compact ? 'p-3' : 'p-4'}`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
+            active
+              ? 'border-sky-400/30 bg-sky-500/12 text-sky-200'
+              : 'border-white/10 bg-white/[0.05] text-slate-400'
+          }`}
+        >
+          <Activity size={13} className={active ? 'animate-pulse' : ''} />
+        </span>
+        <p className="min-w-0 flex-1 text-xs uppercase tracking-[0.16em] text-slate-500">{title}</p>
+        {active ? <span className="data-pill !px-2 !py-0.5 text-[10px] text-sky-200">接收中</span> : null}
+      </div>
+      <p
+        className={`${compact ? 'mt-2 text-sm leading-6' : 'mt-3 text-sm leading-7'} text-slate-300`}
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {visibleText}
+        {active ? <span aria-hidden="true" className="stream-caret" /> : null}
+      </p>
+      {meta ? <p className="mt-2 text-xs text-slate-500">{meta}</p> : null}
+      {active ? (
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+          <span className="stream-sweep" />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function toolPayloadFromNode(node: VisibleWorkflowNode) {
@@ -301,6 +423,11 @@ function SubAgentTimeline({
   );
 }
 
+function isWorkflowToolRunning(tool: WorkflowToolCall) {
+  const normalizedStatus = String(tool.status || '').toLowerCase();
+  return normalizedStatus === 'running' || (!tool.finished_at && normalizedStatus !== 'completed' && normalizedStatus !== 'failed');
+}
+
 function ToolCallCard({
   tool,
   index,
@@ -317,6 +444,7 @@ function ToolCallCard({
   const hidePayload = Boolean(tool.hide_payload || isReportToolName(tool.tool_name));
   const reportUrl = reportUrlFromPayload(taskId, tool);
   const hasSubAgents = Boolean(tool.subagent_workflows && tool.subagent_workflows.length > 0);
+  const toolRunning = isWorkflowToolRunning(tool);
 
   return (
     <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
@@ -331,6 +459,18 @@ function ToolCallCard({
         </div>
         <StatusBadge status={(tool.status as WorkflowNodeStatus) || 'running'} />
       </div>
+
+      {toolRunning ? (
+        <div className="mt-3 rounded-xl border border-sky-400/16 bg-sky-500/[0.05] px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-sky-200">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300 shadow-[0_0_12px_rgba(125,211,252,0.8)] animate-pulse" />
+            <span>正在接收工具结果</span>
+          </div>
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+            <span className="stream-sweep" />
+          </div>
+        </div>
+      ) : null}
 
       {hasSubAgents ? (
         <SubAgentTimeline workflows={tool.subagent_workflows!} />
@@ -619,6 +759,7 @@ export function TaskProcessPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [realtimeState, setRealtimeState] = useState<RealtimeState>('idle');
+  const [lastRealtimeMessage, setLastRealtimeMessage] = useState<TaskRealtimeMessage | null>(null);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const realtimeRefreshInFlightRef = useRef(false);
   const realtimeRefreshQueuedRef = useRef(false);
@@ -757,11 +898,13 @@ export function TaskProcessPage() {
       setInterventionResult(null);
       setCrossValidationTrigger(null);
       setCrossValidationResult(null);
+      setLastRealtimeMessage(null);
       return;
     }
 
     const loadData = async () => {
       try {
+        setLastRealtimeMessage(null);
         await loadTaskData(taskId);
         setMessage('');
       } catch (error) {
@@ -813,6 +956,7 @@ export function TaskProcessPage() {
       if (payload?.type === 'connection_ack' || payload?.type === 'pong') {
         return;
       }
+      setLastRealtimeMessage(payload);
       scheduleRealtimeRefresh(taskId, payload?.reason !== 'references_changed');
     };
 
@@ -1030,6 +1174,16 @@ export function TaskProcessPage() {
   const latestWorkflowNode = timelineNodes.length > 0 ? timelineNodes[timelineNodes.length - 1] : null;
   const latestWorkflowTime = latestWorkflowNode?.updated_at;
   const isTaskActive = Boolean(status && ACTIVE_TASK_STATUSES.has(status.status));
+  const liveSourceNode = waitingNode ?? activeNode ?? latestWorkflowNode;
+  const liveText = workflowNodeLiveText(liveSourceNode) || status?.hint || '';
+  const isLiveStreaming = Boolean(isTaskActive && !waitingNode && liveSourceNode && realtimeState !== 'idle');
+  const lastRealtimePayload = lastRealtimeMessage?.payload ?? {};
+  const lastRealtimeStepName = typeof lastRealtimePayload.step_name === 'string' ? lastRealtimePayload.step_name : '';
+  const liveMeta = [
+    realtimeReasonText(lastRealtimeMessage?.reason),
+    lastRealtimeStepName,
+    lastRealtimeMessage?.timestamp ? formatTime(lastRealtimeMessage.timestamp) : latestWorkflowTime ? formatTime(latestWorkflowTime) : '',
+  ].filter(Boolean).join(' · ');
   const stageItems = status?.progress_model?.stages ?? [];
   const completedCount = stageItems.length > 0
     ? stageItems.filter((stage) => stage.status === 'completed' || stage.status === 'skipped').length
@@ -1215,15 +1369,12 @@ export function TaskProcessPage() {
                         : '流程仍可自动推进，建议结合事件流判断是否需要介入。'}
                     </p>
                   </div>
-                  <div className="panel-subtle p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">最新进展</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {latestWorkflowNode?.summary ?? latestWorkflowNode?.node_name ?? '暂无'}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {latestWorkflowTime ? formatTime(latestWorkflowTime) : '当前没有新的过程消息。'}
-                    </p>
-                  </div>
+                  <LiveStreamPanel
+                    title="实时输出"
+                    text={liveText}
+                    meta={liveMeta || (latestWorkflowTime ? formatTime(latestWorkflowTime) : undefined)}
+                    active={isLiveStreaming}
+                  />
                 </div>
               </div>
 
@@ -1330,9 +1481,21 @@ export function TaskProcessPage() {
                                 </div>
 
                                 {bodyText ? (
-                                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                                    {bodyText}
-                                  </p>
+                                  isCurrent && isTaskActive && !isWaiting ? (
+                                    <div className="mt-3">
+                                      <LiveStreamPanel
+                                        title="节点输出"
+                                        text={bodyText}
+                                        meta={step.updated_at ? formatTime(step.updated_at) : undefined}
+                                        active
+                                        compact
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="mt-3 text-sm leading-6 text-slate-300">
+                                      {bodyText}
+                                    </p>
+                                  )
                                 ) : null}
 
                                 {stepTools.length > 0 ? (
