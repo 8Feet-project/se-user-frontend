@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Database, FileSearch, LogOut, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { logoutCurrentSession } from '../api/client';
 import { BrandLink } from '../components/common/BrandLink';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 import { Button } from '../components/ui/button';
 import { getStoredPermissions, getStoredUserRole } from '../lib/auth';
 import { cn } from '../lib/utils';
@@ -69,20 +70,21 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(99,202,183,0.09),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_32%),linear-gradient(160deg,#0a1628_0%,#0c1c36_60%,#0a1628_100%)] text-slate-100">
+    <div className="app-shell min-h-screen text-slate-100">
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-6">
-        <aside className="flex flex-col rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[#07111f]/82 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+        <aside className="relative z-10 flex flex-col rounded-[32px] border border-[var(--8feet-line-accent)] bg-[var(--8feet-bg-elevated)] p-5 shadow-[var(--8feet-shadow-panel)] backdrop-blur-2xl">
           <div className="space-y-3 border-b border-[rgba(99,202,183,0.1)] pb-5">
-            <BrandLink
-              title="8Feet Admin"
-              badgeClassName="h-10 w-10 rounded-[18px] border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]"
-              titleClassName="text-xs uppercase tracking-[0.32em] text-slate-500"
-            />
+            <div className="flex items-start justify-between gap-4">
+              <BrandLink
+                title="8Feet Admin"
+                badgeClassName="h-10 w-10 rounded-[18px] border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]"
+                titleClassName="text-xs uppercase tracking-[0.32em] text-slate-500"
+              />
+              <ThemeToggle className="scale-[0.74] origin-top-right" />
+            </div>
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-tight text-white">系统管理后台</h1>
-              <p className="text-sm leading-6 text-slate-400">
-                覆盖模型配置、权限治理、用户数据看板与底层全链路日志排查。
-              </p>
+              <p className="text-sm leading-6 text-slate-400">管理模型、用户、日志和运营数据。</p>
             </div>
           </div>
 
@@ -145,7 +147,7 @@ export function AdminLayout() {
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-col rounded-[32px] border border-[rgba(99,202,183,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01)),rgba(7,17,31,0.82)] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:p-6">
+        <div className="relative z-10 flex min-h-0 flex-col rounded-[32px] border border-[var(--8feet-line-accent)] bg-[var(--8feet-bg-elevated)] p-4 shadow-[var(--8feet-shadow-panel)] backdrop-blur-2xl lg:p-6">
           <Outlet />
         </div>
       </div>
