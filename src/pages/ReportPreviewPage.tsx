@@ -59,14 +59,18 @@ function citationNumber(citation: ReportCitation, fallbackIndex: number) {
   return citation.index_number && citation.index_number > 0 ? citation.index_number : fallbackIndex + 1;
 }
 
+function normalizeCiteKey(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
+
 function citeKeyForCitation(citation: ReportCitation) {
-  return citation.cite_key?.trim() || citation.citation_id;
+  return normalizeCiteKey(citation.cite_key) || citation.citation_id;
 }
 
 function replaceCitationsWithFootnotes(markdown: string, citations: ReportCitation[]) {
   const byKey = new Map(citations.map((citation, index) => [citeKeyForCitation(citation), citationNumber(citation, index)]));
   return (markdown || '').replace(CITE_MARK_RE, (_match, citeKey: string) => {
-    const number = byKey.get(citeKey);
+    const number = byKey.get(normalizeCiteKey(citeKey));
     if (!number) {
       return `[@${citeKey}]`;
     }
