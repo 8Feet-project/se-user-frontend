@@ -1,6 +1,9 @@
 import {
   AlertTriangle,
+  Bot,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Database,
   FileSearch,
   GitBranch,
@@ -42,6 +45,7 @@ import type {
   ResearchTaskListItem,
   ResearchTaskStatusResponse,
   RetryAnalysisResponse,
+  SubAgentWorkflow,
   SubmitTaskInterventionResponse,
   TaskFactsResponse,
   TaskInterventionAction,
@@ -156,6 +160,147 @@ function reportUrlFromPayload(taskId: string, payload?: { report_id?: string; re
   return payload?.report_id ? `/report?task_id=${taskId}&report_id=${payload.report_id}` : `/report?task_id=${taskId}`;
 }
 
+function SubAgentNodeCard({
+  node,
+  isLast,
+}: {
+  node: WorkflowNode;
+  isLast: boolean;
+}) {
+  const isAgentStep = node.node_kind === 'agent_step';
+  const planningText = isAgentStep
+    ? String(node.payload?.planning || node.summary || node.description || '').trim()
+    : '';
+  const nodeTitle = isAgentStep
+    ? (planningText || '子代理已执行一轮工具调用')
+    : node.node_name;
+  const bodyText = isAgentStep
+    ? ''
+    : node.summary ?? node.description ?? '';
+  const tools = isAgentStep && Array.isArray(node.payload?.tools) ? node.payload.tools : [];
+  const markerTone =
+    node.node_status === 'completed'
+      ? 'border-emerald-500/30 bg-emerald-500/14 text-emerald-300'
+      : node.node_status === 'failed'
+        ? 'border-rose-500/30 bg-rose-500/14 text-rose-300'
+        : 'border-sky-500/30 bg-sky-500/14 text-sky-300';
+
+  return (
+    <div className="relative pl-8">
+      {!isLast ? (
+        <span className="absolute left-[13px] top-7 bottom-[-0.75rem] w-px bg-gradient-to-b from-[rgba(99,202,183,0.25)] via-white/5 to-transparent" />
+      ) : null}
+      <div className={`absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border ${markerTone}`}>
+        {node.node_status === 'completed' ? (
+          <CheckCircle2 size={12} />
+        ) : node.node_status === 'failed' ? (
+          <AlertTriangle size={12} />
+        ) : (
+          <PlayCircle size={12} />
+        )}
+      </div>
+      <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-xs font-medium text-slate-200">{nodeTitle}</p>
+          <StatusBadge status={node.node_status} />
+        </div>
+        {bodyText ? (
+          <p className="mt-1 text-[11px] leading-5 text-slate-400 line-clamp-2">{bodyText}</p>
+        ) : null}
+        {tools.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {tools.map((t, ti) => (
+              <span key={ti} className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-400">
+                {t.display_name || t.tool_name || `工具${ti + 1}`}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SubAgentTimeline({
+  workflows,
+}: {
+  workflows: SubAgentWorkflow[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const current = workflows[activeIndex];
+  if (!current) return null;
+
+  const hasMultiple = workflows.length > 1;
+
+  return (
+    <div className="mt-2 rounded-xl border border-[rgba(99,202,183,0.12)] bg-black/20">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+      >
+        <span className={`inline-flex transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}>
+          <ChevronRight size={14} className="text-slate-400" />
+        </span>
+        <Bot size={14} className="shrink-0 text-[#63cab7]/70" />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-300">
+          {current.description || current.subagent_type || `子代理 ${activeIndex + 1}`}
+        </span>
+        {current.subagent_type ? (
+          <span className="shrink-0 rounded-full border border-white/8 bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-500">
+            {current.subagent_type}
+          </span>
+        ) : null}
+        {hasMultiple ? (
+          <span className="shrink-0 text-[10px] text-slate-500">{activeIndex + 1}/{workflows.length}</span>
+        ) : null}
+      </button>
+
+      {expanded ? (
+        <div className="border-t border-white/5 px-3 py-3">
+          {hasMultiple ? (
+            <div className="mb-3 flex items-center gap-2">
+              <Button
+                size="xs"
+                variant="secondary"
+                disabled={activeIndex === 0}
+                onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex - 1); }}
+                className="h-7 px-2 text-[11px]"
+              >
+                <ChevronLeft size={12} />
+              </Button>
+              <span className="min-w-0 flex-1 truncate text-center text-[10px] text-slate-500">
+                {current.subagent_type || `子代理 ${activeIndex + 1}`}
+              </span>
+              <Button
+                size="xs"
+                variant="secondary"
+                disabled={activeIndex === workflows.length - 1}
+                onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex + 1); }}
+                className="h-7 px-2 text-[11px]"
+              >
+                <ChevronRight size={12} />
+              </Button>
+            </div>
+          ) : null}
+
+          <div className="space-y-2.5">
+            {current.nodes.map((node, nodeIndex) => (
+              <SubAgentNodeCard
+                key={node.node_id}
+                node={node}
+                isLast={nodeIndex === current.nodes.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ToolCallCard({
   tool,
   index,
@@ -171,6 +316,8 @@ function ToolCallCard({
   const statusLine = tool.status_text || (tool.finished_at ? '工具已完成' : '工具执行中');
   const hidePayload = Boolean(tool.hide_payload || isReportToolName(tool.tool_name));
   const reportUrl = reportUrlFromPayload(taskId, tool);
+  const hasSubAgents = Boolean(tool.subagent_workflows && tool.subagent_workflows.length > 0);
+
   return (
     <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
       <div className="flex items-start justify-between gap-3">
@@ -184,7 +331,12 @@ function ToolCallCard({
         </div>
         <StatusBadge status={(tool.status as WorkflowNodeStatus) || 'running'} />
       </div>
-      {hidePayload ? (
+
+      {hasSubAgents ? (
+        <SubAgentTimeline workflows={tool.subagent_workflows!} />
+      ) : null}
+
+      {hasSubAgents ? null : hidePayload ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="data-pill">报告内容已省略</span>
           {reportUrl ? (

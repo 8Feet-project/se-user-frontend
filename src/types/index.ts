@@ -349,6 +349,13 @@ export interface WorkflowNodeMetric {
   value: string | number;
 }
 
+export interface SubAgentWorkflow {
+  subagent_id: string;
+  subagent_type: string;
+  description: string;
+  nodes: WorkflowNode[];
+}
+
 export interface WorkflowToolCall {
   tool_name: string;
   display_name?: string;
@@ -363,6 +370,7 @@ export interface WorkflowToolCall {
   started_at?: string;
   finished_at?: string;
   source_node_ids?: string[];
+  subagent_workflows?: SubAgentWorkflow[];
 }
 
 export interface WorkflowNodePayload {

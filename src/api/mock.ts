@@ -277,8 +277,8 @@ export const mockTaskStatus: ResearchTaskStatusResponse = {
   hint: '分析阶段发现低置信度结论，等待人工确认检索范围与分析规则。',
   object_name: '宁德时代',
   object_type: 'stock',
-  current_node_id: 'node-analysis',
-  current_node_name: '结构化分析',
+  current_node_id: 'agent-step-3',
+  current_node_name: '结构化分析与交叉验证',
   waiting_intervention: true,
   metrics_summary: [
     { label: '已采集事实', value: 128 },
@@ -290,75 +290,206 @@ export const mockTaskStatus: ResearchTaskStatusResponse = {
 
 export const mockTaskWorkflow: TaskWorkflowResponse = {
   task_id: 'task-002',
-  current_node: 'node-analysis',
-  waiting_intervention_node_id: 'node-analysis',
+  current_node: 'agent-step-3',
+  waiting_intervention_node_id: 'agent-step-3',
   nodes: [
     {
-      node_id: 'node-receive',
-      node_name: '任务接收',
-      node_type: 'ingest',
+      node_id: 'agent-step-1',
+      node_name: 'Agent 步骤 1',
+      node_kind: 'agent_step',
       node_status: 'completed',
-      description: '解析对象类型与任务参数。',
-      summary: '已识别目标为股票，完成初始任务建模。',
-      started_at: '2026-04-06T08:55:00Z',
-      finished_at: '2026-04-06T08:55:08Z',
-      updated_at: '2026-04-06T08:55:08Z',
-      duration_ms: 8000,
-      metrics: [
-        { label: '对象识别', value: 'stock' },
-        { label: '任务优先级', value: 'P1' },
-      ],
+      description: '我将拆解调研维度，先通过 web_search 发现候选来源，再分配任务给子代理并行收集证据。',
+      summary: '我将拆解调研维度，先通过 web_search 发现候选来源，再分配任务给子代理并行收集证据。',
+      updated_at: '2026-04-06T08:56:30Z',
+      payload: {
+        planning: '我将拆解调研维度，先通过 web_search 发现候选来源，再分配任务给子代理并行收集证据。',
+        tools: [
+          {
+            tool_name: 'web_search',
+            display_name: '网页搜索',
+            execution_id: 'exec-001',
+            status: 'completed',
+            status_text: '已搜索到 12 条信息',
+            input: { query: '腾讯控股 2026年Q1 财报 营收 利润', max_results: 15 },
+            output: { total_results: 12, query: '腾讯控股 2026年Q1 财报 营收 利润' },
+            started_at: '2026-04-06T08:55:30Z',
+            finished_at: '2026-04-06T08:55:35Z',
+            source_node_ids: ['raw-1', 'raw-2'],
+          },
+          {
+            tool_name: 'task',
+            display_name: '搜索腾讯财报数据并采集公告原文',
+            execution_id: 'exec-002',
+            status: 'completed',
+            status_text: '已采集腾讯2025年报核心数据：营收6,603亿元，同比增长8%。',
+            input: {
+              subagent_type: 'deep-search',
+              description: '搜索腾讯财报数据并采集公告原文',
+              prompt: '请搜索腾讯控股2025年年报和2026年Q1财报的核心财务数据...',
+            },
+            output: 'Task succeeded. Result: 已采集腾讯2025年报核心数据：营收6,603亿元，同比增长8%。',
+            started_at: '2026-04-06T08:55:36Z',
+            finished_at: '2026-04-06T08:56:30Z',
+            source_node_ids: ['raw-3', 'raw-8'],
+            subagent_workflows: [
+              {
+                subagent_id: 'subagent-deep-search-001',
+                subagent_type: 'deep-search',
+                description: '搜索腾讯财报数据并采集公告原文',
+                nodes: [
+                  {
+                    node_id: 'sa1-agent-step-1',
+                    node_name: 'Agent 步骤 1',
+                    node_kind: 'agent_step',
+                    node_status: 'completed',
+                    description: '开始搜索腾讯2025年年报和2026年Q1季报的关键财务数据。',
+                    summary: '开始搜索腾讯2025年年报和2026年Q1季报的关键财务数据。',
+                    updated_at: '2026-04-06T08:56:00Z',
+                    payload: {
+                      planning: '开始搜索腾讯2025年年报和2026年Q1季报的关键财务数据。',
+                      tools: [
+                        {
+                          tool_name: 'web_search',
+                          display_name: '网页搜索',
+                          status: 'completed',
+                          status_text: '已搜索到 8 条信息',
+                        },
+                        {
+                          tool_name: 'web_fetch',
+                          display_name: '网页读取',
+                          status: 'completed',
+                          status_text: '已读取网页',
+                        },
+                      ],
+                      source_node_ids: ['sa1-raw-1', 'sa1-raw-2', 'sa1-raw-3'],
+                    },
+                  },
+                  {
+                    node_id: 'sa1-agent-step-2',
+                    node_name: 'Agent 步骤 2',
+                    node_kind: 'agent_step',
+                    node_status: 'completed',
+                    description: '提取关键财务指标：2025年全年营收6,603亿元（YoY +8%），Non-IFRS净利润2,220亿元（YoY +19%）。',
+                    summary: '提取关键财务指标：2025年全年营收6,603亿元（YoY +8%）。',
+                    updated_at: '2026-04-06T08:56:28Z',
+                    payload: {
+                      planning: '已获取年报和Q1数据，整理核心财务指标。',
+                      tools: [
+                        {
+                          tool_name: 'write_file',
+                          display_name: '写入文件',
+                          status: 'completed',
+                          status_text: '文件已写入',
+                        },
+                      ],
+                      source_node_ids: ['sa1-raw-4'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            tool_name: 'task',
+            display_name: '搜索腾讯游戏业务与竞争格局',
+            execution_id: 'exec-003',
+            status: 'completed',
+            status_text: '国内游戏收入增长得益于《无畏契约》和《地下城与勇士》系列表现。',
+            input: {
+              subagent_type: 'deep-search',
+              description: '搜索腾讯游戏业务与竞争格局',
+              prompt: '请调研腾讯游戏业务的最新表现、市场份额和竞争格局...',
+            },
+            output: 'Task succeeded. Result: 国内游戏收入增长得益于《无畏契约》和《地下城与勇士》系列表现。',
+            started_at: '2026-04-06T08:55:36Z',
+            finished_at: '2026-04-06T08:56:25Z',
+            source_node_ids: ['raw-4', 'raw-7'],
+            subagent_workflows: [
+              {
+                subagent_id: 'subagent-deep-search-002',
+                subagent_type: 'deep-search',
+                description: '搜索腾讯游戏业务与竞争格局',
+                nodes: [
+                  {
+                    node_id: 'sa2-agent-step-1',
+                    node_name: 'Agent 步骤 1',
+                    node_kind: 'agent_step',
+                    node_status: 'completed',
+                    description: '搜索腾讯游戏业务最新季度表现和市场份额数据。',
+                    summary: '搜索腾讯游戏业务最新季度表现和市场份额数据。',
+                    updated_at: '2026-04-06T08:56:24Z',
+                    payload: {
+                      planning: '搜索腾讯游戏业务最新季度表现和市场份额数据。',
+                      tools: [
+                        {
+                          tool_name: 'web_search',
+                          display_name: '网页搜索',
+                          status: 'completed',
+                          status_text: '已搜索到 6 条信息',
+                        },
+                        {
+                          tool_name: 'web_fetch',
+                          display_name: '网页读取',
+                          status: 'completed',
+                          status_text: '已读取网页',
+                        },
+                      ],
+                      source_node_ids: ['sa2-raw-1', 'sa2-raw-2'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        source_node_ids: ['raw-1', 'raw-2', 'raw-3', 'raw-4', 'raw-5', 'raw-6', 'raw-7', 'raw-8'],
+      },
     },
     {
-      node_id: 'node-search',
-      node_name: '数据检索',
-      node_type: 'retrieval',
+      node_id: 'agent-step-2',
+      node_name: 'Agent 步骤 2',
+      node_kind: 'agent_step',
       node_status: 'completed',
-      description: '采集公告、新闻、研报和产业链数据。',
-      summary: '已完成 128 条候选事实采集，并建立来源分组。',
-      started_at: '2026-04-06T08:55:08Z',
-      finished_at: '2026-04-06T08:58:30Z',
-      updated_at: '2026-04-06T08:58:30Z',
-      duration_ms: 202000,
-      can_intervene: true,
-      intervention_id: 'intv-search-001',
-      metrics: [
-        { label: '采集记录', value: 128 },
-        { label: '高权威来源', value: 41 },
-        { label: '平均耗时', value: '320ms' },
-      ],
+      description: '两个子代理已完成证据采集，我现在整理数据并撰写报告。',
+      summary: '两个子代理已完成证据采集，我现在整理数据并撰写报告。',
+      updated_at: '2026-04-06T08:58:00Z',
+      payload: {
+        planning: '两个子代理已完成证据采集，我现在整理数据并撰写报告。',
+        tools: [
+          {
+            tool_name: 'write_file',
+            display_name: '写入文件',
+            execution_id: 'exec-004',
+            status: 'completed',
+            status_text: '文件已写入',
+            input: { path: '/mnt/user-data/outputs/research_report.md' },
+            started_at: '2026-04-06T08:57:00Z',
+            finished_at: '2026-04-06T08:58:00Z',
+            source_node_ids: ['raw-9', 'raw-10'],
+          },
+        ],
+        source_node_ids: ['raw-9', 'raw-10'],
+      },
     },
     {
-      node_id: 'node-analysis',
-      node_name: '结构化分析',
-      node_type: 'analysis',
+      node_id: 'agent-step-3',
+      node_name: 'Agent 步骤 3',
+      node_kind: 'agent_step',
       node_status: 'waiting_user',
-      description: '聚合事实、识别冲突并形成结论草案。',
-      summary: '检测到 6 条低置信度事实，需要人工确认是否调整规则。',
-      started_at: '2026-04-06T08:58:31Z',
+      description: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
+      summary: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
       updated_at: '2026-04-06T09:04:00Z',
       can_intervene: true,
-      intervention_id: 'intv-analysis-001',
-      metrics: [
-        { label: '事实簇', value: 18 },
-        { label: '低置信度', value: 6 },
-        { label: '冲突簇', value: 2 },
-      ],
-    },
-    {
-      node_id: 'node-report',
-      node_name: '报告生成',
-      node_type: 'report',
-      node_status: 'pending',
-      description: '输出最终报告与结论摘要。',
-      summary: '等待分析节点完成。',
-      metrics: [{ label: '报告版本', value: 'draft-0' }],
+      payload: {
+        planning: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
+        tools: [],
+        source_node_ids: ['raw-11'],
+      },
     },
   ],
   edges: [
-    { from: 'node-receive', to: 'node-search' },
-    { from: 'node-search', to: 'node-analysis' },
-    { from: 'node-analysis', to: 'node-report' },
+    { from: 'agent-step-1', to: 'agent-step-2' },
+    { from: 'agent-step-2', to: 'agent-step-3' },
   ],
 };
 
@@ -1566,50 +1697,38 @@ const mockTaskEventsMap: Record<string, TaskEvent[]> = {
     {
       event_id: 'event-001',
       task_id: 'task-002',
-      node_id: 'node-receive',
-      node_name: '任务接收',
+      node_id: 'agent-step-1',
+      node_name: 'Agent 步骤 1',
       node_status: 'completed',
       level: 'success',
-      title: '任务初始化完成',
-      message: '已识别目标对象类型，并建立调研任务上下文。',
-      metrics: { object_type: 'stock', priority: 'P1' },
-      timestamp: '2026-04-06T08:55:08Z',
+      title: '子代理并行搜索完成',
+      message: '两个 deep-search 子代理已完成腾讯财报和游戏业务数据采集。',
+      metrics: { subagents: 2, tools: 5 },
+      timestamp: '2026-04-06T08:56:30Z',
     },
     {
       event_id: 'event-002',
       task_id: 'task-002',
-      node_id: 'node-search',
-      node_name: '数据检索',
+      node_id: 'agent-step-2',
+      node_name: 'Agent 步骤 2',
       node_status: 'completed',
       level: 'info',
-      title: '候选事实采集完成',
-      message: '完成公告、新闻、研报等多源采集，生成 128 条候选事实。',
-      metrics: { records: 128, high_authority_sources: 41, latency_ms: 320 },
-      timestamp: '2026-04-06T08:58:30Z',
+      title: '报告草稿生成完成',
+      message: 'Lead Agent 已整合子代理证据，生成详细和简版两份报告。',
+      metrics: { records: 128, high_authority_sources: 41 },
+      timestamp: '2026-04-06T08:58:00Z',
     },
     {
       event_id: 'event-003',
       task_id: 'task-002',
-      node_id: 'node-analysis',
-      node_name: '结构化分析',
-      node_status: 'running',
-      level: 'warning',
-      title: '检测到低置信度事实',
-      message: '有 6 条事实可信度不足，且存在 2 个冲突簇，建议人工复核。',
-      metrics: { low_confidence_facts: 6, conflict_clusters: 2 },
-      timestamp: '2026-04-06T09:03:10Z',
-    },
-    {
-      event_id: 'event-004',
-      task_id: 'task-002',
-      node_id: 'node-analysis',
-      node_name: '结构化分析',
+      node_id: 'agent-step-3',
+      node_name: '结构化分析与交叉验证',
       node_status: 'waiting_user',
       level: 'warning',
-      title: '等待人工介入',
-      message: '系统暂停于结构化分析节点，等待用户决定继续、更新规则或跳过。',
-      metrics: { available_actions: 3 },
-      timestamp: '2026-04-06T09:04:00Z',
+      title: '检测到收入口径差异',
+      message: '游戏业务收入口径存在差异，等待人工确认数据标准。',
+      metrics: { pending_issues: 1 },
+      timestamp: '2026-04-06T09:03:10Z',
     },
   ],
 };
@@ -1620,33 +1739,14 @@ export async function mockGetTaskEvents(taskId: string): Promise<TaskEvent[]> {
 
 const mockTaskInterventionsMap: Record<string, Record<string, TaskInterventionDetailResponse>> = {
   'task-002': {
-    'node-search': {
+    'agent-step-3': {
       task_id: 'task-002',
-      node_id: 'node-search',
-      node_name: '数据检索',
-      intervention_type: 'rule_adjustment',
-      status: 'waiting_user',
-      reason: '部分行业论坛信号噪声较高，可按需调整来源范围。',
-      suggested_action: '如需提高召回率，可开启论坛源；如需提升可信度，保持高权威源优先。',
-      current_params: {
-        source_authority: 'high',
-        max_results: 100,
-        include_forum: false,
-      },
-      preview_data: {
-        estimated_records: 48,
-        estimated_latency_ms: 520,
-        risk: '可能引入低质量噪声信息',
-      },
-    },
-    'node-analysis': {
-      task_id: 'task-002',
-      node_id: 'node-analysis',
-      node_name: '结构化分析',
+      node_id: 'agent-step-3',
+      node_name: '结构化分析与交叉验证',
       intervention_type: 'manual_review',
       status: 'waiting_user',
-      reason: '发现 6 条低置信度事实与 2 个冲突簇，需要人工决策。',
-      suggested_action: '建议先查看低置信度事实摘要，再决定继续或更新分析规则。',
+      reason: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
+      suggested_action: '请确认数据口径后继续生成报告。',
       current_params: {
         report_mode: 'full',
         confidence_threshold: 0.8,
@@ -1748,11 +1848,11 @@ export async function mockSubmitTaskIntervention(
     mockTaskStatus.hint = '已收到人工反馈，系统恢复结构化分析。';
     mockTaskStatus.waiting_intervention = false;
     mockTaskStatus.available_actions = ['retry_analysis', 'cancel_task'];
-    mockTaskStatus.current_node_id = 'node-report';
+    mockTaskStatus.current_node_id = 'agent-step-3';
     mockTaskStatus.current_node_name = '报告生成';
 
     mockTaskWorkflow.waiting_intervention_node_id = undefined;
-    mockTaskWorkflow.current_node = 'node-report';
+    mockTaskWorkflow.current_node = 'agent-step-3';
     mockTaskWorkflow.nodes = mockTaskWorkflow.nodes.map((node) => {
       if (node.node_id === nodeId) {
         return {
@@ -1760,15 +1860,6 @@ export async function mockSubmitTaskIntervention(
           node_status: 'completed',
           summary: '人工审核完成，分析结果已确认继续执行。',
           finished_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
-      if (node.node_id === 'node-report') {
-        return {
-          ...node,
-          node_status: 'running',
-          summary: '正在生成报告草稿与结论摘要。',
-          started_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
       }
