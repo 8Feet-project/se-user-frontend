@@ -50,7 +50,7 @@ npm install
 npm run dev
 ```
 
-默认启动后可访问：`http://localhost:5173`
+默认启动后可访问：`http://localhost:48888`
 
 ## 环境变量
 

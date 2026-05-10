@@ -32,7 +32,7 @@ The UI is bilingual (Chinese/English labels); Chinese text in the UI is expected
 ## Development Commands
 
 ```bash
-npm run dev        # Start dev server on http://localhost:4173
+npm run dev        # Start dev server on http://localhost:48888
 npm run build      # tsc type-check then Vite production build
 npm run preview    # Preview built output
 ```
