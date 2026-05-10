@@ -195,6 +195,7 @@ export function PageShell({
         <div
           className="flex min-h-screen flex-col px-5 py-5 sm:px-6 lg:pl-[68px] lg:pr-8 lg:py-8 xl:pr-10"
         >
+          {!hideHeader ? (
           <div className="shell-mobile-nav mb-4 lg:hidden">
             <div className="flex items-center justify-between gap-4">
               <BrandLink
@@ -263,6 +264,7 @@ export function PageShell({
               </nav>
             ) : null}
           </div>
+          ) : null}
 
           <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1340px] flex-col gap-7">
             {hideHeader ? (
