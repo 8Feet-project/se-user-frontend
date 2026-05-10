@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Database, FileSearch, LogOut, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { getCurrentUserPermissions, logoutCurrentSession } from '../api/client';
@@ -11,7 +11,6 @@ interface AdminNavItem {
   label: string;
   path: string;
   icon: typeof Database;
-  permission?: string;
   description: string;
 }
 
@@ -20,28 +19,24 @@ const adminNavItems: AdminNavItem[] = [
     label: '统计看板',
     path: '/admin/dashboard',
     icon: BarChart3,
-    permission: 'admin:dashboard:read',
     description: '查看调研量、活跃用户与模型使用情况。',
   },
   {
     label: '模型配置',
     path: '/admin/models',
     icon: Sparkles,
-    permission: 'admin:model:read',
     description: '维护大模型接入、参数与连接状态。',
   },
   {
     label: '用户权限',
     path: '/admin/users',
     icon: Users,
-    permission: 'admin:user:read',
     description: '管理账号状态、角色权限与密码重置。',
   },
   {
     label: '系统日志',
     path: '/admin/logs',
     icon: FileSearch,
-    permission: 'admin:logs:read',
     description: '按日志级别、操作人、模型等条件排查链路问题。',
   },
 ];
@@ -87,13 +82,6 @@ export function AdminLayout() {
 
     void loadPermissions();
   }, [hasToken]);
-
-  const accessibleItems = useMemo(() => {
-    if (loading) {
-      return adminNavItems;
-    }
-    return adminNavItems.filter((item) => !item.permission || permissions.includes(item.permission));
-  }, [loading, permissions]);
 
   if (!hasToken) {
     return (
@@ -205,13 +193,13 @@ export function AdminLayout() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white">当前身份</p>
                 <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">{role || 'loading'}</p>
-                <p className="mt-2 text-xs leading-5 text-slate-400">已加载 {permissions.length} 项权限，用于控制管理端导航与操作范围。</p>
+                <p className="mt-2 text-xs leading-5 text-slate-400">已加载 {permissions.length} 项权限，用于控制管理端操作范围。</p>
               </div>
             </div>
           </div>
 
           <nav className="mt-6 flex-1 space-y-2">
-            {accessibleItems.map((item) => {
+            {adminNavItems.map((item) => {
               const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
               const Icon = item.icon;
               return (
