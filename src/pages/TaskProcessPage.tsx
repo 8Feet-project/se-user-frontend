@@ -6,6 +6,7 @@ import {
   GitBranch,
   ListChecks,
   PlayCircle,
+  Presentation,
   RefreshCcw,
   Shield,
   Sparkles,
@@ -86,6 +87,9 @@ function toolPayloadFromNode(node: VisibleWorkflowNode) {
   if (node.node_kind !== 'tool_call') {
     return null;
   }
+  if (node.payload?.hide_tool_payload || isReportToolName(node.node_name)) {
+    return null;
+  }
 
   const callNode = node.source_nodes.find((item) => item.node_kind === 'tool_call') ?? node;
   const returnNode = node.source_nodes.find((item) => item.node_kind === 'tool_return') ?? null;
@@ -126,9 +130,47 @@ function agentStepPlanning(node: VisibleWorkflowNode) {
   return String(node.payload?.planning || node.summary || node.description || '').trim();
 }
 
-function ToolCallCard({ tool, index }: { tool: WorkflowToolCall; index: number }) {
+function isReportToolName(toolName?: string) {
+  const normalized = String(toolName ?? '').replace(/^调用工具:\s*|^工具返回:\s*/g, '').trim();
+  return ['present_report', 'present_files', '生成调研报告', '展示调研报告'].includes(normalized);
+}
+
+function isReportNode(node: VisibleWorkflowNode) {
+  if (node.node_kind === 'report_generation') {
+    return true;
+  }
+  if (node.payload?.report_url || node.payload?.report_id) {
+    return true;
+  }
+  const toolNames = node.payload?.report_tool_names ?? [];
+  return toolNames.some((name) => isReportToolName(name));
+}
+
+function reportUrlFromPayload(taskId: string, payload?: { report_id?: string; report_url?: string }) {
+  if (payload?.report_url) {
+    return payload.report_url;
+  }
+  if (!taskId) {
+    return '';
+  }
+  return payload?.report_id ? `/report?task_id=${taskId}&report_id=${payload.report_id}` : `/report?task_id=${taskId}`;
+}
+
+function ToolCallCard({
+  tool,
+  index,
+  taskId,
+  onOpenReport,
+}: {
+  tool: WorkflowToolCall;
+  index: number;
+  taskId: string;
+  onOpenReport: (url: string) => void;
+}) {
   const toolTitle = tool.display_name || tool.tool_name || `工具 ${index + 1}`;
   const statusLine = tool.status_text || (tool.finished_at ? '工具已完成' : '工具执行中');
+  const hidePayload = Boolean(tool.hide_payload || isReportToolName(tool.tool_name));
+  const reportUrl = reportUrlFromPayload(taskId, tool);
   return (
     <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
       <div className="flex items-start justify-between gap-3">
@@ -142,10 +184,22 @@ function ToolCallCard({ tool, index }: { tool: WorkflowToolCall; index: number }
         </div>
         <StatusBadge status={(tool.status as WorkflowNodeStatus) || 'running'} />
       </div>
-      <div className="mt-3 space-y-2">
-        <ToolPayloadDisclosure label="输入" value={tool.input} />
-        <ToolPayloadDisclosure label="输出" value={tool.output} />
-      </div>
+      {hidePayload ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="data-pill">报告内容已省略</span>
+          {reportUrl ? (
+            <Button size="xs" variant="secondary" onClick={() => onOpenReport(reportUrl)}>
+              <FileSearch size={12} />
+              查看报告
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <ToolPayloadDisclosure label="输入" value={tool.input} />
+          <ToolPayloadDisclosure label="输出" value={tool.output} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1064,6 +1118,8 @@ export function TaskProcessPage() {
                       const stepTools = agentStepTools(step);
                       const planningText = agentStepPlanning(step);
                       const isAgentStep = step.node_kind === 'agent_step';
+                      const reportNode = isReportNode(step);
+                      const stepReportUrl = reportUrlFromPayload(taskId, step.payload);
                       const stepTitle = isAgentStep
                         ? (planningText || step.summary || 'Agent 已执行一轮工具调用')
                         : step.node_name;
@@ -1086,7 +1142,7 @@ export function TaskProcessPage() {
                           )}
                           <div className={`absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border ${markerClass}`}>
                             {step.node_status === 'completed' ? (
-                              <CheckCircle2 size={18} />
+                              reportNode ? <Presentation size={18} /> : <CheckCircle2 size={18} />
                             ) : isWaiting ? (
                               <AlertTriangle size={18} />
                             ) : isCurrent ? (
@@ -1113,6 +1169,7 @@ export function TaskProcessPage() {
                                     <StatusBadge status={step.node_status} />
                                     {step.node_type ? <span className="data-pill">{nodeTypeText(step.node_type)}</span> : null}
                                     {isAgentStep ? <span className="data-pill">工具 {stepTools.length}</span> : null}
+                                    {reportNode ? <span className="data-pill">报告</span> : null}
                                     {step.node_kind === "tool_call" ? <span className="data-pill">工具执行</span> : null}
                                     {isCurrent ? <span className="data-pill">当前节点</span> : null}
                                     {isWaiting ? <span className="data-pill">等待人工</span> : null}
@@ -1133,8 +1190,22 @@ export function TaskProcessPage() {
                                         key={`${step.node_id}-${tool.execution_id ?? toolIndex}`}
                                         tool={tool}
                                         index={toolIndex}
+                                        taskId={taskId}
+                                        onOpenReport={(url) => navigate(url)}
                                       />
                                     ))}
+                                  </div>
+                                ) : null}
+
+                                {reportNode && stepReportUrl ? (
+                                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                                    <Button size="sm" variant="secondary" onClick={() => navigate(stepReportUrl)}>
+                                      <FileSearch size={14} />
+                                      查看报告
+                                    </Button>
+                                    {step.payload?.report_title ? (
+                                      <span className="text-xs text-slate-500">{step.payload.report_title}</span>
+                                    ) : null}
                                   </div>
                                 ) : null}
 

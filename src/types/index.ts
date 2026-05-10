@@ -357,6 +357,9 @@ export interface WorkflowToolCall {
   status_text?: string;
   input?: unknown;
   output?: unknown;
+  hide_payload?: boolean;
+  report_id?: string;
+  report_url?: string;
   started_at?: string;
   finished_at?: string;
   source_node_ids?: string[];
@@ -370,6 +373,13 @@ export interface WorkflowNodePayload {
   planning?: string;
   tools?: WorkflowToolCall[];
   source_node_ids?: string[];
+  hide_tool_payload?: boolean;
+  report_id?: string;
+  report_title?: string;
+  report_url?: string;
+  report_created_at?: string;
+  tool_names?: string[];
+  report_tool_names?: string[];
 }
 
 export interface WorkflowNode {
