@@ -351,8 +351,10 @@ export interface WorkflowNodeMetric {
 
 export interface WorkflowToolCall {
   tool_name: string;
+  display_name?: string;
   execution_id?: string | null;
   status?: WorkflowNodeStatus | string;
+  status_text?: string;
   input?: unknown;
   output?: unknown;
   started_at?: string;

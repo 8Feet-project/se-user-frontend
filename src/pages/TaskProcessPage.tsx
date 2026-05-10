@@ -127,11 +127,17 @@ function agentStepPlanning(node: VisibleWorkflowNode) {
 }
 
 function ToolCallCard({ tool, index }: { tool: WorkflowToolCall; index: number }) {
+  const toolTitle = tool.display_name || tool.tool_name || `工具 ${index + 1}`;
+  const statusLine = tool.status_text || (tool.finished_at ? '工具已完成' : '工具执行中');
   return (
     <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-100">{tool.tool_name || `工具 ${index + 1}`}</p>
+          <p className="text-sm font-semibold text-slate-100">{toolTitle}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{statusLine}</p>
+          {tool.tool_name && tool.tool_name !== toolTitle ? (
+            <p className="mt-1 break-all text-[11px] leading-4 text-slate-600">{tool.tool_name}</p>
+          ) : null}
           <p className="mt-1 text-xs text-slate-500">{tool.finished_at ? formatTime(tool.finished_at) : '执行中'}</p>
         </div>
         <StatusBadge status={(tool.status as WorkflowNodeStatus) || 'running'} />
