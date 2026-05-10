@@ -225,9 +225,9 @@ export function AdminDashboardPage() {
       <header className="flex flex-col gap-4 rounded-[28px] border border-[rgba(99,202,183,0.12)] bg-white/[0.04] p-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Admin Dashboard</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">多维度用户数据展示</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">运营概览</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            支持全局时间筛选器：默认今日，可按时间点或时间段查询，并可快捷选择近 7 日 / 近 30 日联动刷新统计视图。
+            查看调研请求、活跃用户和模型使用情况。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadData()} className="rounded-2xl border-[rgba(99,202,183,0.2)] bg-white/[0.06] text-slate-100 hover:bg-white/[0.1]">
@@ -301,15 +301,15 @@ export function AdminDashboardPage() {
           title="总调研请求量"
           value={derivedRequestTotal}
           icon={<Database className="h-5 w-5" />}
-          hint="按当前时间范围汇总模型调用量作为调研热度代理"
+          hint="所选时间范围内的调研热度"
         />
-        <MetricCard title="DAU" value={derivedDau} icon={<Users className="h-5 w-5" />} hint="当前时间范围最后一天活跃用户数" />
-        <MetricCard title="MAU" value={derivedMau} icon={<Activity className="h-5 w-5" />} hint="当前时间范围活跃用户均值" />
+        <MetricCard title="DAU" value={derivedDau} icon={<Users className="h-5 w-5" />} hint="最近一天的活跃用户" />
+        <MetricCard title="MAU" value={derivedMau} icon={<Activity className="h-5 w-5" />} hint="所选时间范围内的活跃均值" />
         <MetricCard
           title="近期待检日志"
           value={filteredModelRanking.reduce((acc, item) => acc + item.call_count, 0)}
           icon={<Sparkles className="h-5 w-5" />}
-          hint="以模型调用量作为排障观察代理指标"
+          hint="需要重点关注的调用变化"
         />
       </section>
 
@@ -403,7 +403,7 @@ export function AdminDashboardPage() {
                 </div>
               </div>
               <div className="mt-6 rounded-3xl border border-[rgba(99,202,183,0.1)] bg-[#07111f]/72 p-4 text-sm leading-6 text-slate-400">
-                当前调研对象以公司与股票为主，商品调研占比较低，可作为模型路由与提示词优化的依据。
+                公司和股票类调研占比较高，后续可以优先关注这两类任务的模型表现。
               </div>
             </>
           )}
@@ -449,7 +449,7 @@ export function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">用户活跃与留存</h2>
-              <p className="mt-1 text-sm text-slate-400">支撑管理端用户行为观察。</p>
+              <p className="mt-1 text-sm text-slate-400">了解用户近期是否持续使用平台。</p>
             </div>
             <Badge variant="secondary" className="border-[rgba(99,202,183,0.16)] bg-white/[0.05] text-slate-200">
               User Activity

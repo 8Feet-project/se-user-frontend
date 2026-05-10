@@ -17,17 +17,17 @@ const highlights = [
   {
     icon: Sparkles,
     title: '任务发起',
-    desc: '填写调研对象、对象类型、时间范围和模型选择后创建任务。',
+    desc: '输入公司、股票或商品，开始一轮调研。',
   },
   {
     icon: GitBranch,
     title: '流程查看',
-    desc: '查看任务状态、节点日志、参考信息和需要人工处理的节点。',
+    desc: '跟进任务进展，及时处理需要确认的节点。',
   },
   {
     icon: FileText,
     title: '报告管理',
-    desc: '阅读报告正文，查看引用，按支持的格式导出结果。',
+    desc: '阅读报告、查看引用，也可以导出留档。',
   },
 ];
 
@@ -120,7 +120,7 @@ export function LoginPage() {
             <p className="page-kicker">8Feet</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-100">智能调研平台</h2>
             <p className="text-sm leading-7 text-slate-400">
-              登录后进入用户端工作台。普通用户只能看到业务页面，管理员会额外看到管理后台入口。
+              登录后进入工作台。管理员可以在侧边栏进入管理后台。
             </p>
           </div>
 
@@ -147,7 +147,7 @@ export function LoginPage() {
           <p className="page-kicker">账户入口</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">登录 8Feet 智能调研平台</h1>
           <p className="text-sm leading-7 text-slate-400">
-            使用用户名或邮箱登录。登录状态失效时，系统会回到首页并要求重新登录。
+            使用用户名或邮箱登录。
           </p>
         </div>
 

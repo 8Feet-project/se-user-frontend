@@ -294,7 +294,7 @@ export function AdminLogsPage() {
       for (let i = 0; i < maxAttempts; i += 1) {
         const status = await getAdminLogExportStatus(response.export_id);
         if (status.status === 'completed') {
-          setExportStatusText(`导出完成，可下载：${status.download_url || '下载地址由后端返回'}`);
+          setExportStatusText(status.download_url ? `导出完成，可下载：${status.download_url}` : '导出完成，请稍后刷新查看下载链接。');
           setFeedback({ tone: 'success', text: '导出成功。' });
           return;
         }
@@ -306,7 +306,7 @@ export function AdminLogsPage() {
         setExportStatusText(`导出处理中：${status.status}`);
       }
 
-      setFeedback({ tone: 'error', text: '导出状态轮询超时，请稍后刷新查看。' });
+      setFeedback({ tone: 'error', text: '导出还在处理中，请稍后刷新查看。' });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '导出失败';
       setFeedback({ tone: 'error', text: reason });
@@ -320,9 +320,9 @@ export function AdminLogsPage() {
       <header className="flex flex-col gap-4 rounded-[28px] border border-slate-800 bg-slate-900/60 p-6 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">System Logs</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">全链路日志可视化排查</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">系统日志排查</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            支持按时间点/时间段查询，非时间筛选项均支持多选，提供分页展示与导出保护机制。
+            按时间、级别、操作人或模型筛选日志，定位异常和关键操作。
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -481,7 +481,7 @@ export function AdminLogsPage() {
             </div>
           </div>
           <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-4 text-xs leading-6 text-slate-400">
-            导出保护规则：若未加时间或级别限制，系统会阻止导出，避免大范围查询打满数据库 I/O。
+            导出前请先缩小时间或日志级别，避免一次导出过多记录。
           </div>
         </div>
       </Card>
@@ -564,7 +564,7 @@ export function AdminLogsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">排查详情侧边栏</h2>
-              <p className="mt-1 text-sm text-slate-400">展示用户动作、意图、Agent 轨迹、原始提示词与返回结果。</p>
+              <p className="mt-1 text-sm text-slate-400">查看这条日志的上下文、提示词和模型返回。</p>
             </div>
             <Search className="h-5 w-5 text-slate-500" />
           </div>

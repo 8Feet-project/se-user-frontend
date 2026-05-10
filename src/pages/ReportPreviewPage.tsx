@@ -250,7 +250,7 @@ export function ReportPreviewPage() {
 
   const handleChangeReport = (nextReportId: string) => {
     if (nextReportId && !isValidReportId(nextReportId)) {
-      setMessage('报告 ID 无效，请重新选择报告。');
+      setMessage('这份报告暂时无法打开，请重新选择。');
       return;
     }
 
@@ -377,10 +377,10 @@ export function ReportPreviewPage() {
         const status = await getReportExportStatus(exportTask.export_id);
         if (status.status === 'completed') {
           if (!status.download_url) {
-            throw new Error('导出完成但未返回下载链接。');
+            throw new Error('导出完成，但暂时没有下载链接。');
           }
           triggerDownload(status.download_url);
-          setMessage(`报告导出完成，下载链接${status.expires_at ? `有效期至 ${status.expires_at}` : '已打开'}。`);
+          setMessage('报告导出完成，下载已开始。');
           return;
         }
         if (status.status === 'failed') {
@@ -389,7 +389,7 @@ export function ReportPreviewPage() {
         await wait(1000);
       }
 
-      throw new Error('导出仍在处理中，请稍后重试。');
+      throw new Error('报告仍在生成，请稍后再试。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '报告导出失败';
       setMessage(reason);
@@ -449,7 +449,7 @@ export function ReportPreviewPage() {
               <h2 className="text-2xl font-semibold tracking-tight text-slate-100">{report?.title ?? '调研报告'}</h2>
               {report ? (
                 <div className="flex flex-wrap gap-2">
-                  <span className="data-pill">报告 ID：{report.report_id}</span>
+                  <span className="data-pill">报告编号：{report.report_id}</span>
                   <span className="data-pill">来源任务：{report.task_id}</span>
                   <span className="data-pill">{reportMode === 'brief' ? '简版' : '详版'}</span>
                   <span className="data-pill">创建时间：{formatDateTime(report.created_at)}</span>
@@ -502,7 +502,7 @@ export function ReportPreviewPage() {
                 </div>
               </div>
             ) : (
-              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '暂无报告内容，请先从任务流程或历史记录进入具体报告。'}</div>
+              <div className="panel-subtle p-5 text-sm text-slate-500">{message || '还没有可显示的报告内容。请先完成一次调研，或从历史记录打开报告。'}</div>
             )}
           </Card>
 
@@ -586,7 +586,7 @@ export function ReportPreviewPage() {
                           <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <p className="mt-2 text-xs text-amber-300">来源不足</p>
+                        <p className="mt-2 text-xs text-amber-300">这条引用没有来源链接</p>
                       )}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button type="button" size="sm" variant="secondary" onClick={() => void handleShowCitationDetail(citation)} disabled={loadingCitationId === citation.citation_id}>
@@ -602,7 +602,7 @@ export function ReportPreviewPage() {
                   );
                 })
               ) : (
-                <div className="panel-subtle p-4 text-sm text-amber-300">来源不足</div>
+                <div className="panel-subtle p-4 text-sm text-slate-500">这份报告还没有引用信息。</div>
               )}
             </div>
           </Card>
@@ -647,11 +647,11 @@ export function ReportPreviewPage() {
                     <ExternalLink size={14} />
                   </a>
                 ) : (
-                  <p className="text-amber-300">来源不足</p>
+                  <p className="text-amber-300">这条引用没有来源链接。</p>
                 )}
               </div>
             ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">选择一条引用查看详情；没有可用来源时会提示“来源不足”。</div>
+              <div className="panel-subtle p-4 text-sm text-slate-500">选择一条引用，这里会显示标题、链接和摘录。</div>
             )}
           </Card>
 

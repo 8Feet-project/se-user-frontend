@@ -217,7 +217,7 @@ export function PageShell({
               <div>
                 <p className="shell-kicker">{isAdminRoute ? '管理端' : '用户端'}</p>
               <p className="mt-2 max-w-[36rem] text-sm leading-6 text-slate-400">
-                  {isAdminRoute ? '管理端入口与用户端分开显示。' : '选择需要进入的业务页面。'}
+                  {isAdminRoute ? '管理用户、模型、日志和运营数据。' : '选择需要进入的业务页面。'}
                 </p>
               </div>
             </div>

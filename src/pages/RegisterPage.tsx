@@ -14,17 +14,17 @@ const steps = [
   {
     icon: MailCheck,
     title: '企业邮箱校验',
-    desc: '支持发送注册验证码，注册时由后端一次性完成验码与用户创建。',
+    desc: '用邮箱验证码确认身份，再完成账号创建。',
   },
   {
     icon: Bot,
-    title: '默认进入 AI 调研工作流',
-    desc: '注册完成后即可开始发起任务、查看流程与管理报告。',
+    title: '开始调研',
+    desc: '注册后可以直接发起任务，后续流程和报告都会保存在账号下。',
   },
   {
     icon: ShieldCheck,
-    title: '邀请制与手机号兼容',
-    desc: '邀请码、手机号都是可选项，便于兼顾不同团队的接入方式。',
+    title: '团队接入',
+    desc: '如果团队发了邀请码，可以在注册时一起填写。',
   },
 ];
 
@@ -65,7 +65,7 @@ export function RegisterPage() {
       });
       saveAuthSession(response);
       setRegisterSucceeded(true);
-      setMessage(`注册成功，用户 ID：${response.user_id}`);
+      setMessage('注册成功，已为你登录。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '注册失败';
       setRegisterSucceeded(false);
@@ -84,7 +84,7 @@ export function RegisterPage() {
     try {
       setSubmitting(true);
       const response = await sendEmailCode({ email: email.trim(), scene: 'register' });
-      setMessage(`验证码已发送，结果：${response.result}，有效期 ${response.expire_in}s。请在注册时一并提交邮箱和验证码。`);
+      setMessage(`验证码已发送，请在 ${response.expire_in} 秒内完成注册。`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发送验证码失败';
       setMessage(reason);
@@ -106,7 +106,7 @@ export function RegisterPage() {
             <p className="page-kicker">账号注册</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-100">创建 8Feet 账号</h2>
             <p className="text-sm leading-7 text-slate-400">
-              注册需要用户名、昵称、邮箱验证码和密码。注册成功后会自动写入登录状态。
+              填写基础信息，完成邮箱验证后就可以进入工作台。
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function RegisterPage() {
           <p className="page-kicker">新建账号</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">开始使用 8Feet 调研平台</h1>
           <p className="text-sm leading-7 text-slate-400">
-            填写账号信息并完成邮箱验证。普通账号默认进入用户端工作台。
+            填写账号信息并完成邮箱验证。
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export function RegisterPage() {
             </Button>
           </div>
           <div className="sm:col-span-2 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
-            验证说明：注册接口会连同邮箱和验证码一起提交，由后端完成验码与创建用户。
+            验证码会和注册信息一起提交，请使用最近收到的一次验证码。
           </div>
           <div>
             <Label htmlFor="register-phone">手机号（可选）</Label>
@@ -192,7 +192,7 @@ export function RegisterPage() {
             <p>{message}</p>
             {registerSucceeded ? (
               <p className="mt-2 text-xs text-emerald-200/90">
-                当前账号已完成注册并写入登录令牌，可直接进入任务发起页继续体验主业务链路。
+                现在可以直接进入任务页，开始第一轮调研。
               </p>
             ) : null}
           </div>

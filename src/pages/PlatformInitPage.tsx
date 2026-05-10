@@ -55,10 +55,8 @@ export function PlatformInitPage() {
       });
       const nextMessage = response.message
         ?? (response.initialized
-          ? response.super_admin_user_id == null
-            ? '初始化完成，但后端未返回超级管理员 ID。'
-            : `初始化完成，超级管理员 ID：${response.super_admin_user_id}`
-          : '初始化请求已提交，但后端未返回已初始化状态。');
+          ? '初始化完成，超级管理员账号已创建。'
+          : '初始化请求已提交，请刷新状态确认结果。');
 
       await loadStatus();
       setCreatedAccount({
@@ -91,7 +89,7 @@ export function PlatformInitPage() {
             <p className="page-kicker">平台初始化</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-100">首次启动配置</h2>
             <p className="text-sm leading-7 text-slate-400">
-              创建平台名称和首个超级管理员账号。初始化完成后请使用返回的账号登录。
+              设置平台名称，并创建第一个超级管理员账号。
             </p>
           </div>
 
@@ -102,8 +100,8 @@ export function PlatformInitPage() {
                   <Settings2 size={16} strokeWidth={1.9} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-100">初始化契约</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">填写平台名称和管理员邮箱，由后端创建首个超级管理员账号。</p>
+                  <p className="text-sm font-semibold text-slate-100">创建管理员</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">填写平台名称和管理员邮箱，系统会创建第一个超级管理员账号。</p>
                 </div>
               </div>
             </div>
@@ -114,7 +112,7 @@ export function PlatformInitPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100">状态复核</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">初始化状态以是否存在超级管理员为准，避免普通用户占位造成误判。</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">刷新后可以确认平台是否已经准备好。</p>
                 </div>
               </div>
             </div>
@@ -126,9 +124,9 @@ export function PlatformInitPage() {
                 <div>
                   <p className="text-sm font-semibold text-slate-100">当前状态</p>
                   <p className="mt-1 text-sm leading-6 text-slate-400">
-                    initialized：{initStatus ? String(initStatus.initialized) : 'loading...'}
+                    初始化：{initStatus ? (initStatus.initialized ? '已完成' : '未完成') : '加载中...'}
                     <br />
-                    has_super_admin：{initStatus ? String(initStatus.has_super_admin) : 'loading...'}
+                    超级管理员：{initStatus ? (initStatus.has_super_admin ? '已创建' : '未创建') : '加载中...'}
                   </p>
                 </div>
               </div>
@@ -142,13 +140,13 @@ export function PlatformInitPage() {
           <p className="page-kicker">平台初始化</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">8Feet 平台初始化配置</h1>
           <p className="text-sm leading-7 text-slate-400">
-            首次启动时创建超级管理员账号。初始化完成后，请使用返回的用户名和临时密码登录，再尽快修改密码。
+            首次启动时创建超级管理员账号。完成后请使用临时密码登录，并尽快修改密码。
           </p>
         </div>
 
         {initialized ? (
           <div className="mt-6 rounded-[24px] border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
-            平台已完成初始化。为避免重复创建超级管理员与默认配置，当前页面已切换为状态展示模式。
+            平台已完成初始化。请回到登录页使用管理员账号登录。
           </div>
         ) : null}
 
@@ -190,10 +188,10 @@ export function PlatformInitPage() {
           <div className="mt-6 rounded-[24px] border border-[rgba(99,202,183,0.28)] bg-[rgba(99,202,183,0.08)] p-5 text-sm text-slate-200">
             <p className="font-semibold text-slate-100">超级管理员账号</p>
             <div className="mt-3 grid gap-2 text-slate-300">
-              <p>用户名：{createdAccount.username ?? '未返回'}</p>
-              <p>邮箱：{createdAccount.adminEmail ?? '未返回'}</p>
-              <p>临时密码：{createdAccount.tempPassword ?? '请检查初始化邮件或后端日志'}</p>
-              <p>邮件发送：{createdAccount.mailSent ? '已发送' : '未发送或未配置 SMTP'}</p>
+              <p>用户名：{createdAccount.username ?? '请查看初始化结果'}</p>
+              <p>邮箱：{createdAccount.adminEmail ?? '请查看初始化结果'}</p>
+              <p>临时密码：{createdAccount.tempPassword ?? '请查看初始化邮件或本地服务日志'}</p>
+              <p>邮件：{createdAccount.mailSent ? '已发送' : '未发送'}</p>
             </div>
           </div>
         ) : null}

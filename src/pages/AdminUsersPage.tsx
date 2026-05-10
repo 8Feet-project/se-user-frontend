@@ -186,10 +186,10 @@ export function AdminUsersPage() {
       setForm({ username: '', email: '', phone: '', role: creatableRoles[0], permissions: [] });
       await loadUsers();
       await handleSelectUser(response.user_id);
-      setFeedback({ tone: 'success', text: '账号创建成功，已应用前端子集校验并通过服务端校验。' });
+      setFeedback({ tone: 'success', text: '账号创建成功，权限已保存。' });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '创建账号失败';
-      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
+      setFeedback({ tone: 'error', text: reason });
     } finally {
       setSubmitting(false);
     }
@@ -228,10 +228,10 @@ export function AdminUsersPage() {
       });
       await loadUsers();
       await handleSelectUser(selectedUser.user_id);
-      setFeedback({ tone: 'success', text: '保存成功，前后端授权校验均已通过。' });
+      setFeedback({ tone: 'success', text: '保存成功，权限已更新。' });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '保存失败';
-      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
+      setFeedback({ tone: 'error', text: reason });
     } finally {
       setSavingDetail(false);
     }
@@ -261,7 +261,7 @@ export function AdminUsersPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">User & Permission</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">用户与权限管理</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            管理员可向其创建的管理员/普通用户授予权限，且授权集合必须是当前授权者权限的子集；保存时执行前端校验与服务端二次校验。
+            管理账号角色、状态和权限范围。管理员只能授予自己拥有的权限。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadUsers()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
@@ -529,7 +529,7 @@ export function AdminUsersPage() {
                       className="h-auto min-h-12 rounded-2xl border-slate-700 bg-slate-900/80 text-slate-100"
                     />
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-slate-500">前端会拦截越权授予，提交后服务端会再次校验。</p>
+                  <p className="mt-3 text-xs leading-5 text-slate-500">只能选择你有权授予的权限。</p>
                 </section>
 
                 <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5">

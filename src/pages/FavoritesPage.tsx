@@ -164,7 +164,7 @@ export function FavoritesPage() {
       const response = await updateFavoriteFolder(selectedFolderId, {
         folder_name: editingFolderName.trim(),
       });
-      setMessage(`目录更新成功：${response.updated_fields.join(', ') || '无字段变化'}`);
+      setMessage(response.updated_fields.length ? '目录名称已保存。' : '目录名称没有变化。');
       await loadFolders();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '更新目录失败';
@@ -181,8 +181,8 @@ export function FavoritesPage() {
     }
     try {
       setSubmitting(true);
-      const response = await deleteFavoriteFolder(selectedFolderId);
-      setMessage(`删除目录结果：${response.result}`);
+      await deleteFavoriteFolder(selectedFolderId);
+      setMessage('目录已删除。');
       setSelectedFolderId('');
       setEditingFolderName('');
       await loadAll();
@@ -243,8 +243,8 @@ export function FavoritesPage() {
   const handleDeleteItem = async (favoriteId: string) => {
     try {
       setSubmitting(true);
-      const response = await deleteFavoriteItem(favoriteId);
-      setMessage(`已取消收藏：${response.target_id}`);
+      await deleteFavoriteItem(favoriteId);
+      setMessage('已取消收藏。');
       await loadItems(selectedFolderId || undefined);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '取消收藏失败';
@@ -412,7 +412,7 @@ export function FavoritesPage() {
           <DialogHeader>
             <DialogTitle>新增收藏</DialogTitle>
             <DialogDescription>
-              当前会保存到{selectedFolder?.folder_name ? `“${selectedFolder.folder_name}”` : '当前视图'}，你也可以先切换目录再发起收藏。
+              收藏会保存到{selectedFolder?.folder_name ? `“${selectedFolder.folder_name}”` : '默认目录'}，也可以先切换目录。
             </DialogDescription>
           </DialogHeader>
           <form
@@ -444,7 +444,7 @@ export function FavoritesPage() {
                 ))}
               </Select>
               {favoriteTargets.length === 0 ? (
-                <p className="text-xs text-amber-300">当前类型暂无可选对象，请从报告页或历史页直接点击“收藏”。</p>
+                <p className="text-xs text-amber-300">这里暂时没有可选内容。你可以先去报告页或历史页收藏。</p>
               ) : null}
             </div>
 

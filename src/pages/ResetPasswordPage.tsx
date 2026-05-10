@@ -30,7 +30,7 @@ export function ResetPasswordPage() {
       const response = await passwordResetRequest({ username: username.trim() });
       setRequestSucceeded(true);
       setConfirmSucceeded(false);
-      setMessage(`重置请求结果：${response.result}`);
+      setMessage('重置请求已提交，请查看邮件或管理员提供的重置令牌。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '发起重置失败';
       setRequestSucceeded(false);
@@ -42,7 +42,7 @@ export function ResetPasswordPage() {
 
   const handleConfirmReset = async () => {
     if (!resetToken.trim() || !newPassword) {
-      setMessage('请填写 reset_token 与新密码。');
+      setMessage('请填写重置令牌和新密码。');
       setConfirmSucceeded(false);
       return;
     }
@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
         new_password: newPassword,
       });
       setConfirmSucceeded(true);
-      setMessage(`重置确认结果：${response.result}`);
+      setMessage('密码已重置。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '确认重置失败';
       setConfirmSucceeded(false);
@@ -77,7 +77,7 @@ export function ResetPasswordPage() {
             <p className="page-kicker">密码重置</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-100">找回账号密码</h2>
             <p className="text-sm leading-7 text-slate-400">
-              先提交用户名或邮箱发起重置，再使用后端返回或发送的重置令牌设置新密码。
+              先确认账号，再用重置令牌设置新密码。
             </p>
           </div>
 
@@ -89,7 +89,7 @@ export function ResetPasswordPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100">第一步：发起重置</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">填写用户名或邮箱，请求后端创建密码重置流程。</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">填写用户名或邮箱，开始找回密码。</p>
                 </div>
               </div>
             </div>
@@ -99,8 +99,8 @@ export function ResetPasswordPage() {
                   <KeyRound size={16} strokeWidth={1.9} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-100">第二步：提交令牌</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">拿到 reset_token 后，再输入新密码完成最终确认。</p>
+                  <p className="text-sm font-semibold text-slate-100">第二步：输入重置令牌</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">拿到重置令牌后，输入新密码完成确认。</p>
                 </div>
               </div>
             </div>
@@ -111,7 +111,7 @@ export function ResetPasswordPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100">第三步：回到登录</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">密码更新后，建议立即返回登录页并验证账号状态。</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">密码更新后，回到登录页使用新密码登录。</p>
                 </div>
               </div>
             </div>
@@ -124,7 +124,7 @@ export function ResetPasswordPage() {
           <p className="page-kicker">密码恢复</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">重置 8Feet 账户密码</h1>
           <p className="text-sm leading-7 text-slate-400">
-            先发起重置请求，再填写 reset_token 与新密码完成确认。
+            先发起重置请求，再填写重置令牌和新密码。
           </p>
         </div>
 
@@ -137,10 +137,10 @@ export function ResetPasswordPage() {
             {submitting ? '提交中...' : '发起密码重置'}
           </Button>
           <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
-            第一步状态：{requestSucceeded ? '已发起重置，请准备 reset_token' : '尚未发起重置'}
+            第一步状态：{requestSucceeded ? '已提交，请准备重置令牌' : '尚未提交'}
           </div>
           <div>
-            <Label htmlFor="reset-token">reset_token</Label>
+            <Label htmlFor="reset-token">重置令牌</Label>
             <Input id="reset-token" value={resetToken} onChange={(event) => setResetToken(event.target.value)} placeholder="请输入重置令牌" />
           </div>
           <div>
@@ -162,7 +162,7 @@ export function ResetPasswordPage() {
           >
             <p>{message}</p>
             {confirmSucceeded ? (
-              <p className="mt-2 text-xs text-emerald-200/90">密码已更新，可立即返回登录页验证新密码是否生效。</p>
+              <p className="mt-2 text-xs text-emerald-200/90">密码已更新，现在可以返回登录页。</p>
             ) : null}
           </div>
         ) : null}
@@ -170,7 +170,7 @@ export function ResetPasswordPage() {
         {confirmSucceeded ? (
           <div className="mt-6">
             <Link to="/login" className="block">
-              <Button className="w-full">返回登录并验证新密码</Button>
+              <Button className="w-full">返回登录</Button>
             </Link>
           </div>
         ) : null}

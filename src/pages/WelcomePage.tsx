@@ -5,9 +5,9 @@ import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { hasAccessToken, takeAuthNotice } from '@/lib/auth';
 
 const quickLinks = [
-  { icon: ClipboardList, label: '发起调研', sub: '输入对象，立即进入标准化任务流程', path: '/launch' },
-  { icon: GitBranch, label: '查看流程', sub: '实时跟踪节点状态与事件流', path: '/process' },
-  { icon: FileText, label: '调研报告', sub: '查看引用、导出内容并继续追问', path: '/report' },
+  { icon: ClipboardList, label: '发起调研', sub: '输入对象，开始一轮调研', path: '/launch' },
+  { icon: GitBranch, label: '查看流程', sub: '看清任务走到哪一步', path: '/process' },
+  { icon: FileText, label: '调研报告', sub: '阅读正文、追问细节、导出报告', path: '/report' },
 ];
 
 export function WelcomePage() {
@@ -48,7 +48,7 @@ export function WelcomePage() {
                   8Feet 智能调研平台
                 </h1>
                 <p className="mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">
-                  面向商业研究任务的前端入口。登录后可以创建调研任务、查看执行流程、阅读报告并管理历史记录。
+                  从一个调研对象开始，跟进过程、阅读报告，把有价值的结果沉淀下来。
                 </p>
               </div>
             </div>
@@ -70,7 +70,7 @@ export function WelcomePage() {
             <p className="page-kicker">常用入口</p>
             <h2 className="mt-3 text-2xl font-semibold text-slate-100">工作台页面</h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">
-              登录后可直接进入以下页面。未登录访问这些页面时会回到首页。
+              常用入口放在这里，方便回到正在做的调研。
             </p>
 
             <div className="mt-5 grid gap-3 lg:grid-cols-3">

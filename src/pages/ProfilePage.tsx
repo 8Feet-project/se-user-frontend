@@ -48,7 +48,7 @@ export function ProfilePage() {
         phone: phone.trim() || undefined,
         avatar_url: avatarUrl.trim() || undefined,
       });
-      setMessage(`资料更新成功：${response.updated_fields.join(', ') || '无字段变化'}`);
+      setMessage(response.updated_fields.length ? '个人资料已保存。' : '没有需要保存的变化。');
       await loadProfile();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '更新个人信息失败';
@@ -69,7 +69,7 @@ export function ProfilePage() {
         old_password: oldPassword,
         new_password: newPassword,
       });
-      setMessage(`密码修改结果：${response.result}`);
+      setMessage('密码已修改。');
       setOldPassword('');
       setNewPassword('');
     } catch (error) {
@@ -97,7 +97,7 @@ export function ProfilePage() {
               <p className="page-kicker">个人资料</p>
               <h2 className="mt-1 text-2xl font-semibold text-slate-100">个人资料</h2>
               <p className="mt-2 text-sm leading-7 text-slate-400">
-                支持更新昵称、邮箱、手机号与头像链接。
+                这些信息会显示在你的账号资料中。
               </p>
             </div>
           </div>
@@ -143,7 +143,7 @@ export function ProfilePage() {
             </>
           ) : (
             <div className="rounded-3xl border border-dashed border-[rgba(99,202,183,0.16)] bg-[rgba(7,17,31,0.5)] p-6 text-sm text-slate-400">
-              {message || '暂无个人资料数据，请确认登录态或稍后重试。'}
+              {message || '暂时没有读取到个人资料，请稍后再试。'}
             </div>
           )}
         </Card>
@@ -156,7 +156,7 @@ export function ProfilePage() {
             </div>
             <div className="panel-subtle space-y-2 p-4 text-sm text-slate-300">
               <p>
-                <span className="text-slate-500">用户 ID：</span>
+                <span className="text-slate-500">账号编号：</span>
                 {profile?.user_id ?? '-'}
               </p>
               <p>

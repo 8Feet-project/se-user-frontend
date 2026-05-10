@@ -71,14 +71,14 @@ export function AlertsMessagesPage() {
     }
     try {
       setSubmitting(true);
-      const response = await createAlert({
+      await createAlert({
         object_name: objectName.trim(),
         object_type: objectType,
         push_in_app: pushInApp,
         push_email: pushEmail,
         schedule_rule: scheduleRule,
       });
-      setMessage(`提醒创建成功：${response.alert_id}`);
+      setMessage('提醒已创建。');
       setObjectName('');
       await loadAlerts();
     } catch (error) {
@@ -93,7 +93,7 @@ export function AlertsMessagesPage() {
     try {
       setSubmitting(true);
       const response = await updateAlert(alertId, { status: nextStatus });
-      setMessage(`提醒已更新：${response.updated_fields.join(', ') || '无字段变化'}`);
+      setMessage(response.updated_fields.length ? '提醒状态已更新。' : '提醒状态没有变化。');
       await loadAlerts();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '更新提醒失败';
@@ -106,8 +106,8 @@ export function AlertsMessagesPage() {
   const handleDeleteAlert = async (alertId: string) => {
     try {
       setSubmitting(true);
-      const response = await deleteAlert(alertId);
-      setMessage(`删除提醒结果：${response.result}`);
+      await deleteAlert(alertId);
+      setMessage('提醒已删除。');
       await loadAlerts();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '删除提醒失败';
@@ -120,8 +120,8 @@ export function AlertsMessagesPage() {
   const handleMarkMessageRead = async (messageId: string) => {
     try {
       setSubmitting(true);
-      const response = await markMessageRead(messageId);
-      setMessage(`消息已读：${response.message_id}`);
+      await markMessageRead(messageId);
+      setMessage('消息已标记为已读。');
       await loadMessages();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '标记消息已读失败';
@@ -135,7 +135,7 @@ export function AlertsMessagesPage() {
     try {
       setSubmitting(true);
       const response = await markAllMessagesRead();
-      setMessage(`全部已读完成，数量：${response.affected_count}`);
+      setMessage(response.affected_count > 0 ? `已标记 ${response.affected_count} 条消息。` : '没有未读消息。');
       await loadMessages();
     } catch (error) {
       const reason = error instanceof Error ? error.message : '全部标记已读失败';
@@ -148,7 +148,7 @@ export function AlertsMessagesPage() {
   return (
     <PageShell
       title="提醒消息"
-      subtitle="配置对象提醒，查看站内消息和已读状态。"
+      subtitle="关注重要对象，及时查看提醒消息。"
     >
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
@@ -158,7 +158,7 @@ export function AlertsMessagesPage() {
             <Radar size={16} className="text-[#63cab7]" />
             <h2 className="text-2xl font-semibold text-slate-100">提醒配置</h2>
           </div>
-          <p className="text-sm text-slate-400">支持对象监控、推送频率、站内通知和邮件通知。</p>
+          <p className="text-sm text-slate-400">选择你关心的对象和提醒方式。</p>
 
           <div className="grid gap-4">
             <div>
