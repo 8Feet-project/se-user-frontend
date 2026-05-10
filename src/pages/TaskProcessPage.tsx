@@ -661,7 +661,7 @@ export function TaskProcessPage() {
       if (payload?.type === 'connection_ack' || payload?.type === 'pong') {
         return;
       }
-      scheduleRealtimeRefresh(taskId, true);
+      scheduleRealtimeRefresh(taskId, payload?.reason !== 'references_changed');
     };
 
     socket.onerror = () => {
