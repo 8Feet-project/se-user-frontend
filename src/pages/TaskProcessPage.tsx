@@ -1,11 +1,9 @@
 import {
-  Activity,
   AlertTriangle,
   CheckCircle2,
   Database,
   FileSearch,
   GitBranch,
-  Info,
   ListChecks,
   PlayCircle,
   RefreshCcw,
@@ -23,7 +21,6 @@ import {
   getResearchTaskStatus,
   getResearchTaskWorkflow,
   getResearchTasks,
-  getTaskEvents,
   getTaskFacts,
   getTaskIntervention,
   retryAnalysis,
@@ -45,7 +42,6 @@ import type {
   ResearchTaskStatusResponse,
   RetryAnalysisResponse,
   SubmitTaskInterventionResponse,
-  TaskEvent,
   TaskFactsResponse,
   TaskInterventionAction,
   TaskInterventionDetailResponse,
@@ -96,19 +92,6 @@ function toolPayloadFromNode(node: VisibleWorkflowNode) {
   return {
     input: callNode.payload?.input,
     output: returnNode?.payload?.output,
-  };
-}
-
-function toolPayloadFromEvent(event: VisibleTaskEvent) {
-  if (event.node_kind !== 'tool_call') {
-    return null;
-  }
-
-  const callEvent = event.source_events.find((item) => item.node_kind === 'tool_call') ?? event;
-  const returnEvent = event.source_events.find((item) => item.node_kind === 'tool_return') ?? null;
-  return {
-    input: callEvent.payload?.input,
-    output: returnEvent?.payload?.output,
   };
 }
 
@@ -205,39 +188,6 @@ function statusTone(status?: WorkflowNodeStatus | ResearchTaskStatusResponse['st
       return 'border-slate-500/20 bg-slate-500/10 text-slate-300';
     default:
       return 'border-white/10 bg-white/[0.06] text-slate-300';
-  }
-}
-
-function eventMeta(level?: TaskEvent['level']) {
-  switch (level) {
-    case 'success':
-      return {
-        icon: CheckCircle2,
-        label: '成功',
-        markerClass: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300',
-        panelClass: 'border-emerald-500/20 bg-emerald-500/[0.06]',
-      };
-    case 'warning':
-      return {
-        icon: AlertTriangle,
-        label: '告警',
-        markerClass: 'border-amber-500/30 bg-amber-500/15 text-amber-300',
-        panelClass: 'border-amber-500/20 bg-amber-500/[0.06]',
-      };
-    case 'error':
-      return {
-        icon: AlertTriangle,
-        label: '异常',
-        markerClass: 'border-rose-500/30 bg-rose-500/15 text-rose-300',
-        panelClass: 'border-rose-500/20 bg-rose-500/[0.06]',
-      };
-    default:
-      return {
-        icon: Info,
-        label: '信息',
-        markerClass: 'border-sky-500/30 bg-sky-500/15 text-sky-300',
-        panelClass: 'border-white/10 bg-white/[0.04]',
-      };
   }
 }
 
@@ -361,11 +311,6 @@ type VisibleWorkflowNode = WorkflowNode & {
   source_nodes: WorkflowNode[];
 };
 
-type VisibleTaskEvent = TaskEvent & {
-  source_event_ids: string[];
-  source_events: TaskEvent[];
-};
-
 function mergeWorkflowNodes(nodes: WorkflowNode[]) {
   const visibleNodes: VisibleWorkflowNode[] = [];
   const hiddenNodeIds = new Set<string>();
@@ -431,67 +376,6 @@ function mergeWorkflowNodes(nodes: WorkflowNode[]) {
   return { visibleNodes, hiddenNodeIdSet };
 }
 
-function mergeTaskEvents(events: TaskEvent[]) {
-  const visibleEvents: VisibleTaskEvent[] = [];
-  const hiddenEventIds = new Set<string>();
-
-  for (const event of events) {
-    const currentId = event.event_id ?? `${event.node_id}-${event.timestamp}`;
-    if (hiddenEventIds.has(currentId)) {
-      continue;
-    }
-
-    const isToolCall = event.node_kind === "tool_call";
-    const executionId = event.execution_id ?? null;
-
-    if (isToolCall && executionId) {
-      const pairEvent = events.find((candidate) =>
-        candidate !== event &&
-        candidate.execution_id === executionId &&
-        candidate.node_kind === "tool_return"
-      );
-
-      if (pairEvent) {
-        const pairId = pairEvent.event_id ?? `${pairEvent.node_id}-${pairEvent.timestamp}`;
-        hiddenEventIds.add(pairId);
-
-        const toolName =
-          event.node_name.replace(/^调用工具:\s*/, "").trim() ||
-          pairEvent.node_name.replace(/^工具返回:\s*/, "").trim() ||
-          "未知工具";
-
-        visibleEvents.push({
-          ...event,
-          node_name: `工具执行: ${toolName}`,
-          title: `工具执行: ${toolName}`,
-          message:
-            pairEvent.message ||
-            event.message ||
-            `工具 ${toolName} 已返回结果。`,
-          node_status:
-            pairEvent.node_status === "failed"
-              ? "failed"
-              : pairEvent.node_status === "completed"
-                ? "completed"
-                : event.node_status,
-          timestamp: pairEvent.timestamp || event.timestamp,
-          source_event_ids: [currentId, pairId],
-          source_events: [event, pairEvent],
-        });
-        continue;
-      }
-    }
-
-    visibleEvents.push({
-      ...event,
-      source_event_ids: [currentId],
-      source_events: [event],
-    });
-  }
-
-  return visibleEvents;
-}
-
 export function TaskProcessPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -502,7 +386,6 @@ export function TaskProcessPage() {
   const [status, setStatus] = useState<ResearchTaskStatusResponse | null>(null);
   const [workflow, setWorkflow] = useState<TaskWorkflowResponse | null>(null);
   const [facts, setFacts] = useState<TaskFactsResponse | null>(null);
-  const [events, setEvents] = useState<TaskEvent[]>([]);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeTaskResponse | null>(null);
   const [retryResult, setRetryResult] = useState<RetryAnalysisResponse | null>(null);
   const [crossValidationTrigger, setCrossValidationTrigger] =
@@ -553,17 +436,15 @@ export function TaskProcessPage() {
   }, []);
 
   const loadTaskData = useCallback(async (targetTaskId: string) => {
-    const [statusResult, workflowResult, factsResult, eventsResult] = await Promise.all([
+    const [statusResult, workflowResult, factsResult] = await Promise.all([
       getResearchTaskStatus(targetTaskId),
       getResearchTaskWorkflow(targetTaskId),
       getTaskFacts(targetTaskId),
-      getTaskEvents(targetTaskId),
     ]);
 
     setStatus(statusResult);
     setWorkflow(workflowResult);
     setFacts(factsResult);
-    setEvents(eventsResult);
 
     try {
       setLoadingCrossValidationResult(true);
@@ -659,7 +540,6 @@ export function TaskProcessPage() {
       setStatus(null);
       setWorkflow(null);
       setFacts(null);
-      setEvents([]);
       setInterventionNode(null);
       setInterventionDetail(null);
       setInterventionResult(null);
@@ -935,6 +815,9 @@ export function TaskProcessPage() {
     () => mergeWorkflowNodes(workflowNodes),
     [workflowNodes]
   );
+  const latestWorkflowNode = timelineNodes.length > 0 ? timelineNodes[timelineNodes.length - 1] : null;
+  const latestWorkflowTime = latestWorkflowNode?.updated_at;
+  const isTaskActive = Boolean(status && ACTIVE_TASK_STATUSES.has(status.status));
   const stageItems = status?.progress_model?.stages ?? [];
   const completedCount = stageItems.length > 0
     ? stageItems.filter((stage) => stage.status === 'completed' || stage.status === 'skipped').length
@@ -954,12 +837,6 @@ export function TaskProcessPage() {
     : timelineNodes.length > 0
       ? workflowDerivedProgress
       : Math.max(0, Math.min(100, status?.progress ?? 0));
-  const sortedEvents = useMemo(
-    () => [...events].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()),
-    [events]
-  );
-  const groupedEvents = useMemo(() => mergeTaskEvents(sortedEvents), [sortedEvents]);
-  const latestEvent = sortedEvents[0] ?? null;
   const sortedSources = useMemo(
     () => [...(facts?.sources ?? [])].sort((left, right) => right.count - left.count),
     [facts]
@@ -1063,7 +940,7 @@ export function TaskProcessPage() {
                 </div>
                 <div className="panel-subtle p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">过程信号</p>
-                  <p className="mt-3 text-lg font-semibold text-slate-100">{sortedEvents.length}</p>
+                  <p className="mt-3 text-lg font-semibold text-slate-100">{timelineNodes.length}</p>
                   <p className="mt-1 text-sm text-slate-400">待人工 {waitingCount} · 异常 {failedCount}</p>
                   <p className="mt-1 text-sm text-slate-500">同步：{realtimeStateText(realtimeState)}</p>
                 </div>
@@ -1072,7 +949,7 @@ export function TaskProcessPage() {
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-sm font-medium text-slate-300">任务推进程度</p>
-                  <p className="text-sm text-slate-400">{latestEvent ? formatTime(latestEvent.timestamp) : '--'}</p>
+                  <p className="text-sm text-slate-400">{formatTime(latestWorkflowTime)}</p>
                 </div>
                 <div className="mt-4 h-2 rounded-full bg-white/[0.06]">
                   <div
@@ -1110,7 +987,7 @@ export function TaskProcessPage() {
                 <p className="mt-3 text-sm leading-7 text-slate-300">
                   {waitingNode
                     ? waitingNode.summary ?? waitingNode.description ?? '该节点正在等待人工决策。'
-                    : activeNode?.summary ?? activeNode?.description ?? latestEvent?.message ?? '当前没有新的阻塞信号。'}
+                    : activeNode?.summary ?? activeNode?.description ?? latestWorkflowNode?.summary ?? latestWorkflowNode?.description ?? '当前没有新的阻塞信号。'}
                 </p>
 
                 <div className="mt-5 grid gap-3">
@@ -1123,12 +1000,12 @@ export function TaskProcessPage() {
                     </p>
                   </div>
                   <div className="panel-subtle p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">最新事件</p>
+                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">最新进展</p>
                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {latestEvent?.title ?? '暂无'}
+                      {latestWorkflowNode?.summary ?? latestWorkflowNode?.node_name ?? '暂无'}
                     </p>
                     <p className="mt-1 text-sm text-slate-400">
-                      {latestEvent?.message ?? '当前没有新的过程消息。'}
+                      {latestWorkflowTime ? formatTime(latestWorkflowTime) : '当前没有新的过程消息。'}
                     </p>
                   </div>
                 </div>
@@ -1171,12 +1048,18 @@ export function TaskProcessPage() {
                 <div className="min-h-0 flex-1 overflow-y-auto pr-2">
                   <div className="space-y-4">
                     {timelineNodes.map((step, index) => {
-                      const isCurrent = step.source_node_ids.includes(workflow?.current_node ?? "");
+                      const isCurrent = isTaskActive && step.source_node_ids.includes(workflow?.current_node ?? "");
                       const isWaiting = step.source_node_ids.includes(workflow?.waiting_intervention_node_id ?? "");
                       const toolPayload = toolPayloadFromNode(step);
                       const stepTools = agentStepTools(step);
                       const planningText = agentStepPlanning(step);
                       const isAgentStep = step.node_kind === 'agent_step';
+                      const stepTitle = isAgentStep
+                        ? (planningText || step.summary || 'Agent 已执行一轮工具调用')
+                        : step.node_name;
+                      const bodyText = isAgentStep
+                        ? ''
+                        : step.summary ?? step.description ?? '该节点尚未返回更多说明。';
                       const markerClass =
                         step.node_status === 'completed'
                           ? 'border-emerald-500/30 bg-emerald-500/14 text-emerald-300'
@@ -1216,10 +1099,9 @@ export function TaskProcessPage() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                    <p className="text-base font-semibold text-slate-100">{step.node_name}</p>
+                                    <p className="min-w-0 text-base font-semibold leading-6 text-slate-100">{stepTitle}</p>
                                     <StatusBadge status={step.node_status} />
                                     {step.node_type ? <span className="data-pill">{nodeTypeText(step.node_type)}</span> : null}
-                                    {isAgentStep ? <span className="data-pill">Agent 动作</span> : null}
                                     {isAgentStep ? <span className="data-pill">工具 {stepTools.length}</span> : null}
                                     {step.node_kind === "tool_call" ? <span className="data-pill">工具执行</span> : null}
                                     {isCurrent ? <span className="data-pill">当前节点</span> : null}
@@ -1228,16 +1110,11 @@ export function TaskProcessPage() {
                                   <span className="shrink-0 text-xs text-slate-500">{formatTime(step.updated_at)}</span>
                                 </div>
 
-                                {planningText ? (
-                                  <div className="mt-3 rounded-2xl border border-[rgba(99,202,183,0.14)] bg-[rgba(99,202,183,0.05)] px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Agent 思路</p>
-                                    <p className="mt-2 text-sm leading-6 text-slate-300">{planningText}</p>
-                                  </div>
-                                ) : (
+                                {bodyText ? (
                                   <p className="mt-3 text-sm leading-6 text-slate-300">
-                                    {step.summary ?? step.description ?? '该节点尚未返回更多说明。'}
+                                    {bodyText}
                                   </p>
-                                )}
+                                ) : null}
 
                                 {stepTools.length > 0 ? (
                                   <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -1349,65 +1226,6 @@ export function TaskProcessPage() {
                 </div>
               ) : null}
             </Card>
-
-            <Card className="space-y-5">
-            <div className="flex items-center gap-2">
-              <Activity size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">实时事件</h3>
-            </div>
-
-            {sortedEvents.length > 0 ? (
-              <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
-                {groupedEvents.slice(0, 8).map((event, index) => {
-                  const meta = eventMeta(event.level);
-                  const EventIcon = meta.icon;
-                  const toolPayload = toolPayloadFromEvent(event);
-
-                  return (
-                    <div key={event.event_id ?? `${event.node_id}-${event.timestamp}`} className="relative pl-8">
-                      {index < sortedEvents.length - 1 ? (
-                        <span className="absolute left-[9px] top-6 bottom-[-1rem] w-px bg-gradient-to-b from-white/20 to-transparent" />
-                      ) : null}
-                      <div className={`absolute left-0 top-0 flex h-5 w-5 items-center justify-center rounded-full border ${meta.markerClass}`}>
-                        <EventIcon size={12} />
-                      </div>
-                      <div className={`rounded-2xl border p-4 ${meta.panelClass}`}>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-100">{event.title ?? event.node_name}</p>
-                          <span className="data-pill">{meta.label}</span>
-                          <StatusBadge status={event.node_status} />
-                        </div>
-                        <p className="mt-2 text-sm leading-6 text-slate-300">
-                          {event.message ?? '该事件暂无附加说明。'}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
-                          <span className="data-pill">节点：{event.node_name}</span>
-                          <span className="data-pill">时间：{formatTime(event.timestamp)}</span>
-                        </div>
-                        {toolPayload ? (
-                          <div className="mt-3 space-y-2">
-                            <ToolPayloadDisclosure label="输入" value={toolPayload.input} />
-                            <ToolPayloadDisclosure label="输出" value={toolPayload.output} />
-                          </div>
-                        ) : null}
-                        {Object.keys(event.metrics).length > 0 ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {Object.entries(event.metrics).map(([key, value]) => (
-                              <span key={`${event.event_id ?? event.timestamp}-${key}`} className="data-pill">
-                                {key}：{value}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">当前没有可展示的过程事件。</div>
-            )}
-          </Card>
 
           <Card className="space-y-5">
             <div className="flex items-center gap-2">
