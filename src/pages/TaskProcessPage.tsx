@@ -19,7 +19,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  analyzeTask,
   buildResearchTaskRealtimeUrl,
   cancelResearchTask,
   getCrossValidationResult,
@@ -27,30 +26,19 @@ import {
   getResearchTaskWorkflow,
   getResearchTasks,
   getTaskFacts,
-  getTaskIntervention,
-  retryAnalysis,
-  submitTaskIntervention,
   triggerCrossValidation,
 } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Textarea } from '@/components/ui/textarea';
 import type {
-  AnalyzeTaskResponse,
   CrossValidationResultResponse,
   ResearchTaskListItem,
   ResearchTaskStatusResponse,
-  RetryAnalysisResponse,
   SubAgentWorkflow,
-  SubmitTaskInterventionResponse,
   TaskFactsResponse,
-  TaskInterventionAction,
-  TaskInterventionDetailResponse,
   TaskRealtimeMessage,
   TaskWorkflowResponse,
   TriggerCrossValidationResponse,
@@ -563,19 +551,6 @@ function nodeTypeText(nodeType?: string) {
   }
 }
 
-function interventionActionText(action: TaskInterventionAction) {
-  switch (action) {
-    case 'confirm_continue':
-      return '确认后继续执行';
-    case 'update_rules':
-      return '调整规则并重试';
-    case 'skip_intervention':
-      return '跳过该次介入';
-    default:
-      return action;
-  }
-}
-
 function crossValidationStatusText(status?: CrossValidationResultResponse['status'] | TriggerCrossValidationResponse['status']) {
   switch (status) {
     case 'queued':
@@ -724,8 +699,7 @@ function mergeWorkflowNodes(nodes: WorkflowNode[]) {
     });
   }
 
-  const hiddenNodeIdSet = new Set(hiddenNodeIds);
-  return { visibleNodes, hiddenNodeIdSet };
+  return visibleNodes;
 }
 
 export function TaskProcessPage() {
@@ -738,24 +712,11 @@ export function TaskProcessPage() {
   const [status, setStatus] = useState<ResearchTaskStatusResponse | null>(null);
   const [workflow, setWorkflow] = useState<TaskWorkflowResponse | null>(null);
   const [facts, setFacts] = useState<TaskFactsResponse | null>(null);
-  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeTaskResponse | null>(null);
-  const [retryResult, setRetryResult] = useState<RetryAnalysisResponse | null>(null);
   const [crossValidationTrigger, setCrossValidationTrigger] =
     useState<TriggerCrossValidationResponse | null>(null);
   const [crossValidationResult, setCrossValidationResult] =
     useState<CrossValidationResultResponse | null>(null);
   const [loadingCrossValidationResult, setLoadingCrossValidationResult] = useState(false);
-  const [interventionNode, setInterventionNode] = useState<WorkflowNode | null>(null);
-  const [interventionDetail, setInterventionDetail] =
-    useState<TaskInterventionDetailResponse | null>(null);
-  const [interventionAction, setInterventionAction] =
-    useState<TaskInterventionAction>('confirm_continue');
-  const [ruleChanges, setRuleChanges] = useState('');
-  const [interventionComment, setInterventionComment] = useState('');
-  const [interventionResult, setInterventionResult] =
-    useState<SubmitTaskInterventionResponse | null>(null);
-  const [loadingIntervention, setLoadingIntervention] = useState(false);
-  const [submittingIntervention, setSubmittingIntervention] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [realtimeState, setRealtimeState] = useState<RealtimeState>('idle');
@@ -893,9 +854,6 @@ export function TaskProcessPage() {
       setStatus(null);
       setWorkflow(null);
       setFacts(null);
-      setInterventionNode(null);
-      setInterventionDetail(null);
-      setInterventionResult(null);
       setCrossValidationTrigger(null);
       setCrossValidationResult(null);
       setLastRealtimeMessage(null);
@@ -1036,45 +994,6 @@ export function TaskProcessPage() {
     }
   };
 
-  const handleAnalyzeTask = async () => {
-    if (!taskId) {
-      setMessage('请先选择任务。');
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const result = await analyzeTask(taskId, {
-        model_id: 'model-deepseek-v3',
-        report_mode: 'full',
-      });
-      setAnalyzeResult(result);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
-      setMessage(`分析任务已启动，当前状态：${statusText(result.status)}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '启动分析失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRetryAnalysis = async () => {
-    if (!taskId) {
-      setMessage('请先选择任务。');
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const result = await retryAnalysis(taskId, { model_id: 'model-gpt-4.1' });
-      setRetryResult(result);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
-      setMessage(`已发起重试，当前状态：${statusText(result.status)}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '重试分析失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleTriggerCrossValidation = async () => {
     if (!taskId) {
       setMessage('请先选择任务。');
@@ -1110,64 +1029,9 @@ export function TaskProcessPage() {
     }
   };
 
-  const handleOpenIntervention = async (node: WorkflowNode) => {
-    if (!taskId) {
-      setMessage('请先选择任务。');
-      return;
-    }
-    try {
-      setInterventionNode(node);
-      setInterventionAction('confirm_continue');
-      setRuleChanges('');
-      setInterventionComment('');
-      setInterventionResult(null);
-      setLoadingIntervention(true);
-      const detail = await getTaskIntervention(taskId, node.node_id);
-      setInterventionDetail(detail);
-      setMessage('');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '加载人工介入详情失败');
-    } finally {
-      setLoadingIntervention(false);
-    }
-  };
-
-  const handleCloseIntervention = () => {
-    setInterventionNode(null);
-    setInterventionDetail(null);
-    setInterventionAction('confirm_continue');
-    setRuleChanges('');
-    setInterventionComment('');
-    setInterventionResult(null);
-    setLoadingIntervention(false);
-    setSubmittingIntervention(false);
-  };
-
-  const handleSubmitIntervention = async () => {
-    if (!taskId || !interventionNode) {
-      setMessage('请先选择任务和节点。');
-      return;
-    }
-    try {
-      setSubmittingIntervention(true);
-      const result = await submitTaskIntervention(taskId, interventionNode.node_id, {
-        action: interventionAction,
-        rule_changes: ruleChanges.trim() || undefined,
-        comment: interventionComment.trim() || undefined,
-      });
-      setInterventionResult(result);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
-      setMessage(`人工介入已提交，结果：${result.result}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '提交人工介入失败');
-    } finally {
-      setSubmittingIntervention(false);
-    }
-  };
-
   const currentTask = useMemo(() => tasks.find((item) => item.task_id === taskId) ?? null, [tasks, taskId]);
   const workflowNodes = workflow?.nodes ?? [];
-  const { visibleNodes: timelineNodes, hiddenNodeIdSet } = useMemo(
+  const timelineNodes = useMemo(
     () => mergeWorkflowNodes(workflowNodes),
     [workflowNodes]
   );
@@ -1225,12 +1089,6 @@ export function TaskProcessPage() {
       subtitle="查看当前任务状态、流程节点、参考信息和可执行操作。"
       action={
         <div className="flex flex-wrap gap-2">
-          {waitingNode ? (
-            <Button size="sm" onClick={() => handleOpenIntervention(waitingNode)} disabled={submitting || !taskId}>
-              <AlertTriangle size={14} />
-              处理待介入节点
-            </Button>
-          ) : null}
           <Button size="sm" variant="secondary" onClick={handleRefreshTaskData} disabled={submitting || !taskId}>
             <RefreshCcw size={14} />
             刷新流程
@@ -1330,13 +1188,12 @@ export function TaskProcessPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="data-pill">对象：{status?.object_type ?? currentTask?.object_type ?? '--'}</span>
                   {facts ? <span className="data-pill">事实：{facts.fact_count}</span> : null}
-                  <span className="data-pill">可用动作：{status?.available_actions?.length ?? 0}</span>
                 </div>
                 {stageItems.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {stageItems.map((stage) => (
                       <span key={stage.key} className="data-pill">
-                        {stage.label} {stage.progress_percent}%
+                        {stage.label}：{statusText(stage.status)}
                       </span>
                     ))}
                   </div>
@@ -1365,7 +1222,7 @@ export function TaskProcessPage() {
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500">当前判断</p>
                     <p className="mt-2 text-sm leading-6 text-slate-300">
                       {waitingNode
-                        ? '系统已经暂停在该节点，优先处理后再继续。'
+                        ? '该节点正在等待人工处理。请刷新流程，或联系管理员确认。'
                         : '流程仍可自动推进，建议结合事件流判断是否需要介入。'}
                     </p>
                   </div>
@@ -1378,11 +1235,6 @@ export function TaskProcessPage() {
                 </div>
               </div>
 
-              {waitingNode ? (
-                <Button size="sm" className="mt-5 shrink-0" onClick={() => handleOpenIntervention(waitingNode)} disabled={submitting || !taskId}>
-                  立即处理该节点
-                </Button>
-              ) : null}
             </div>
           </div>
         </Card>
@@ -1547,16 +1399,8 @@ export function TaskProcessPage() {
                                   <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
                                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500">人工介入</p>
                                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                                      {isWaiting ? '该节点已暂停，等待人工确认后继续。' : '该节点支持人工打开更多介入选项。'}
+                                      当前只能查看节点状态，暂时不能在这里处理。
                                     </p>
-                                    <Button
-                                      size="sm"
-                                      variant={isWaiting ? 'default' : 'secondary'}
-                                      onClick={() => handleOpenIntervention(step)}
-                                      className="mt-4 w-full"
-                                    >
-                                      {isWaiting ? '立即处理' : '查看介入选项'}
-                                    </Button>
                                   </div>
                                 </div>
                               ) : null}
@@ -1569,7 +1413,7 @@ export function TaskProcessPage() {
                 </div>
               ) : (
                 <div className="panel-subtle p-5 text-sm text-slate-500">
-                  当前任务暂无流程节点数据，可能尚未启动分析或接口暂未返回工作流详情。
+                  当前任务暂无流程节点数据，可能尚未启动分析或流程详情暂未更新。
                 </div>
               )}
             </Card>
@@ -1582,20 +1426,14 @@ export function TaskProcessPage() {
                 <h3 className="text-xl font-semibold text-slate-100">流程操作</h3>
               </div>
               <p className="text-sm leading-6 text-slate-400">
-                这些操作会改变当前任务执行状态，适合在判断流程卡住、需要重试或准备补充验证时使用。
+                这些操作会影响当前任务，请确认后再执行。
               </p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <Button size="sm" variant="secondary" onClick={handleAnalyzeTask} disabled={submitting || !taskId}>
-                  启动分析
-                </Button>
-                <Button size="sm" variant="secondary" onClick={handleRetryAnalysis} disabled={submitting || !taskId}>
-                  重试分析
-                </Button>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={handleTriggerCrossValidation}
-                  disabled={submitting || !taskId}
+                  disabled={submitting || !taskId || status?.status !== 'completed'}
                 >
                   启动交叉验证
                 </Button>
@@ -1614,11 +1452,9 @@ export function TaskProcessPage() {
                   查看报告
                 </Button>
               </div>
-
-              {analyzeResult || retryResult ? (
-                <div className="panel-subtle p-4 text-sm text-slate-300">
-                  {analyzeResult ? <p>最近启动分析：{statusText(analyzeResult.status)}</p> : null}
-                  {retryResult ? <p className={analyzeResult ? 'mt-1' : ''}>最近重试结果：{statusText(retryResult.status)}</p> : null}
+              {status?.status !== 'completed' ? (
+                <div className="panel-subtle p-4 text-xs leading-5 text-slate-500">
+                  多模型交叉验证需要主任务完成后才能启动。
                 </div>
               ) : null}
             </Card>
@@ -1797,156 +1633,6 @@ export function TaskProcessPage() {
         </div>
       </div>
 
-      {interventionNode ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-black/60 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-8">
-          <div className="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center">
-            <div className="glass-card flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:max-h-[calc(100vh-4rem)] sm:p-8">
-              <div className="flex flex-col gap-4 border-b border-[rgba(99,202,183,0.1)] pb-5 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Human review</p>
-                  <h3 className="mt-2 text-xl font-semibold text-slate-100">
-                    {interventionDetail?.node_name ?? interventionNode.node_name}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-400">
-                    task_id：{taskId} · node_id：{interventionNode.node_id}
-                  </p>
-                </div>
-                <Button size="sm" variant="secondary" onClick={handleCloseIntervention}>
-                  关闭
-                </Button>
-              </div>
-
-              {loadingIntervention ? (
-                <div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1 sm:pr-2">
-                  <p className="text-sm text-slate-400">正在加载人工介入详情...</p>
-                </div>
-              ) : (
-                <div className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="panel-subtle p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">节点类型</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-100">
-                        {interventionDetail?.intervention_type ?? 'manual_review'}
-                      </p>
-                    </div>
-                    <div className="panel-subtle p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">建议动作</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-300">
-                        {interventionDetail?.suggested_action ?? '暂无建议。'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="panel-subtle p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">触发原因</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-300">
-                        {interventionDetail?.reason ?? '暂无原因说明。'}
-                      </p>
-                    </div>
-                    <div className="panel-subtle p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">当前判断</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-300">
-                        {status?.waiting_intervention
-                          ? '该节点已暂停，提交决策后流程会继续推进。'
-                          : '该节点支持人工打开更多选项，但当前未阻塞整个流程。'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Label>当前规则参数</Label>
-                      <div className="panel-solid mt-2 overflow-x-auto p-4">
-                        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-300">
-                          {JSON.stringify(interventionDetail?.current_params ?? {}, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>影响预览</Label>
-                      <div className="panel-solid mt-2 overflow-x-auto p-4">
-                        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-300">
-                          {JSON.stringify(interventionDetail?.preview_data ?? {}, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="intervention-action">处理动作</Label>
-                      <Select
-                        id="intervention-action"
-                        value={interventionAction}
-                        onChange={(event) => setInterventionAction(event.target.value as TaskInterventionAction)}
-                      >
-                        <option value="confirm_continue">{interventionActionText('confirm_continue')}</option>
-                        <option value="update_rules">{interventionActionText('update_rules')}</option>
-                        <option value="skip_intervention">{interventionActionText('skip_intervention')}</option>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="intervention-comment">处理备注</Label>
-                      <Input
-                        id="intervention-comment"
-                        value={interventionComment}
-                        onChange={(event) => setInterventionComment(event.target.value)}
-                        placeholder="说明这次人工判断的依据"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="intervention-rule-changes">规则调整</Label>
-                    <Textarea
-                      id="intervention-rule-changes"
-                      value={ruleChanges}
-                      onChange={(event) => setRuleChanges(event.target.value)}
-                      placeholder="当选择“调整规则并重试”时，可填写规则变更 JSON 或说明文本"
-                      rows={5}
-                      disabled={interventionAction !== 'update_rules'}
-                      className="font-mono text-xs leading-6"
-                    />
-                    {interventionAction !== 'update_rules' ? (
-                      <p className="mt-2 text-xs text-slate-500">当前动作不会写入规则调整内容。</p>
-                    ) : null}
-                  </div>
-
-                  {interventionResult ? (
-                    <div className="panel-subtle p-4 text-sm text-slate-300">
-                      <p>处理结果：{interventionResult.result}</p>
-                      <p className="mt-1">审计日志：{interventionResult.audit_log_id}</p>
-                    </div>
-                  ) : null}
-
-                  <div className="flex flex-wrap justify-end gap-3">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={handleCloseIntervention}
-                      disabled={submittingIntervention}
-                    >
-                      取消
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => navigate(`/report?task_id=${taskId}`)}
-                      disabled={!taskId}
-                    >
-                      查看报告
-                    </Button>
-                    <Button size="sm" onClick={handleSubmitIntervention} disabled={submittingIntervention}>
-                      {submittingIntervention ? '提交中...' : '提交人工介入'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </PageShell>
   );
 }

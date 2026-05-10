@@ -837,9 +837,9 @@ export interface CreateAdminModelRequest {
   provider: string;
   api_base_url: string;
   api_key: string;
-  context_window: number;
-  temperature: number;
-  max_output_tokens: number;
+  context_window?: number;
+  temperature?: number;
+  max_output_tokens?: number;
   input_price_1m: number;
   output_price_1m: number;
   description?: string;

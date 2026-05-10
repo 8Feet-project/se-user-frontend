@@ -362,10 +362,6 @@ function mapAdminUserDetail(item: BackendAdminUserDetail): AdminUserDetail {
 }
 
 function toBackendAdminModelPayload(payload: CreateAdminModelRequest | UpdateAdminModelRequest) {
-  const params: Record<string, unknown> = {};
-  if (payload.temperature !== undefined) {
-    params.temperature = payload.temperature;
-  }
   return {
     name: payload.model_name,
     model_name: payload.model_name,
@@ -374,11 +370,8 @@ function toBackendAdminModelPayload(payload: CreateAdminModelRequest | UpdateAdm
     api_endpoint: payload.api_base_url,
     api_base_url: payload.api_base_url,
     api_key: payload.api_key,
-    context_window: payload.context_window,
-    max_output_tokens: payload.max_output_tokens,
     input_price_1m: payload.input_price_1m,
     output_price_1m: payload.output_price_1m,
-    params,
     description: payload.description,
     is_enabled: payload.enabled,
     enabled: payload.enabled,

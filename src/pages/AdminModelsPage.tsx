@@ -23,21 +23,12 @@ const defaultForm = {
   provider: 'OpenAI',
   api_base_url: '',
   api_key: '',
-  context_window: '128000',
-  temperature: '0.2',
-  max_output_tokens: '2048',
   input_price_1m: '0',
   output_price_1m: '0',
   description: '',
   enabled: 'true',
 };
 
-const contextWindowMin = 1024;
-const contextWindowMax = 512000;
-const temperatureMin = 0;
-const temperatureMax = 2;
-const maxOutputTokensMin = 1;
-const maxOutputTokensMax = 512000;
 const priceMin = 0;
 
 function parseUserIds(value: string) {
@@ -120,9 +111,6 @@ export function AdminModelsPage() {
       provider: selectedModel.provider,
       api_base_url: selectedModel.api_base_url,
       api_key: '',
-      context_window: String(selectedModel.context_window),
-      temperature: String(selectedModel.temperature),
-      max_output_tokens: String(selectedModel.max_output_tokens ?? 2048),
       input_price_1m: String(selectedModel.input_price_1m ?? 0),
       output_price_1m: String(selectedModel.output_price_1m ?? 0),
       description: selectedModel.description ?? '',
@@ -133,23 +121,11 @@ export function AdminModelsPage() {
   const canAssignPermissions = currentPermissions.includes('admin:model:permission') || currentPermissions.includes('admin:model:write');
 
   const validateForm = () => {
-    const contextWindow = Number(form.context_window);
-    const temperature = Number(form.temperature);
-    const maxOutputTokens = Number(form.max_output_tokens);
     const inputPrice = Number(form.input_price_1m);
     const outputPrice = Number(form.output_price_1m);
 
     if (!form.model_name.trim() || !form.provider.trim() || !form.api_base_url.trim()) {
       return '模型名称、提供商、API Base URL 为必填项。';
-    }
-    if (!Number.isFinite(contextWindow) || contextWindow < contextWindowMin || contextWindow > contextWindowMax) {
-      return `上下文窗口需在 ${contextWindowMin} 到 ${contextWindowMax} 之间。`;
-    }
-    if (!Number.isFinite(temperature) || temperature < temperatureMin || temperature > temperatureMax) {
-      return `温度值需在 ${temperatureMin} 到 ${temperatureMax} 之间。`;
-    }
-    if (!Number.isFinite(maxOutputTokens) || maxOutputTokens < maxOutputTokensMin || maxOutputTokens > maxOutputTokensMax) {
-      return `最大输出 Tokens 需在 ${maxOutputTokensMin} 到 ${maxOutputTokensMax} 之间。`;
     }
     if (!Number.isFinite(inputPrice) || inputPrice < priceMin) {
       return '输入单价需为大于等于 0 的数字。';
@@ -174,9 +150,6 @@ export function AdminModelsPage() {
         provider: form.provider.trim(),
         api_base_url: form.api_base_url.trim(),
         api_key: form.api_key,
-        context_window: Number(form.context_window),
-        temperature: Number(form.temperature),
-        max_output_tokens: Number(form.max_output_tokens),
         input_price_1m: Number(form.input_price_1m),
         output_price_1m: Number(form.output_price_1m),
         description: form.description.trim() || undefined,
@@ -187,7 +160,7 @@ export function AdminModelsPage() {
       if (!testResult.success) {
         await deleteAdminModel(response.model_id);
         await loadModels();
-        setFeedback({ tone: 'error', text: '接口连接测试失败，请检查 API 密钥或网络配置。已拦截保存。' });
+        setFeedback({ tone: 'error', text: '连接测试失败，请检查 API 密钥或网络配置。模型没有保存。' });
         return;
       }
 
@@ -217,9 +190,6 @@ export function AdminModelsPage() {
       model_name: selectedModel.model_name,
       provider: selectedModel.provider,
       api_base_url: selectedModel.api_base_url,
-      context_window: selectedModel.context_window,
-      temperature: selectedModel.temperature,
-      max_output_tokens: selectedModel.max_output_tokens ?? 2048,
       input_price_1m: selectedModel.input_price_1m ?? 0,
       output_price_1m: selectedModel.output_price_1m ?? 0,
       description: selectedModel.description ?? '',
@@ -233,9 +203,6 @@ export function AdminModelsPage() {
         provider: form.provider.trim(),
         api_base_url: form.api_base_url.trim(),
         api_key: form.api_key || undefined,
-        context_window: Number(form.context_window),
-        temperature: Number(form.temperature),
-        max_output_tokens: Number(form.max_output_tokens),
         input_price_1m: Number(form.input_price_1m),
         output_price_1m: Number(form.output_price_1m),
         description: form.description.trim() || undefined,
@@ -246,7 +213,7 @@ export function AdminModelsPage() {
       if (!testResult.success) {
         await updateAdminModel(selectedModel.model_id, rollbackPayload);
         await loadModels();
-        setFeedback({ tone: 'error', text: '接口连接测试失败，请检查 API 密钥或网络配置。已回滚本次修改。' });
+        setFeedback({ tone: 'error', text: '连接测试失败，请检查 API 密钥或网络配置。本次修改没有生效。' });
         return;
       }
 
@@ -308,7 +275,7 @@ export function AdminModelsPage() {
     }
 
     if (!canAssignPermissions) {
-      setFeedback({ tone: 'error', text: '当前账号无模型权限分配能力，请联系超级管理员授权。' });
+      setFeedback({ tone: 'error', text: '你没有分配模型权限的权限，请联系超级管理员。' });
       return;
     }
 
@@ -321,10 +288,10 @@ export function AdminModelsPage() {
     try {
       await assignAdminModelPermissions(selectedModel.model_id, permissionPayload);
       await loadModels();
-      setFeedback({ tone: 'success', text: '模型权限分配已提交并通过服务端校验。' });
+      setFeedback({ tone: 'success', text: '模型权限已分配。' });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '模型权限分配失败';
-      setFeedback({ tone: 'error', text: `服务端拒绝本次授权操作：${reason}` });
+      setFeedback({ tone: 'error', text: reason });
     }
   };
 
@@ -335,7 +302,7 @@ export function AdminModelsPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Model Management</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">大模型参数配置与权限管理</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            支持模型新增、参数编辑、连接测试、启停控制以及模型授权分配。保存动作会触发连通性校验，失败时自动拦截并回滚。
+            配置模型接入参数，检查连接状态，并管理谁可以使用这些模型。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadModels()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
@@ -358,12 +325,12 @@ export function AdminModelsPage() {
 
       <section className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="min-h-0 rounded-[28px] border border-slate-800 bg-slate-900/70 p-5">
-          <div className="mb-4 flex items-center justify-between px-1">
-            <div>
-              <h2 className="text-lg font-semibold text-white">模型列表</h2>
-              <p className="mt-1 text-sm text-slate-400">查看连接状态、上下文窗口与授权范围摘要。</p>
-            </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+              <div className="mb-4 flex items-center justify-between px-1">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">模型列表</h2>
+                  <p className="mt-1 text-sm text-slate-400">查看连接状态、启停状态与授权范围摘要。</p>
+                </div>
+                <Badge variant="secondary" className="bg-slate-800 text-slate-200">
               {models.length} 个模型
             </Badge>
           </div>
@@ -390,15 +357,6 @@ export function AdminModelsPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
                     <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-                      上下文 {item.context_window}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-                      温度 {item.temperature}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-                      输出上限 {item.max_output_tokens ?? 2048}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-slate-800 text-slate-200">
                       {item.enabled ? '已启用' : '已停用'}
                     </Badge>
                   </div>
@@ -414,7 +372,7 @@ export function AdminModelsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">模型参数表单</h2>
-                <p className="mt-1 text-sm text-slate-400">支持新增或编辑大模型接入配置。</p>
+                <p className="mt-1 text-sm text-slate-400">填写模型名称、服务地址、密钥、计费信息和启用状态。</p>
               </div>
               <Settings2 className="h-5 w-5 text-slate-500" />
             </div>
@@ -430,49 +388,6 @@ export function AdminModelsPage() {
               </Field>
               <Field label="API Key">
                 <Input value={form.api_key} onChange={(event) => setForm((prev) => ({ ...prev, api_key: event.target.value }))} className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100" placeholder="编辑时可留空表示不更新" />
-              </Field>
-              <Field label="上下文窗口">
-                <div className="space-y-3">
-                  <input
-                    type="range"
-                    min={contextWindowMin}
-                    max={contextWindowMax}
-                    step={1024}
-                    value={Number(form.context_window) || contextWindowMin}
-                    onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))}
-                    className="w-full accent-sky-400"
-                  />
-                  <Input
-                    value={form.context_window}
-                    onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))}
-                    className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
-                  />
-                </div>
-              </Field>
-              <Field label="温度">
-                <div className="space-y-3">
-                  <input
-                    type="range"
-                    min={temperatureMin}
-                    max={temperatureMax}
-                    step={0.1}
-                    value={Number(form.temperature) || 0}
-                    onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))}
-                    className="w-full accent-sky-400"
-                  />
-                  <Input
-                    value={form.temperature}
-                    onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))}
-                    className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
-                  />
-                </div>
-              </Field>
-              <Field label="最大输出 Tokens">
-                <Input
-                  value={form.max_output_tokens}
-                  onChange={(event) => setForm((prev) => ({ ...prev, max_output_tokens: event.target.value }))}
-                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
-                />
               </Field>
               <Field label="输入单价 / 1M Tokens">
                 <Input
@@ -521,7 +436,7 @@ export function AdminModelsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">连接测试与权限分配</h2>
-                <p className="mt-1 text-sm text-slate-400">支持校验连通性并按用户 / 用户组进行授权。</p>
+                <p className="mt-1 text-sm text-slate-400">先确认连接可用，再分配给用户或用户组。</p>
               </div>
               <ShieldCheck className="h-5 w-5 text-slate-500" />
             </div>
@@ -567,7 +482,7 @@ export function AdminModelsPage() {
               </div>
             ) : null}
             <p className="mt-4 text-xs leading-5 text-slate-500">
-              权限分配采用双重确认：前端先校验当前账号是否具备授权能力，提交后再由服务端进行最终合法性校验。
+              只有具备模型管理权限的账号才能调整授权。
             </p>
           </Card>
         </div>
