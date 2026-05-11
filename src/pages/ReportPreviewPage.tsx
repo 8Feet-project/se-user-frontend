@@ -122,6 +122,44 @@ function ReproductionCodeBlock({ code }: { code?: string }) {
   );
 }
 
+function MarkdownBody({ markdown, className = '' }: { markdown: string; className?: string }) {
+  return (
+    <div className={`report-markdown ${className}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a({ href, children, node: _node, ...props }) {
+            if (href?.startsWith('#reference-')) {
+              return (
+                <a
+                  href={href}
+                  className="report-citation-link"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    const target = document.querySelector(href || '');
+                    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target?.classList.add('reference-highlight');
+                    window.setTimeout(() => target?.classList.remove('reference-highlight'), 1400);
+                  }}
+                >
+                  {children}
+                </a>
+              );
+            }
+            return (
+              <a href={href} {...props}>
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
+        {markdown}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const reportIdFromUrl = searchParams.get('report_id');
@@ -511,39 +549,7 @@ export function ReportPreviewPage() {
                   <FileText size={16} className="text-[#63cab7]" />
                   正文内容
                 </div>
-                <div className="report-markdown text-sm text-slate-300">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a({ href, children, node: _node, ...props }) {
-                        if (href?.startsWith('#reference-')) {
-                          return (
-                            <a
-                              href={href}
-                              className="report-citation-link"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                const target = document.querySelector(href || '');
-                                target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                target?.classList.add('reference-highlight');
-                                window.setTimeout(() => target?.classList.remove('reference-highlight'), 1400);
-                              }}
-                            >
-                              {children}
-                            </a>
-                          );
-                        }
-                        return (
-                          <a href={href} {...props}>
-                            {children}
-                          </a>
-                        );
-                      },
-                    }}
-                  >
-                    {renderedReportMarkdown}
-                  </ReactMarkdown>
-                </div>
+                <MarkdownBody markdown={renderedReportMarkdown} className="text-sm text-slate-300" />
               </div>
             ) : (
               <div className="panel-subtle p-5 text-sm text-slate-500">{message || '还没有可显示的报告内容。请先完成一次调研，或从历史记录打开报告。'}</div>
@@ -576,7 +582,13 @@ export function ReportPreviewPage() {
                       <p className="text-sm font-semibold text-slate-100">Q: {qa.question}</p>
                       <StatusBadge status={qa.status} />
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-slate-300">A: {qa.answer}</p>
+                    <div className="mt-3">
+                      <p className="mb-2 text-sm font-medium text-slate-300">A:</p>
+                      <MarkdownBody
+                        markdown={replaceCitationsWithFootnotes(qa.answer, citations)}
+                        className="text-sm text-slate-300"
+                      />
+                    </div>
                     <p className="mt-3 text-xs text-slate-500">更新时间：{qa.updated_at}</p>
                     <div className="mt-4 space-y-2">
                       <Textarea
