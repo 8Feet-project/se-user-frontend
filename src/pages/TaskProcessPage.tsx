@@ -287,6 +287,9 @@ function SubAgentNodeCard({
   const bodyText = isAgentStep
     ? ''
     : node.summary ?? node.description ?? '';
+  const compactNodeTitle = nodeTitle.replace(/\s+/g, ' ').trim();
+  const visibleNodeTitle =
+    compactNodeTitle.length > 120 ? `${compactNodeTitle.slice(0, 120)}...` : compactNodeTitle;
   const tools = isAgentStep && Array.isArray(node.payload?.tools) ? node.payload.tools : [];
   const markerTone =
     node.node_status === 'completed'
@@ -294,6 +297,10 @@ function SubAgentNodeCard({
       : node.node_status === 'failed'
         ? 'border-rose-500/30 bg-rose-500/14 text-rose-300'
         : 'border-sky-500/30 bg-sky-500/14 text-sky-300';
+  const [bodyExpanded, setBodyExpanded] = useState(false);
+  const compactBodyText = bodyText.replace(/\s+/g, ' ').trim();
+  const isLongBody = compactBodyText.length > 220;
+  const visibleBodyText = bodyExpanded || !isLongBody ? bodyText : `${compactBodyText.slice(0, 220)}...`;
 
   return (
     <div className="relative pl-8">
@@ -311,11 +318,24 @@ function SubAgentNodeCard({
       </div>
       <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
         <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-xs font-medium text-slate-200">{nodeTitle}</p>
+          <p className="min-w-0 flex-1 text-xs font-medium text-slate-200">{visibleNodeTitle}</p>
           <StatusBadge status={node.node_status} />
         </div>
         {bodyText ? (
-          <p className="mt-1 text-[11px] leading-5 text-slate-400 line-clamp-2">{bodyText}</p>
+          <div className="mt-1">
+            <p className={`text-[11px] leading-5 text-slate-400 ${bodyExpanded ? 'whitespace-pre-wrap break-words' : ''}`}>
+              {visibleBodyText}
+            </p>
+            {isLongBody ? (
+              <button
+                type="button"
+                onClick={() => setBodyExpanded(!bodyExpanded)}
+                className="mt-1 text-[11px] font-medium text-[#63cab7] hover:text-[#8fe0d2]"
+              >
+                {bodyExpanded ? '收起回复' : '展开完整回复'}
+              </button>
+            ) : null}
+          </div>
         ) : null}
         {tools.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
