@@ -83,6 +83,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: |
+            VITE_USE_MOCK=false
+            VITE_API_BASE_URL=
           tags: |
             ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.sha_short }}
             ${{ env.IMAGE_NAME }}:${{ github.event.inputs.environment || 'production' }}
@@ -129,6 +132,8 @@ jobs:
           git fetch --no-tags origin "${DEPLOY_REF}"
           git checkout --force --detach FETCH_HEAD
           git reset --hard FETCH_HEAD
+          export VITE_USE_MOCK=false
+          export VITE_API_BASE_URL="${VITE_API_BASE_URL:-}"
           if [ -n "${DEPLOY_STATIC_DIR}" ]; then
             npm ci
             npm run build
@@ -148,9 +153,9 @@ jobs:
               echo "Port 80 is already in use. Set DEPLOY_STATIC_DIR to the nginx site root or add a docker-compose.yml."
               exit 1
             fi
-            docker build -t 8feet-frontend:latest .
+            docker build --build-arg VITE_USE_MOCK=false --build-arg VITE_API_BASE_URL= -t 8feet-frontend:latest .
             docker rm -f 8feet-frontend || true
-            docker run -d --name 8feet-frontend --restart unless-stopped -p 80:80 8feet-frontend:latest
+            docker run -d --name 8feet-frontend --restart unless-stopped --network host 8feet-frontend:latest
           fi
           curl -fsS "${SMOKE_URL}"
           REMOTE_DEPLOY

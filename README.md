@@ -56,7 +56,7 @@ npm run dev
 
 项目通过 Vite 环境变量控制接口行为：
 
-- `VITE_USE_MOCK`：是否启用前端 mock 数据（默认 `true`）
+- `VITE_USE_MOCK`：是否启用前端 mock 数据（默认 `false`）
 - `VITE_API_BASE_URL`：后端服务基础地址（可留空，默认同域）
 
 可在项目根目录创建 `.env.local`：
@@ -69,6 +69,12 @@ VITE_API_BASE_URL=http://your-api-domain.com
 接口最终请求前缀为：
 
 `{VITE_API_BASE_URL}/api/v1/*`
+
+`VITE_API_BASE_URL` 留空时会走同域部署，前端 Nginx 需要把 `/api/` 和
+`/ws/` 反向代理到后端宿主机端口 `127.0.0.1:48881`，`/static/` 也代理到后端
+以便 Django 静态文件可用。宿主机 Nginx 部署可参考
+`scripts/deploy/nginx.8feet.meteor041.com.conf`；容器 fallback 默认使用 host
+network，才能访问只绑定在宿主机回环地址的后端端口。
 
 ## 项目结构
 
@@ -190,12 +196,13 @@ docker compose up -d --build
 ```
 
 如果既没有配置 `DEPLOY_STATIC_DIR`，也没有 compose 文件，workflow 会尝试 Docker
-容器部署：
+容器部署。这个 fallback 使用 host network，占用宿主机 `80`，用于保证容器内
+Nginx 能访问后端只绑定在 `127.0.0.1:48881` 的端口：
 
 ```bash
-docker build -t 8feet-frontend:latest .
+docker build --build-arg VITE_USE_MOCK=false --build-arg VITE_API_BASE_URL= -t 8feet-frontend:latest .
 docker rm -f 8feet-frontend || true
-docker run -d --name 8feet-frontend --restart unless-stopped -p 80:80 8feet-frontend:latest
+docker run -d --name 8feet-frontend --restart unless-stopped --network host 8feet-frontend:latest
 ```
 
 如果服务器 80 端口已经被宿主机 Nginx 占用，请配置 `DEPLOY_STATIC_DIR`，不要让

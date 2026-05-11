@@ -200,7 +200,7 @@ import type {
   VerifyEmailResponse,
 } from '../types';
 
-const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
+const useMock = (import.meta.env.VITE_USE_MOCK ?? 'false') === 'true';
 
 type StringLikeId = string | number;
 

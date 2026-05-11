@@ -8,6 +8,9 @@ yarn-error.log*
 .idea/
 .vscode/
 scripts/
+!scripts/
+!scripts/deploy/
+!scripts/deploy/nginx.8feet.meteor041.com.conf
 *.log
 docs/
 !docs/api-docs/
