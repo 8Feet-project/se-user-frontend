@@ -33,6 +33,7 @@ const isValidReportId = (value: string | null | undefined) => Boolean(value?.tri
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 type ReportMode = 'brief' | 'full';
 const CITE_MARK_RE = /\[@([A-Za-z0-9_.:-]+)\]/g;
+const CITE_MARK_GROUP_RE = /(?:\[@[A-Za-z0-9_.:-]+\]\s*)+/g;
 
 function triggerDownload(url: string) {
   const a = document.createElement('a');
@@ -67,14 +68,55 @@ function citeKeyForCitation(citation: ReportCitation) {
   return normalizeCiteKey(citation.cite_key) || citation.citation_id;
 }
 
+function compactCitationNumbers(numbers: number[]) {
+  const sortedNumbers = [...new Set(numbers)].sort((left, right) => left - right);
+  const ranges: string[] = [];
+  let rangeStart: number | null = null;
+  let previous: number | null = null;
+
+  sortedNumbers.forEach((number) => {
+    if (rangeStart === null || previous === null) {
+      rangeStart = number;
+      previous = number;
+      return;
+    }
+
+    if (number === previous + 1) {
+      previous = number;
+      return;
+    }
+
+    ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}-${previous}`);
+    rangeStart = number;
+    previous = number;
+  });
+
+  if (rangeStart !== null && previous !== null) {
+    ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}-${previous}`);
+  }
+
+  return ranges.join(',');
+}
+
 function replaceCitationsWithFootnotes(markdown: string, citations: ReportCitation[]) {
   const byKey = new Map(citations.map((citation, index) => [citeKeyForCitation(citation), citationNumber(citation, index)]));
-  return (markdown || '').replace(CITE_MARK_RE, (_match, citeKey: string) => {
-    const number = byKey.get(normalizeCiteKey(citeKey));
-    if (!number) {
-      return `[@${citeKey}]`;
+  return (markdown || '').replace(CITE_MARK_GROUP_RE, (match) => {
+    const citeKeys = [...match.matchAll(CITE_MARK_RE)].map((item) => item[1]);
+    const numbers = citeKeys
+      .map((citeKey) => byKey.get(normalizeCiteKey(citeKey)))
+      .filter((number): number is number => Boolean(number));
+
+    if (numbers.length !== citeKeys.length || numbers.length === 0) {
+      return citeKeys
+        .map((citeKey) => {
+          const number = byKey.get(normalizeCiteKey(citeKey));
+          return number ? `[[${number}]](#reference-${number})` : `[@${citeKey}]`;
+        })
+        .join('');
     }
-    return `[[${number}]](#reference-${number})`;
+
+    const firstNumber = Math.min(...numbers);
+    return `[[${compactCitationNumbers(numbers)}]](#reference-${firstNumber})`;
   });
 }
 
