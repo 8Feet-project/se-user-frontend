@@ -78,6 +78,50 @@ function replaceCitationsWithFootnotes(markdown: string, citations: ReportCitati
   });
 }
 
+function shouldShowReproductionCode(citation: ReportCitation) {
+  return !citation.source_url?.trim() && Boolean(citation.reproduction_code?.trim());
+}
+
+function CitationMetaPills({ citation }: { citation: ReportCitation }) {
+  const pills = [
+    citation.source_platform,
+    citation.source_type,
+    citation.accessed_at ? `访问：${formatDateTime(citation.accessed_at)}` : '',
+  ].filter(Boolean);
+
+  if (!pills.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {pills.map((pill) => (
+        <span key={pill} className="data-pill !px-2 !py-0.5 text-[11px]">
+          {pill}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ReproductionCodeBlock({ code }: { code?: string }) {
+  const trimmedCode = code?.trim();
+  if (!trimmedCode) {
+    return null;
+  }
+
+  return (
+    <details className="mt-3 rounded-xl border border-white/10 bg-black/10 px-3 py-2">
+      <summary className="cursor-pointer text-xs font-medium text-slate-300">
+        查看复现代码
+      </summary>
+      <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/8 bg-black/20 p-3 text-xs leading-5 text-slate-300">
+        {trimmedCode}
+      </pre>
+    </details>
+  );
+}
+
 export function ReportPreviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const reportIdFromUrl = searchParams.get('report_id');
@@ -580,14 +624,18 @@ export function ReportPreviewPage() {
                           {citation.cite_key ? <p className="mt-1 break-all text-xs text-slate-500">@{citation.cite_key}</p> : null}
                         </div>
                       </div>
+                      <CitationMetaPills citation={citation} />
                       {citation.source_url ? (
                         <a className="mt-2 inline-flex items-center gap-1 break-all text-xs text-[#63cab7]/80 hover:text-[#63cab7]" href={citation.source_url} target="_blank" rel="noopener noreferrer">
                           {citation.source_url}
                           <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <p className="mt-2 text-xs text-amber-300">这条引用没有来源链接</p>
+                        <p className="mt-2 break-words text-xs text-slate-500">
+                          结构化数据来源，无外部 URL。
+                        </p>
                       )}
+                      <ReproductionCodeBlock code={shouldShowReproductionCode(citation) ? citation.reproduction_code : ''} />
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button type="button" size="sm" variant="secondary" onClick={() => void handleShowCitationDetail(citation)} disabled={loadingCitationId === citation.citation_id}>
                           {loadingCitationId === citation.citation_id ? '加载中...' : '查看详情'}
@@ -632,8 +680,10 @@ export function ReportPreviewPage() {
             {citationDetail ? (
               <div className="panel-subtle space-y-3 p-4 text-sm leading-7 text-slate-300">
                 <p className="font-medium text-slate-100">{citationDetail.source_title}</p>
-                <p><span className="text-slate-500">类型：</span>{citationDetail.source_type ?? '未知'}</p>
+                <p><span className="text-slate-500">类型：</span>{citationDetail.source_type || '未知'}</p>
+                {citationDetail.source_platform ? <p><span className="text-slate-500">来源平台：</span>{citationDetail.source_platform}</p> : null}
                 <p><span className="text-slate-500">发布时间：</span>{formatDateTime(citationDetail.published_at) || '未知'}</p>
+                {citationDetail.accessed_at ? <p><span className="text-slate-500">访问时间：</span>{formatDateTime(citationDetail.accessed_at)}</p> : null}
                 {citationDetail.cite_key ? <p><span className="text-slate-500">Cite key：</span>@{citationDetail.cite_key}</p> : null}
                 {citationDetail.bibtex ? (
                   <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/8 bg-black/20 p-3 text-xs leading-5 text-slate-300">
@@ -647,11 +697,12 @@ export function ReportPreviewPage() {
                     <ExternalLink size={14} />
                   </a>
                 ) : (
-                  <p className="text-amber-300">这条引用没有来源链接。</p>
+                  <p className="text-slate-500">结构化数据来源，无外部 URL。</p>
                 )}
+                <ReproductionCodeBlock code={shouldShowReproductionCode(citationDetail) ? citationDetail.reproduction_code : ''} />
               </div>
             ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">选择一条引用，这里会显示标题、链接和摘录。</div>
+              <div className="panel-subtle p-4 text-sm text-slate-500">选择一条引用，这里会显示标题、来源信息、摘录和复现代码。</div>
             )}
           </Card>
 

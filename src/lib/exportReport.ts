@@ -19,7 +19,18 @@ function buildMarkdown(report: ReportDetail): string {
     report.citations.forEach((c, i) => {
       const number = c.index_number && c.index_number > 0 ? c.index_number : i + 1;
       const key = c.cite_key ? ` @${c.cite_key}` : '';
-      lines.push(`${number}. [${c.source_title}](${c.source_url})${key}`);
+      const source = c.source_url ? `[${c.source_title}](${c.source_url})` : c.source_title;
+      const sourceMeta = [c.source_platform, c.source_type].filter((item): item is string => Boolean(item));
+      lines.push(`${number}. ${source}${key}`);
+      if (sourceMeta.length > 0) {
+        lines.push(`   - 来源：${sourceMeta.join(' / ')}`);
+      }
+      if (!c.source_url && c.reproduction_code) {
+        lines.push('   - 复现代码：');
+        lines.push('```python');
+        lines.push(c.reproduction_code);
+        lines.push('```');
+      }
     });
   }
 
@@ -32,8 +43,17 @@ function buildHtml(report: ReportDetail): string {
     report.citations.length > 0
       ? `<hr/><h2>引用来源</h2><ol>${report.citations
           .map(
-            (c) =>
-              `<li><a href="${encodeURI(c.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.source_title)}</a>${c.cite_key ? ` <code>@${escapeHtml(c.cite_key)}</code>` : ''}</li>`
+            (c) => {
+              const title = c.source_url
+                ? `<a href="${encodeURI(c.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.source_title)}</a>`
+                : escapeHtml(c.source_title);
+              const meta = [c.source_platform, c.source_type]
+                .filter((item): item is string => Boolean(item))
+                .map(escapeHtml)
+                .join(' / ');
+              const code = !c.source_url && c.reproduction_code ? `<pre><code>${escapeHtml(c.reproduction_code)}</code></pre>` : '';
+              return `<li>${title}${c.cite_key ? ` <code>@${escapeHtml(c.cite_key)}</code>` : ''}${meta ? `<div class="citation-meta">${meta}</div>` : ''}${code}</li>`;
+            }
           )
           .join('')}</ol>`
       : '';
@@ -54,6 +74,8 @@ function buildHtml(report: ReportDetail): string {
   li { margin-bottom: 0.35em; }
   a { color: #2563eb; text-decoration: none; }
   a:hover { text-decoration: underline; }
+  .citation-meta { color: #64748b; font-size: 0.85rem; }
+  pre { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow-x: auto; padding: 0.75rem; }
   @media print { body { margin: 0; } }
 </style>
 </head>

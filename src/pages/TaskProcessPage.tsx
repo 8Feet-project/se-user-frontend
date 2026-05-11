@@ -270,6 +270,49 @@ function reportUrlFromPayload(taskId: string, payload?: { report_id?: string; re
   return payload?.report_id ? `/report?task_id=${taskId}&report_id=${payload.report_id}` : `/report?task_id=${taskId}`;
 }
 
+function compactPreviewText(text: string) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function ExpandableReplyText({
+  text,
+  maxLength = 220,
+  className = '',
+  textClassName = '',
+}: {
+  text: string;
+  maxLength?: number;
+  className?: string;
+  textClassName?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rawText = text.trim();
+  const compactText = useMemo(() => compactPreviewText(rawText), [rawText]);
+  const isLong = compactText.length > maxLength;
+  const visibleText = expanded || !isLong ? rawText : `${compactText.slice(0, maxLength)}...`;
+
+  if (!rawText) {
+    return null;
+  }
+
+  return (
+    <div className={className}>
+      <p className={`${textClassName} ${expanded ? 'whitespace-pre-wrap' : ''} break-words`}>
+        {visibleText}
+      </p>
+      {isLong ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1 cursor-pointer text-[11px] font-medium text-[#63cab7] transition-colors hover:text-[#8fe0d2]"
+        >
+          {expanded ? '收起回复' : '展开完整回复'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function SubAgentNodeCard({
   node,
   isLast,
@@ -297,10 +340,6 @@ function SubAgentNodeCard({
       : node.node_status === 'failed'
         ? 'border-rose-500/30 bg-rose-500/14 text-rose-300'
         : 'border-sky-500/30 bg-sky-500/14 text-sky-300';
-  const [bodyExpanded, setBodyExpanded] = useState(false);
-  const compactBodyText = bodyText.replace(/\s+/g, ' ').trim();
-  const isLongBody = compactBodyText.length > 220;
-  const visibleBodyText = bodyExpanded || !isLongBody ? bodyText : `${compactBodyText.slice(0, 220)}...`;
 
   return (
     <div className="relative pl-8">
@@ -321,22 +360,11 @@ function SubAgentNodeCard({
           <p className="min-w-0 flex-1 text-xs font-medium text-slate-200">{visibleNodeTitle}</p>
           <StatusBadge status={node.node_status} />
         </div>
-        {bodyText ? (
-          <div className="mt-1">
-            <p className={`text-[11px] leading-5 text-slate-400 ${bodyExpanded ? 'whitespace-pre-wrap break-words' : ''}`}>
-              {visibleBodyText}
-            </p>
-            {isLongBody ? (
-              <button
-                type="button"
-                onClick={() => setBodyExpanded(!bodyExpanded)}
-                className="mt-1 text-[11px] font-medium text-[#63cab7] hover:text-[#8fe0d2]"
-              >
-                {bodyExpanded ? '收起回复' : '展开完整回复'}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+        <ExpandableReplyText
+          text={bodyText}
+          className="mt-1"
+          textClassName="text-[11px] leading-5 text-slate-400"
+        />
         {tools.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {tools.map((t, ti) => (
@@ -455,11 +483,16 @@ function ToolCallCard({
   const toolRunning = isWorkflowToolRunning(tool);
 
   return (
-    <div className="min-w-0 rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/12 p-3 transition-colors duration-200 hover:border-[rgba(99,202,183,0.28)]">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-100">{toolTitle}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">{statusLine}</p>
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-semibold text-slate-100">{toolTitle}</p>
+          <ExpandableReplyText
+            text={statusLine}
+            maxLength={110}
+            className="mt-1"
+            textClassName="text-xs leading-5 text-slate-500"
+          />
           {tool.tool_name && tool.tool_name !== toolTitle ? (
             <p className="mt-1 break-all text-[11px] leading-4 text-slate-600">{tool.tool_name}</p>
           ) : null}

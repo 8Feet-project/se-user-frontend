@@ -681,6 +681,7 @@ export interface ReportCitation {
   source_type?: string;
   source_platform?: string;
   accessed_at?: string;
+  reproduction_code?: string;
   bibtex?: string;
 }
 
