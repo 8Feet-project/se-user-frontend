@@ -761,6 +761,8 @@ export interface PublicSharedReportResponse {
 
 export interface CreateReportQaRequest {
   question: string;
+  context_paragraph?: string;
+  prompt?: string;
 }
 
 export interface CreateReportQaResponse {

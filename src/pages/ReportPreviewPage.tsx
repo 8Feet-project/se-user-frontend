@@ -1,7 +1,8 @@
-﻿import { Download, ExternalLink, FileText, MessageSquareMore, Quote, Star } from 'lucide-react';
+﻿import { Download, ExternalLink, FileText, MessageSquareMore, MessageSquarePlus, Quote, Star, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
@@ -34,6 +35,18 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 type ReportMode = 'brief' | 'full';
 const CITE_MARK_RE = /\[@([A-Za-z0-9_.:-]+)\]/g;
 const CITE_MARK_GROUP_RE = /(?:\[@[A-Za-z0-9_.:-]+\]\s*)+/g;
+
+interface SelectedReportParagraph {
+  id: string;
+  text: string;
+}
+
+type MarkdownNodeWithPosition = {
+  position?: {
+    start?: { line?: number };
+    end?: { line?: number };
+  };
+};
 
 function triggerDownload(url: string) {
   const a = document.createElement('a');
@@ -124,6 +137,54 @@ function shouldShowReproductionCode(citation: ReportCitation) {
   return !citation.source_url?.trim() && Boolean(citation.reproduction_code?.trim());
 }
 
+function textFromReactNode(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(textFromReactNode).join('');
+  }
+
+  if (node && typeof node === 'object' && 'props' in node) {
+    return textFromReactNode((node as ReactElement<{ children?: ReactNode }>).props.children);
+  }
+
+  return '';
+}
+
+function normalizeParagraphText(node: ReactNode) {
+  return textFromReactNode(node).replace(/\s+/g, ' ').trim();
+}
+
+function markdownSourceFromNode(markdown: string, node: unknown) {
+  const position = (node as MarkdownNodeWithPosition | undefined)?.position;
+  const startLine = position?.start?.line;
+  const endLine = position?.end?.line;
+  if (!startLine || !endLine || startLine < 1 || endLine < startLine) {
+    return '';
+  }
+
+  return markdown
+    .split('\n')
+    .slice(startLine - 1, endLine)
+    .join('\n')
+    .trim();
+}
+
+function normalizeSelectableText(markdown: string, node: unknown, children: ReactNode) {
+  return markdownSourceFromNode(markdown, node) || normalizeParagraphText(children);
+}
+
+function buildFollowupPrompt(question: string, contextParagraph?: string) {
+  const trimmedContext = contextParagraph?.trim();
+  if (!trimmedContext) {
+    return question;
+  }
+
+  return `请优先围绕以下报告段落回答。\n\n${trimmedContext}\n\n问题:\n${question}`;
+}
+
 function CitationMetaPills({ citation }: { citation: ReportCitation }) {
   const pills = [
     citation.source_platform,
@@ -164,12 +225,96 @@ function ReproductionCodeBlock({ code }: { code?: string }) {
   );
 }
 
-function MarkdownBody({ markdown, className = '' }: { markdown: string; className?: string }) {
+function MarkdownBody({
+  markdown,
+  className = '',
+  selectedParagraph,
+  onSelectParagraph,
+}: {
+  markdown: string;
+  className?: string;
+  selectedParagraph?: SelectedReportParagraph | null;
+  onSelectParagraph?: (paragraph: SelectedReportParagraph) => void;
+}) {
+  let blockIndex = 0;
+  const renderSelectableBlock = (
+    content: ReactNode,
+    selectedText: string,
+    className = ''
+  ) => {
+    if (!onSelectParagraph || !selectedText) {
+      return content;
+    }
+
+    const blockId = `report-block-${blockIndex}`;
+    blockIndex += 1;
+    const isSelected = selectedParagraph?.id === blockId;
+
+    return (
+      <div className={`report-paragraph-group ${className} ${isSelected ? 'is-selected' : ''}`}>
+        {content}
+        <button
+          type="button"
+          className="report-paragraph-action"
+          aria-label="选中该段追问"
+          aria-pressed={isSelected}
+          title="选中该段追问"
+          onClick={() => onSelectParagraph({ id: blockId, text: selectedText })}
+        >
+          <MessageSquarePlus size={14} />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className={`report-markdown ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          p({ children, node }) {
+            return renderSelectableBlock(
+              <p>{children}</p>,
+              normalizeSelectableText(markdown, node, children)
+            );
+          },
+          li({ children, node }) {
+            return (
+              <li>
+                {renderSelectableBlock(
+                  <div>{children}</div>,
+                  normalizeSelectableText(markdown, node, children),
+                  'is-list-item'
+                )}
+              </li>
+            );
+          },
+          table({ children, node }) {
+            return renderSelectableBlock(
+              <table>{children}</table>,
+              normalizeSelectableText(markdown, node, children),
+              'is-table'
+            );
+          },
+          h1({ children, node }) {
+            return renderSelectableBlock(<h1>{children}</h1>, normalizeSelectableText(markdown, node, children), 'is-heading');
+          },
+          h2({ children, node }) {
+            return renderSelectableBlock(<h2>{children}</h2>, normalizeSelectableText(markdown, node, children), 'is-heading');
+          },
+          h3({ children, node }) {
+            return renderSelectableBlock(<h3>{children}</h3>, normalizeSelectableText(markdown, node, children), 'is-heading');
+          },
+          h4({ children, node }) {
+            return renderSelectableBlock(<h4>{children}</h4>, normalizeSelectableText(markdown, node, children), 'is-heading');
+          },
+          blockquote({ children, node }) {
+            return renderSelectableBlock(
+              <blockquote>{children}</blockquote>,
+              normalizeSelectableText(markdown, node, children),
+              'is-blockquote'
+            );
+          },
           a({ href, children, node: _node, ...props }) {
             if (href?.startsWith('#reference-')) {
               return (
@@ -216,6 +361,7 @@ export function ReportPreviewPage() {
   const [loadingCitationId, setLoadingCitationId] = useState<string | null>(null);
   const [qaList, setQaList] = useState<ReportQaItem[]>([]);
   const [qaQuestion, setQaQuestion] = useState('');
+  const [selectedParagraph, setSelectedParagraph] = useState<SelectedReportParagraph | null>(null);
   const [appendInputs, setAppendInputs] = useState<Record<string, string>>({});
   const [submittingQa, setSubmittingQa] = useState(false);
   const [appendingQaId, setAppendingQaId] = useState<string | null>(null);
@@ -286,6 +432,7 @@ export function ReportPreviewPage() {
 
   const resetReportTransientState = () => {
     setQaQuestion('');
+    setSelectedParagraph(null);
     setAppendInputs({});
     setCitationDetail(null);
   };
@@ -297,6 +444,17 @@ export function ReportPreviewPage() {
     }
 
     navigate(`/process?task_id=${encodeURIComponent(currentTaskId)}`);
+  };
+
+  const focusFollowupInput = () => {
+    window.setTimeout(() => {
+      document.getElementById('report-followup-input')?.focus();
+    }, 0);
+  };
+
+  const handleSelectParagraph = (paragraph: SelectedReportParagraph) => {
+    setSelectedParagraph((current) => (current?.id === paragraph.id ? null : paragraph));
+    focusFollowupInput();
   };
 
   useEffect(() => {
@@ -368,6 +526,7 @@ export function ReportPreviewPage() {
         setQaList(qaResponse.list);
         setCitations(citationResponse.list);
         setCitationDetail(null);
+        setSelectedParagraph(null);
       } catch (error) {
         const reason = error instanceof Error ? error.message : '加载报告失败';
         setMessage(reason);
@@ -424,9 +583,15 @@ export function ReportPreviewPage() {
     setSubmittingQa(true);
     setMessage('');
     try {
-      const response = await createReportQa(reportId, { question });
+      const contextParagraph = selectedParagraph?.text;
+      const response = await createReportQa(reportId, {
+        question,
+        context_paragraph: contextParagraph,
+        prompt: buildFollowupPrompt(question, contextParagraph),
+      });
       setQaList((prev) => [response.qa, ...prev]);
       setQaQuestion('');
+      setSelectedParagraph(null);
       navigateToTaskProcess('追问已提交，但暂时无法定位来源任务。请从历史记录打开对应调研流程。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '提交追问失败';
@@ -616,7 +781,12 @@ export function ReportPreviewPage() {
                   <FileText size={16} className="text-[#63cab7]" />
                   正文内容
                 </div>
-                <MarkdownBody markdown={renderedReportMarkdown} className="text-sm text-slate-300" />
+                <MarkdownBody
+                  markdown={renderedReportMarkdown}
+                  className="text-sm text-slate-300"
+                  selectedParagraph={selectedParagraph}
+                  onSelectParagraph={handleSelectParagraph}
+                />
               </div>
             ) : (
               <div className="panel-subtle p-5 text-sm text-slate-500">{message || '还没有可显示的报告内容。请先完成一次调研，或从历史记录打开报告。'}</div>
@@ -633,7 +803,18 @@ export function ReportPreviewPage() {
             </div>
 
             <div className="space-y-3">
-              <Textarea value={qaQuestion} onChange={(event) => setQaQuestion(event.target.value)} placeholder="请输入你希望继续追问的内容，例如：请拆解该公司下一阶段的增长驱动因素。" className="min-h-[110px]" />
+              {selectedParagraph ? (
+                <div className="selected-paragraph-panel">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-[#8ce5d6]">已选报告段落</span>
+                    <Button type="button" size="icon-xs" variant="ghost" onClick={() => setSelectedParagraph(null)} aria-label="取消选中段落">
+                      <X size={12} />
+                    </Button>
+                  </div>
+                  <p>{selectedParagraph.text}</p>
+                </div>
+              ) : null}
+              <Textarea id="report-followup-input" value={qaQuestion} onChange={(event) => setQaQuestion(event.target.value)} placeholder="请输入你希望继续追问的内容，例如：请拆解该公司下一阶段的增长驱动因素。" className="min-h-[110px]" />
               <div className="flex justify-end">
                 <Button type="button" onClick={() => void handleCreateQa()} disabled={submittingQa || !reportId}>
                   {submittingQa ? '提交中...' : '提交追问'}
