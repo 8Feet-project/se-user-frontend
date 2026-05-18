@@ -31,6 +31,7 @@ import {
   triggerCrossValidation,
   updateTaskAutoAdvance,
 } from '@/api/client';
+import { AuthorityBadge } from '@/components/common/AuthorityBadge';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -915,38 +916,6 @@ function approvalActionText(action: ApprovalAction) {
     default:
       return action;
   }
-}
-
-function authorityLabelFromReference(reference: {
-  authority_score?: number | string;
-  authority_tier?: string;
-  authority_label?: string;
-}) {
-  if (reference.authority_label) {
-    return reference.authority_label;
-  }
-  const score = Number(reference.authority_score);
-  if (Number.isFinite(score)) {
-    if (score <= 5) {
-      const tierLabels: Record<number, string> = {
-        5: '官方/一手来源',
-        4: '专业高可信来源',
-        3: '主流可参考来源',
-        2: '二手待核验来源',
-        1: '低可信线索来源',
-      };
-      return tierLabels[Math.max(1, Math.min(5, Math.round(score)))] ?? '';
-    }
-    if (score >= 90) return '官方/一手来源';
-    if (score >= 75) return '专业高可信来源';
-    if (score >= 55) return '主流可参考来源';
-    if (score >= 35) return '二手待核验来源';
-    return '低可信线索来源';
-  }
-  if (reference.authority_tier) {
-    return reference.authority_tier;
-  }
-  return '';
 }
 
 function deriveWorkflowProgress(
@@ -2052,7 +2021,6 @@ export function TaskProcessPage() {
                   <div className="max-h-[34rem] space-y-3 overflow-y-auto pr-1">
                     {sortedReferences.map((reference, index) => {
                       const number = reference.index_number && reference.index_number > 0 ? reference.index_number : index + 1;
-                      const authorityLabel = authorityLabelFromReference(reference);
                       return (
                         <div key={reference.reference_id || `${reference.url}-${index}`} className="panel-subtle p-3">
                           <div className="flex items-start gap-3">
@@ -2067,9 +2035,12 @@ export function TaskProcessPage() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             {reference.source_platform ? <span className="data-pill">{reference.source_platform}</span> : null}
                             {reference.source_type ? <span className="data-pill">{reference.source_type}</span> : null}
-                            {authorityLabel ? (
-                              <span className="data-pill">权威度 {authorityLabel}</span>
-                            ) : null}
+                            <AuthorityBadge
+                              label={reference.authority_label}
+                              score={reference.authority_score}
+                              tier={reference.authority_tier}
+                              reason={reference.authority_reason}
+                            />
                           </div>
                           {reference.url ? (
                             <a className="mt-3 block break-all text-xs leading-5 text-[#63cab7]/80 hover:text-[#63cab7]" href={reference.url} target="_blank" rel="noopener noreferrer">
