@@ -9,7 +9,9 @@ import {
   appendReportQa,
   createFavoriteItem,
   createReportQa,
+  deleteFavoriteItem,
   exportReport,
+  findFavoriteItem,
   getFavoriteItems,
   getReportCitationDetail,
   getReportCitations,
@@ -26,7 +28,7 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 import { downloadReport } from '@/lib/exportReport';
-import type { ReportCitation, ReportCitationDetail, ReportDetail, ReportListItem, ReportQaItem } from '@/types';
+import type { FavoriteItem, ReportCitation, ReportCitationDetail, ReportDetail, ReportListItem, ReportQaItem } from '@/types';
 
 import './ReportPreviewPage.css';
 
@@ -369,7 +371,7 @@ export function ReportPreviewPage() {
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx' | 'md' | 'html'>('pdf');
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const reportMarkdown = useMemo(() => {
     if (!report) {
       return '';
@@ -402,6 +404,11 @@ export function ReportPreviewPage() {
 
     return taskIdFromUrl?.trim() ?? '';
   }, [report?.task_id, reportId, reports, taskIdFromUrl]);
+  const currentReportFavorite = useMemo(
+    () => findFavoriteItem(favoriteItems, 'report', report?.report_id ?? reportId),
+    [favoriteItems, report?.report_id, reportId]
+  );
+  const isFavorited = Boolean(currentReportFavorite);
 
   const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -511,7 +518,6 @@ export function ReportPreviewPage() {
       setQaList([]);
       setCitations([]);
       setCitationDetail(null);
-      setIsFavorited(false);
       return;
     }
 
@@ -538,16 +544,16 @@ export function ReportPreviewPage() {
 
   useEffect(() => {
     if (!reportId) {
-      setIsFavorited(false);
+      setFavoriteItems([]);
       return;
     }
 
     const loadFavoriteState = async () => {
       try {
         const response = await getFavoriteItems({ favorite_type: 'report', page: 1, page_size: 200 });
-        setIsFavorited(response.list.some((item) => item.target_id === reportId));
+        setFavoriteItems(response.list);
       } catch {
-        setIsFavorited(false);
+        setFavoriteItems([]);
       }
     };
 
@@ -643,22 +649,31 @@ export function ReportPreviewPage() {
       setMessage('请先选择报告。');
       return;
     }
-    if (isFavorited) {
-      setMessage('该报告已在收藏夹中。');
-      return;
-    }
     setFavoriting(true);
     setMessage('');
     try {
-      await createFavoriteItem({
+      if (currentReportFavorite) {
+        await deleteFavoriteItem(currentReportFavorite.favorite_id);
+        setFavoriteItems((prev) => prev.filter((item) => item.favorite_id !== currentReportFavorite.favorite_id));
+        setMessage('已取消收藏。');
+        return;
+      }
+
+      const response = await createFavoriteItem({
         favorite_type: 'report',
         target_id: report.report_id,
         remark: report.title,
       });
-      setIsFavorited(true);
-      setMessage('报告已加入收藏夹。');
+      const created: FavoriteItem = {
+        favorite_id: response.favorite_id,
+        favorite_type: 'report',
+        target_id: report.report_id,
+        remark: report.title,
+      };
+      setFavoriteItems((prev) => [...prev.filter((item) => item.target_id !== report.report_id), created]);
+      setMessage('报告已收藏。');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '收藏报告失败';
+      const reason = error instanceof Error ? error.message : '更新收藏失败';
       setMessage(reason);
     } finally {
       setFavoriting(false);
@@ -767,9 +782,16 @@ export function ReportPreviewPage() {
                   <span className="data-pill">来源任务：{report.task_id}</span>
                   <span className="data-pill">{reportMode === 'brief' ? '简版' : '详版'}</span>
                   <span className="data-pill">创建时间：{formatDateTime(report.created_at)}</span>
-                  <Button type="button" size="sm" variant="secondary" disabled={favoriting || isFavorited} onClick={() => void handleFavoriteReport()}>
-                    <Star size={14} />
-                    {favoriting ? '收藏中...' : isFavorited ? '已收藏' : '收藏'}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={favoriting}
+                    onClick={() => void handleFavoriteReport()}
+                    aria-label={isFavorited ? '取消收藏当前报告' : '收藏当前报告'}
+                  >
+                    <Star size={14} fill={isFavorited ? 'currentColor' : 'none'} />
+                    {favoriting ? '更新中...' : isFavorited ? '已收藏' : '收藏'}
                   </Button>
                 </div>
               ) : null}

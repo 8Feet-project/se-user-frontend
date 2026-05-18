@@ -511,48 +511,12 @@ export interface ResearchHistoryReloadResponse {
   redirect_url: string;
 }
 
-export interface FavoriteFolder {
-  folder_id: string;
-  folder_name: string;
-  parent_id?: string;
-}
-
-export interface FavoriteFoldersResponse {
-  folders: FavoriteFolder[];
-  default_folder_id?: string;
-}
-
-export interface CreateFavoriteFolderRequest {
-  folder_name: string;
-  parent_id?: string;
-}
-
-export interface CreateFavoriteFolderResponse {
-  folder_id: string;
-  folder_name: string;
-}
-
-export interface UpdateFavoriteFolderRequest {
-  folder_name?: string;
-  parent_id?: string;
-}
-
-export interface UpdateFavoriteFolderResponse {
-  folder_id: string;
-  updated_fields: string[];
-}
-
-export interface DeleteFavoriteFolderResponse {
-  result: string;
-}
-
 export type FavoriteType = 'insight' | 'report' | 'model';
 
 export interface FavoriteItem {
   favorite_id: string;
   favorite_type: FavoriteType;
   target_id: string;
-  folder_id?: string;
   remark?: string;
 }
 
@@ -564,22 +528,12 @@ export interface FavoriteItemsResponse {
 export interface CreateFavoriteItemRequest {
   favorite_type: FavoriteType;
   target_id: string;
-  folder_id?: string;
   remark?: string;
 }
 
 export interface CreateFavoriteItemResponse {
   favorite_id: string;
   favorite_status: string;
-}
-
-export interface MoveFavoriteItemRequest {
-  target_folder_id: string;
-}
-
-export interface MoveFavoriteItemResponse {
-  favorite_id: string;
-  target_folder_id: string;
 }
 
 export interface DeleteFavoriteItemResponse {

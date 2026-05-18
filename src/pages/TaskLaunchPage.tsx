@@ -85,7 +85,7 @@ export function TaskLaunchPage() {
       } else {
         setFavoriteModelItems([]);
         setFavoriteModelIds([]);
-        warnings.push('模型收藏夹加载失败');
+        warnings.push('模型收藏状态加载失败');
       }
 
       if (modelsResult.status === 'fulfilled') {

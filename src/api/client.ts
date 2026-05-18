@@ -4,7 +4,6 @@ import {
   mockCreateAdminModel,
   mockCreateAdminUser,
   mockCreateAlert,
-  mockCreateFavoriteFolder,
   mockCreateFavoriteItem,
   mockCreateResearchTask,
   mockDeleteAdminModel,
@@ -32,10 +31,8 @@ import {
   mockGetTaskEvents,
   mockGetTaskIntervention,
   mockDeleteAlert,
-  mockDeleteFavoriteFolder,
   mockDeleteFavoriteItem,
   mockGetAlerts,
-  mockGetFavoriteFolders,
   mockGetFavoriteItems,
   mockGetMessages,
   mockGetCurrentUserProfile,
@@ -52,7 +49,6 @@ import {
   mockRefreshToken,
   mockRegister,
   mockReloadResearchHistory,
-  mockMoveFavoriteItem,
   mockGetReports,
   mockGetReportCitations,
   mockGetReportCitationDetail,
@@ -75,7 +71,6 @@ import {
   mockUpdateAdminModel,
   mockUpdateAdminUser,
   mockUpdateAlert,
-  mockUpdateFavoriteFolder,
   mockSubmitTaskIntervention,
   mockVerifyEmail,
 } from './mock';
@@ -111,8 +106,6 @@ import type {
   CreateAdminUserResponse,
   CreateAlertRequest,
   CreateAlertResponse,
-  CreateFavoriteFolderRequest,
-  CreateFavoriteFolderResponse,
   CreateFavoriteItemRequest,
   CreateFavoriteItemResponse,
   CreateReportQaRequest,
@@ -123,13 +116,13 @@ import type {
   CurrentUserPermissionsResponse,
   DeleteAdminModelResponse,
   DeleteAlertResponse,
-  DeleteFavoriteFolderResponse,
   DeleteFavoriteItemResponse,
   DeleteReportShareResponse,
   ExportAdminLogsRequest,
   ExportReportRequest,
   ExportReportResponse,
-  FavoriteFoldersResponse,
+  FavoriteItem,
+  FavoriteType,
   FavoriteItemsResponse,
   HistoryTaskItem,
   LoginRequest,
@@ -141,8 +134,6 @@ import type {
   MessagesResponse,
   ModelRoutingRecommendationResponse,
   ModelsAvailableResponse,
-  MoveFavoriteItemRequest,
-  MoveFavoriteItemResponse,
   ObjectType,
   PasswordResetConfirmRequest,
   PasswordResetConfirmResponse,
@@ -191,8 +182,6 @@ import type {
   UpdateAdminUserResponse,
   UpdateAlertRequest,
   UpdateAlertResponse,
-  UpdateFavoriteFolderRequest,
-  UpdateFavoriteFolderResponse,
   UpdateUserProfileRequest,
   UpdateUserProfileResponse,
   UserProfile,
@@ -895,50 +884,8 @@ export async function appendReportQa(
   });
 }
 
-export async function getFavoriteFolders(): Promise<FavoriteFoldersResponse> {
-  if (useMock) {
-    return mockGetFavoriteFolders();
-  }
-  return request<FavoriteFoldersResponse>('/favorites/folders/');
-}
-
-export async function createFavoriteFolder(
-  payload: CreateFavoriteFolderRequest
-): Promise<CreateFavoriteFolderResponse> {
-  if (useMock) {
-    return mockCreateFavoriteFolder(payload);
-  }
-  return request<CreateFavoriteFolderResponse>('/favorites/folders/', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function updateFavoriteFolder(
-  folderId: string,
-  payload: UpdateFavoriteFolderRequest
-): Promise<UpdateFavoriteFolderResponse> {
-  if (useMock) {
-    return mockUpdateFavoriteFolder(folderId, payload);
-  }
-  return request<UpdateFavoriteFolderResponse>(`/favorites/folders/${folderId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function deleteFavoriteFolder(folderId: string): Promise<DeleteFavoriteFolderResponse> {
-  if (useMock) {
-    return mockDeleteFavoriteFolder(folderId);
-  }
-  return request<DeleteFavoriteFolderResponse>(`/favorites/folders/${folderId}`, {
-    method: 'DELETE',
-  });
-}
-
 export async function getFavoriteItems(params: {
-  folder_id?: string;
-  favorite_type?: string;
+  favorite_type?: FavoriteType;
   page?: number;
   page_size?: number;
 } = {}): Promise<FavoriteItemsResponse> {
@@ -960,19 +907,6 @@ export async function createFavoriteItem(
   });
 }
 
-export async function moveFavoriteItem(
-  favoriteId: string,
-  payload: MoveFavoriteItemRequest
-): Promise<MoveFavoriteItemResponse> {
-  if (useMock) {
-    return mockMoveFavoriteItem(favoriteId, payload);
-  }
-  return request<MoveFavoriteItemResponse>(`/favorites/items/${favoriteId}/move`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
 export async function deleteFavoriteItem(favoriteId: string): Promise<DeleteFavoriteItemResponse> {
   if (useMock) {
     return mockDeleteFavoriteItem(favoriteId);
@@ -980,6 +914,13 @@ export async function deleteFavoriteItem(favoriteId: string): Promise<DeleteFavo
   return request<DeleteFavoriteItemResponse>(`/favorites/items/${favoriteId}`, {
     method: 'DELETE',
   });
+}
+
+export function findFavoriteItem(items: FavoriteItem[], favoriteType: FavoriteType, targetId?: string | null): FavoriteItem | undefined {
+  if (!targetId) {
+    return undefined;
+  }
+  return items.find((item) => item.favorite_type === favoriteType && item.target_id === targetId);
 }
 
 export async function getAlerts(params: {

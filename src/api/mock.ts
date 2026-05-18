@@ -29,8 +29,6 @@ import type {
   CreateAdminUserResponse,
   CreateAlertRequest,
   CreateAlertResponse,
-  CreateFavoriteFolderRequest,
-  CreateFavoriteFolderResponse,
   CreateFavoriteItemRequest,
   CreateFavoriteItemResponse,
   CreateReportQaRequest,
@@ -41,14 +39,13 @@ import type {
   CurrentUserPermissionsResponse,
   DeleteAdminModelResponse,
   DeleteAlertResponse,
-  DeleteFavoriteFolderResponse,
   DeleteFavoriteItemResponse,
   DeleteReportShareResponse,
   ExportAdminLogsRequest,
   ExportReportRequest,
   ExportReportResponse,
-  FavoriteFoldersResponse,
   FavoriteItemsResponse,
+  FavoriteType,
   HistoryTaskItem,
   LoginRequest,
   LoginResponse,
@@ -60,8 +57,6 @@ import type {
   MessagesResponse,
   ModelsAvailableResponse,
   ModelRoutingRecommendationResponse,
-  MoveFavoriteItemRequest,
-  MoveFavoriteItemResponse,
   PasswordResetConfirmRequest,
   PasswordResetConfirmResponse,
   PasswordResetRequest,
@@ -109,8 +104,6 @@ import type {
   UpdateAdminUserResponse,
   UpdateAlertRequest,
   UpdateAlertResponse,
-  UpdateFavoriteFolderRequest,
-  UpdateFavoriteFolderResponse,
   UpdateUserProfileRequest,
   UpdateUserProfileResponse,
   UserProfile,
@@ -878,28 +871,18 @@ const mockAdminLogDetails: Record<string, AdminLogDetail> = {
 
 const mockAdminLogExports: Record<string, AdminLogExportStatusResponse> = {};
 
-let mockFavoriteFolders: FavoriteFoldersResponse = {
-  folders: [
-    { folder_id: 'folder-default', folder_name: '默认收藏夹' },
-    { folder_id: 'folder-report', folder_name: '报告收藏' },
-  ],
-  default_folder_id: 'folder-default',
-};
-
 let mockFavoriteItems: FavoriteItemsResponse = {
   list: [
     {
       favorite_id: 'fav-001',
       favorite_type: 'report',
       target_id: 'report-001',
-      folder_id: 'folder-report',
       remark: '重点参考',
     },
     {
       favorite_id: 'fav-002',
       favorite_type: 'insight',
       target_id: 'insight-002',
-      folder_id: 'folder-default',
       remark: '行业观点',
     },
   ],
@@ -2160,65 +2143,10 @@ export async function mockAppendReportQa(
   };
 }
 
-export async function mockGetFavoriteFolders(): Promise<FavoriteFoldersResponse> {
-  return {
-    folders: [...mockFavoriteFolders.folders],
-    default_folder_id: mockFavoriteFolders.default_folder_id,
-  };
-}
-
-export async function mockCreateFavoriteFolder(
-  payload: CreateFavoriteFolderRequest
-): Promise<CreateFavoriteFolderResponse> {
-  const folderId = `folder-${Date.now()}`;
-  mockFavoriteFolders.folders.push({
-    folder_id: folderId,
-    folder_name: payload.folder_name,
-    parent_id: payload.parent_id,
-  });
-  return {
-    folder_id: folderId,
-    folder_name: payload.folder_name,
-  };
-}
-
-export async function mockUpdateFavoriteFolder(
-  folderId: string,
-  payload: UpdateFavoriteFolderRequest
-): Promise<UpdateFavoriteFolderResponse> {
-  const target = mockFavoriteFolders.folders.find((folder) => folder.folder_id === folderId);
-  const updatedFields: string[] = [];
-  if (target) {
-    if (payload.folder_name !== undefined) {
-      target.folder_name = payload.folder_name;
-      updatedFields.push('folder_name');
-    }
-    if (payload.parent_id !== undefined) {
-      target.parent_id = payload.parent_id;
-      updatedFields.push('parent_id');
-    }
-  }
-  return {
-    folder_id: folderId,
-    updated_fields: updatedFields,
-  };
-}
-
-export async function mockDeleteFavoriteFolder(folderId: string): Promise<DeleteFavoriteFolderResponse> {
-  mockFavoriteFolders.folders = mockFavoriteFolders.folders.filter((folder) => folder.folder_id !== folderId);
-  mockFavoriteItems.list = mockFavoriteItems.list.filter((item) => item.folder_id !== folderId);
-  mockFavoriteItems.total = mockFavoriteItems.list.length;
-  return { result: 'ok' };
-}
-
 export async function mockGetFavoriteItems(params?: {
-  folder_id?: string;
-  favorite_type?: string;
+  favorite_type?: FavoriteType;
 }): Promise<FavoriteItemsResponse> {
   let list = [...mockFavoriteItems.list];
-  if (params?.folder_id) {
-    list = list.filter((item) => item.folder_id === params.folder_id);
-  }
   if (params?.favorite_type) {
     list = list.filter((item) => item.favorite_type === params.favorite_type);
   }
@@ -2231,32 +2159,27 @@ export async function mockGetFavoriteItems(params?: {
 export async function mockCreateFavoriteItem(
   payload: CreateFavoriteItemRequest
 ): Promise<CreateFavoriteItemResponse> {
+  const existing = mockFavoriteItems.list.find(
+    (item) => item.favorite_type === payload.favorite_type && item.target_id === payload.target_id
+  );
+  if (existing) {
+    return {
+      favorite_id: existing.favorite_id,
+      favorite_status: 'favorited',
+    };
+  }
+
   const favoriteId = `fav-${Date.now()}`;
   mockFavoriteItems.list.push({
     favorite_id: favoriteId,
     favorite_type: payload.favorite_type,
     target_id: payload.target_id,
-    folder_id: payload.folder_id,
     remark: payload.remark,
   });
   mockFavoriteItems.total = mockFavoriteItems.list.length;
   return {
     favorite_id: favoriteId,
     favorite_status: 'favorited',
-  };
-}
-
-export async function mockMoveFavoriteItem(
-  favoriteId: string,
-  payload: MoveFavoriteItemRequest
-): Promise<MoveFavoriteItemResponse> {
-  const target = mockFavoriteItems.list.find((item) => item.favorite_id === favoriteId);
-  if (target) {
-    target.folder_id = payload.target_folder_id;
-  }
-  return {
-    favorite_id: favoriteId,
-    target_folder_id: payload.target_folder_id,
   };
 }
 

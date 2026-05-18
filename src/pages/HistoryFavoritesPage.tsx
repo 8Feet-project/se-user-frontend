@@ -2,12 +2,20 @@ import { Clock3, FileSearch, History, RotateCcw, Sparkles, Star } from 'lucide-r
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { createFavoriteItem, getResearchHistory, getResearchHistoryDetail, reloadResearchHistory } from '@/api/client';
+import {
+  createFavoriteItem,
+  deleteFavoriteItem,
+  findFavoriteItem,
+  getFavoriteItems,
+  getResearchHistory,
+  getResearchHistoryDetail,
+  reloadResearchHistory,
+} from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
-import type { HistoryTaskItem, ResearchHistoryDetail, ResearchHistoryReloadResponse } from '@/types';
+import type { FavoriteItem, HistoryTaskItem, ResearchHistoryDetail, ResearchHistoryReloadResponse } from '@/types';
 
 function objectTypeLabel(type: HistoryTaskItem['object_type']) {
   if (type === 'company') return '公司';
@@ -33,6 +41,7 @@ export function HistoryFavoritesPage() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ResearchHistoryDetail | null>(null);
+  const [favoriteReportItems, setFavoriteReportItems] = useState<FavoriteItem[]>([]);
   const [reloadResult, setReloadResult] = useState<ResearchHistoryReloadResponse | null>(null);
   const [message, setMessage] = useState('');
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
@@ -41,8 +50,12 @@ export function HistoryFavoritesPage() {
 
   const loadData = async () => {
     try {
-      const history = await getResearchHistory({ page: 1, page_size: 10 });
+      const [history, favorites] = await Promise.all([
+        getResearchHistory({ page: 1, page_size: 10 }),
+        getFavoriteItems({ favorite_type: 'report', page: 1, page_size: 200 }),
+      ]);
       setTasks(history.list);
+      setFavoriteReportItems(favorites.list);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '加载历史失败';
       setMessage(reason);
@@ -106,14 +119,29 @@ export function HistoryFavoritesPage() {
 
     try {
       setFavoritingTaskId(task.task_id);
-      await createFavoriteItem({
+      const existing = findFavoriteItem(favoriteReportItems, 'report', task.report_id);
+      if (existing) {
+        await deleteFavoriteItem(existing.favorite_id);
+        setFavoriteReportItems((prev) => prev.filter((item) => item.favorite_id !== existing.favorite_id));
+        setMessage('已取消收藏。');
+        return;
+      }
+
+      const response = await createFavoriteItem({
         favorite_type: 'report',
         target_id: task.report_id,
         remark: `${task.object_name} 报告`,
       });
-      setMessage('报告已加入收藏夹。');
+      const created: FavoriteItem = {
+        favorite_id: response.favorite_id,
+        favorite_type: 'report',
+        target_id: task.report_id,
+        remark: `${task.object_name} 报告`,
+      };
+      setFavoriteReportItems((prev) => [...prev.filter((item) => item.target_id !== task.report_id), created]);
+      setMessage('报告已收藏。');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '收藏报告失败';
+      const reason = error instanceof Error ? error.message : '更新收藏失败';
       setMessage(reason);
     } finally {
       setFavoritingTaskId(null);
@@ -121,6 +149,7 @@ export function HistoryFavoritesPage() {
   };
 
   const completedCount = useMemo(() => tasks.filter((task) => task.status === 'completed').length, [tasks]);
+  const selectedDetailReportFavorited = Boolean(findFavoriteItem(favoriteReportItems, 'report', selectedDetail?.report_id));
 
   return (
     <PageShell
@@ -148,93 +177,97 @@ export function HistoryFavoritesPage() {
 
           <div className="space-y-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {tasks.length > 0 ? (
-              tasks.map((task) => (
-                <div
-                  key={task.task_id}
-                  className="panel-subtle cursor-pointer rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleOpenHistoryItem(task)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      handleOpenHistoryItem(task);
-                    }
-                  }}
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-base font-semibold text-slate-100">{task.object_name}</p>
-                      <p className="mt-1 text-sm text-slate-400">{objectTypeLabel(task.object_type)}</p>
+              tasks.map((task) => {
+                const isReportFavorited = Boolean(findFavoriteItem(favoriteReportItems, 'report', task.report_id));
+                return (
+                  <div
+                    key={task.task_id}
+                    className="panel-subtle cursor-pointer rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenHistoryItem(task)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpenHistoryItem(task);
+                      }
+                    }}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-base font-semibold text-slate-100">{task.object_name}</p>
+                        <p className="mt-1 text-sm text-slate-400">{objectTypeLabel(task.object_type)}</p>
+                      </div>
+                      <StatusBadge status={task.status} />
                     </div>
-                    <StatusBadge status={task.status} />
+                    <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                      <Clock3 size={12} />
+                      创建时间：{formatDateTime(task.created_at)}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleLoadDetail(task.task_id);
+                        }}
+                        disabled={submittingTaskId === task.task_id}
+                      >
+                        查看详情
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleReloadTask(task.task_id);
+                        }}
+                        disabled={submittingTaskId === task.task_id}
+                      >
+                        重载结果
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/process?task_id=${task.task_id}`);
+                        }}
+                      >
+                        查看流程
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (task.report_id) {
+                            navigate(`/report?report_id=${task.report_id}`);
+                          } else {
+                            navigate(`/report?task_id=${task.task_id}`);
+                          }
+                        }}
+                      >
+                        查看报告
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleFavoriteReport(task);
+                        }}
+                        disabled={favoritingTaskId === task.task_id || !task.report_id}
+                        aria-label={isReportFavorited ? `取消收藏 ${task.object_name} 报告` : `收藏 ${task.object_name} 报告`}
+                      >
+                        <Star size={14} fill={isReportFavorited ? 'currentColor' : 'none'} />
+                        {favoritingTaskId === task.task_id ? '更新中...' : isReportFavorited ? '已收藏' : '收藏报告'}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-                    <Clock3 size={12} />
-                    创建时间：{formatDateTime(task.created_at)}
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleLoadDetail(task.task_id);
-                      }}
-                      disabled={submittingTaskId === task.task_id}
-                    >
-                      查看详情
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleReloadTask(task.task_id);
-                      }}
-                      disabled={submittingTaskId === task.task_id}
-                    >
-                      重载结果
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/process?task_id=${task.task_id}`);
-                      }}
-                    >
-                      查看流程
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (task.report_id) {
-                          navigate(`/report?report_id=${task.report_id}`);
-                        } else {
-                          navigate(`/report?task_id=${task.task_id}`);
-                        }
-                      }}
-                    >
-                      查看报告
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleFavoriteReport(task);
-                      }}
-                      disabled={favoritingTaskId === task.task_id || !task.report_id}
-                    >
-                      <Star size={14} />
-                      {favoritingTaskId === task.task_id ? '收藏中...' : '收藏报告'}
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : loaded ? (
               <div className="panel-subtle p-5 text-sm text-slate-500">
                 当前暂无历史任务。待完成一次调研后，这里会显示可复查、可重载、可跳转的任务记录。
@@ -276,9 +309,15 @@ export function HistoryFavoritesPage() {
                   >
                     打开报告
                   </Button>
-                  <Button size="sm" variant="secondary" onClick={() => void handleFavoriteReport(selectedDetail)} disabled={favoritingTaskId === selectedDetail.task_id || !selectedDetail.report_id}>
-                    <Star size={14} />
-                    {favoritingTaskId === selectedDetail.task_id ? '收藏中...' : '收藏报告'}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void handleFavoriteReport(selectedDetail)}
+                    disabled={favoritingTaskId === selectedDetail.task_id || !selectedDetail.report_id}
+                    aria-label={selectedDetailReportFavorited ? `取消收藏 ${selectedDetail.object_name} 报告` : `收藏 ${selectedDetail.object_name} 报告`}
+                  >
+                    <Star size={14} fill={selectedDetailReportFavorited ? 'currentColor' : 'none'} />
+                    {favoritingTaskId === selectedDetail.task_id ? '更新中...' : selectedDetailReportFavorited ? '已收藏' : '收藏报告'}
                   </Button>
                 </div>
               </div>
