@@ -979,61 +979,97 @@ select optgroup {
     @apply text-sm leading-6 text-slate-300;
   }
 
-  .persona-markdown > * + * {
+  .persona-chat-markdown {
+    @apply text-sm leading-6 text-slate-200;
+  }
+
+  .persona-markdown > * + *,
+  .persona-chat-markdown > * + * {
     margin-top: 0.65rem;
   }
 
   .persona-markdown h1,
   .persona-markdown h2,
-  .persona-markdown h3 {
+  .persona-markdown h3,
+  .persona-chat-markdown h1,
+  .persona-chat-markdown h2,
+  .persona-chat-markdown h3 {
     @apply font-semibold text-slate-100;
   }
 
-  .persona-markdown h1 {
+  .persona-markdown h1,
+  .persona-chat-markdown h1 {
     @apply text-base;
   }
 
   .persona-markdown h2,
-  .persona-markdown h3 {
+  .persona-markdown h3,
+  .persona-chat-markdown h2,
+  .persona-chat-markdown h3 {
     @apply text-sm;
   }
 
   .persona-markdown ul,
-  .persona-markdown ol {
+  .persona-markdown ol,
+  .persona-chat-markdown ul,
+  .persona-chat-markdown ol {
     @apply pl-5;
   }
 
-  .persona-markdown ul {
+  .persona-markdown ul,
+  .persona-chat-markdown ul {
     list-style: disc;
   }
 
-  .persona-markdown ol {
+  .persona-markdown ol,
+  .persona-chat-markdown ol {
     list-style: decimal;
   }
 
-  .persona-markdown li + li {
+  .persona-markdown li + li,
+  .persona-chat-markdown li + li {
     margin-top: 0.35rem;
   }
 
-  .persona-markdown code {
+  .persona-markdown code,
+  .persona-chat-markdown code {
     @apply rounded-md border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs text-slate-200;
   }
 
-  :root[data-theme='day'] .persona-markdown {
+  .persona-chat-markdown pre {
+    @apply max-w-full overflow-x-auto rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-200;
+  }
+
+  .persona-chat-markdown pre code {
+    @apply border-0 bg-transparent p-0;
+  }
+
+  :root[data-theme='day'] .persona-markdown,
+  :root[data-theme='day'] .persona-chat-markdown {
     color: var(--8feet-text-body) !important;
   }
 
   :root[data-theme='day'] .persona-markdown h1,
   :root[data-theme='day'] .persona-markdown h2,
   :root[data-theme='day'] .persona-markdown h3,
-  :root[data-theme='day'] .persona-markdown strong {
+  :root[data-theme='day'] .persona-markdown strong,
+  :root[data-theme='day'] .persona-chat-markdown h1,
+  :root[data-theme='day'] .persona-chat-markdown h2,
+  :root[data-theme='day'] .persona-chat-markdown h3,
+  :root[data-theme='day'] .persona-chat-markdown strong {
     color: var(--8feet-text-strong) !important;
   }
 
-  :root[data-theme='day'] .persona-markdown code {
+  :root[data-theme='day'] .persona-markdown code,
+  :root[data-theme='day'] .persona-chat-markdown code {
     border-color: rgba(20, 125, 114, 0.14);
     background: rgba(20, 125, 114, 0.08) !important;
     color: var(--8feet-text-strong) !important;
+  }
+
+  :root[data-theme='day'] .persona-chat-markdown pre {
+    border-color: rgba(20, 125, 114, 0.14);
+    background: rgba(255, 255, 255, 0.62) !important;
   }
 
   .field-label {

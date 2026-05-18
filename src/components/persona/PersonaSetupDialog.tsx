@@ -52,6 +52,16 @@ function modelLabel(model: ModelAvailableItem) {
   return `${model.model_name}${model.provider ? ` / ${model.provider}` : ''}`;
 }
 
+function AssistantMessageMarkdown({ content }: { content: string }) {
+  return (
+    <div className="persona-chat-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export function PersonaSetupDialog({
   open,
   onboarding = false,
@@ -156,7 +166,7 @@ export function PersonaSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
-      <DialogContent className="persona-dialog max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
+      <DialogContent className="persona-dialog flex max-h-[calc(100vh-2rem)] h-[calc(100vh-2rem)] flex-col overflow-hidden sm:h-[min(760px,calc(100vh-2rem))] sm:max-w-3xl">
         <DialogHeader className="pr-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[rgba(99,202,183,0.22)] bg-[rgba(99,202,183,0.09)] text-[#63cab7]">
@@ -171,8 +181,8 @@ export function PersonaSetupDialog({
           </div>
         </DialogHeader>
 
-        <div className="grid min-h-0 gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <div className="space-y-4">
+        <div className="grid min-h-0 flex-1 gap-5 overflow-hidden lg:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
             <div className="panel-subtle p-4">
               <Label htmlFor="persona-model">模型</Label>
               <Select
@@ -213,7 +223,7 @@ export function PersonaSetupDialog({
             ) : null}
           </div>
 
-          <div className="flex min-h-[460px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07111f]/60">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07111f]/60">
             <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               {!conversation ? (
                 <div className="flex h-full min-h-[320px] items-center justify-center px-6 text-center">
@@ -238,7 +248,11 @@ export function PersonaSetupDialog({
                             : 'border border-white/10 bg-white/[0.05] text-slate-200'
                         }`}
                       >
-                        {message.content}
+                        {message.role === 'assistant' ? (
+                          <AssistantMessageMarkdown content={message.content} />
+                        ) : (
+                          message.content
+                        )}
                       </div>
                     </div>
                   ))}
