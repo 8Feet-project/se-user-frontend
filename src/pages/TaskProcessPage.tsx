@@ -14,6 +14,7 @@ import {
   RefreshCcw,
   Shield,
   Sparkles,
+  FastForward,
   Workflow,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -26,7 +27,9 @@ import {
   getResearchTaskWorkflow,
   getResearchTasks,
   getTaskFacts,
+  submitTaskIntervention,
   triggerCrossValidation,
+  updateTaskAutoAdvance,
 } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
@@ -39,6 +42,7 @@ import type {
   ResearchTaskStatusResponse,
   SubAgentWorkflow,
   TaskFactsResponse,
+  TaskInterventionAction,
   TaskRealtimeMessage,
   TaskWorkflowResponse,
   TriggerCrossValidationResponse,
@@ -645,6 +649,21 @@ function realtimeStateTone(state: RealtimeState) {
   }
 }
 
+type ApprovalAction = Extract<TaskInterventionAction, 'accept' | 'replan' | 'reject'>;
+
+function approvalActionText(action: ApprovalAction) {
+  switch (action) {
+    case 'accept':
+      return '接受';
+    case 'replan':
+      return '重新计划';
+    case 'reject':
+      return '拒绝，因为';
+    default:
+      return action;
+  }
+}
+
 function deriveWorkflowProgress(
   nodes: WorkflowNode[],
   taskStatus?: ResearchTaskStatusResponse['status']
@@ -772,6 +791,11 @@ export function TaskProcessPage() {
   const [loadingCrossValidationResult, setLoadingCrossValidationResult] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [updatingAutoAdvance, setUpdatingAutoAdvance] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<ApprovalAction>('accept');
+  const [approvalComment, setApprovalComment] = useState('');
+  const [submittingApproval, setSubmittingApproval] = useState(false);
   const [realtimeState, setRealtimeState] = useState<RealtimeState>('idle');
   const [lastRealtimeMessage, setLastRealtimeMessage] = useState<TaskRealtimeMessage | null>(null);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
@@ -903,6 +927,10 @@ export function TaskProcessPage() {
   }, [queryTaskId, taskId]);
 
   useEffect(() => {
+    setAutoAdvance(Boolean(status?.auto_advance));
+  }, [status?.auto_advance, taskId]);
+
+  useEffect(() => {
     if (!taskId) {
       setStatus(null);
       setWorkflow(null);
@@ -910,6 +938,7 @@ export function TaskProcessPage() {
       setCrossValidationTrigger(null);
       setCrossValidationResult(null);
       setLastRealtimeMessage(null);
+      setAutoAdvance(false);
       return;
     }
 
@@ -1009,6 +1038,11 @@ export function TaskProcessPage() {
     [workflow]
   );
 
+  useEffect(() => {
+    setApprovalAction('accept');
+    setApprovalComment('');
+  }, [waitingNode?.node_id]);
+
   const activeNode = useMemo(
     () => workflow?.nodes.find((node) => node.node_id === workflow.current_node) ?? null,
     [workflow]
@@ -1079,6 +1113,61 @@ export function TaskProcessPage() {
       setMessage(error instanceof Error ? error.message : '刷新交叉验证结果失败');
     } finally {
       setLoadingCrossValidationResult(false);
+    }
+  };
+
+  const handleToggleAutoAdvance = async () => {
+    if (!taskId) {
+      setMessage('请先选择任务。');
+      return;
+    }
+
+    const nextAutoAdvance = !autoAdvance;
+    setAutoAdvance(nextAutoAdvance);
+    try {
+      setUpdatingAutoAdvance(true);
+      const result = await updateTaskAutoAdvance(taskId, nextAutoAdvance);
+      setAutoAdvance(result.auto_advance);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      setMessage(
+        result.auto_advance
+          ? result.resumed
+            ? '自动推进已开启，并已接受当前待确认计划。'
+            : '自动推进已开启。'
+          : '自动推进已关闭。'
+      );
+    } catch (error) {
+      setAutoAdvance(!nextAutoAdvance);
+      setMessage(error instanceof Error ? error.message : '更新自动推进失败');
+    } finally {
+      setUpdatingAutoAdvance(false);
+    }
+  };
+
+  const handleSubmitStepApproval = async () => {
+    if (!taskId || !waitingNode) {
+      setMessage('当前没有待处理的人工确认节点。');
+      return;
+    }
+    if (approvalAction === 'reject' && !approvalComment.trim()) {
+      setMessage('请填写拒绝原因。');
+      return;
+    }
+
+    try {
+      setSubmittingApproval(true);
+      await submitTaskIntervention(taskId, waitingNode.node_id, {
+        action: approvalAction,
+        comment: approvalAction === 'accept' ? '' : approvalComment.trim(),
+      });
+      setApprovalAction('accept');
+      setApprovalComment('');
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      setMessage(`已提交：${approvalActionText(approvalAction)}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '提交确认结果失败');
+    } finally {
+      setSubmittingApproval(false);
     }
   };
 
@@ -1160,6 +1249,15 @@ export function TaskProcessPage() {
         crossValidationResult.model_outputs.length > 0 ||
         crossValidationResult.used_models.length > 0)
   );
+  const approvalNextAction = String(waitingNode?.payload?.next_action || waitingNode?.node_name || '确认下一步计划');
+  const approvalExecutionPlan = String(
+    waitingNode?.payload?.execution_plan ||
+      waitingNode?.summary ||
+      waitingNode?.description ||
+      '等待 AI 提供执行计划。'
+  );
+  const showApprovalPanel = Boolean(waitingNode && !autoAdvance);
+
   return (
     <PageShell
       title="调研流程"
@@ -1479,7 +1577,11 @@ export function TaskProcessPage() {
                                   <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
                                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500">人工介入</p>
                                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                                      当前只能查看节点状态，暂时不能在这里处理。
+                                      {step.payload?.auto_accepted
+                                        ? '自动推进已接受该步骤计划。'
+                                        : isWaiting
+                                          ? '请在右侧流程操作中处理。'
+                                          : '可在右侧流程操作中查看处理状态。'}
                                     </p>
                                   </div>
                                 </div>
@@ -1508,6 +1610,114 @@ export function TaskProcessPage() {
               <p className="text-sm leading-6 text-slate-400">
                 这些操作会影响当前任务，请确认后再执行。
               </p>
+              <button
+                type="button"
+                onClick={handleToggleAutoAdvance}
+                disabled={!taskId || updatingAutoAdvance}
+                className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-[rgba(99,202,183,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+                role="switch"
+                aria-checked={autoAdvance}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                    autoAdvance
+                      ? 'border-[rgba(99,202,183,0.35)] bg-[rgba(99,202,183,0.14)] text-[#8ce5d6]'
+                      : 'border-white/10 bg-black/10 text-slate-400'
+                  }`}>
+                    <FastForward size={16} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-slate-200">自动推进</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-500">
+                      {autoAdvance ? '需要确认的步骤将自动接受。' : '需要确认的步骤会停下等待处理。'}
+                    </span>
+                  </span>
+                </span>
+                <span
+                  className={`relative h-6 w-11 shrink-0 rounded-full border transition ${
+                    autoAdvance
+                      ? 'border-[rgba(99,202,183,0.5)] bg-[rgba(99,202,183,0.32)]'
+                      : 'border-white/10 bg-black/20'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 h-4 w-4 rounded-full bg-slate-100 transition ${
+                      autoAdvance ? 'left-6' : 'left-1'
+                    }`}
+                  />
+                </span>
+              </button>
+              {showApprovalPanel ? (
+                <div className="rounded-2xl border border-amber-400/24 bg-amber-500/[0.07] p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={15} className="text-amber-200" />
+                    <p className="text-sm font-semibold text-amber-100">等待确认</p>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-amber-100/60">接下来</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-slate-100">{approvalNextAction}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-amber-100/60">执行计划</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-300">{approvalExecutionPlan}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    {(['accept', 'replan'] as ApprovalAction[]).map((action) => (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => {
+                          setApprovalAction(action);
+                          setApprovalComment('');
+                        }}
+                        className={`flex min-h-11 items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${
+                          approvalAction === action
+                            ? 'border-[rgba(99,202,183,0.45)] bg-[rgba(99,202,183,0.12)] text-[#8ce5d6]'
+                            : 'border-white/10 bg-black/10 text-slate-300 hover:border-white/20 hover:text-slate-100'
+                        }`}
+                      >
+                        <span>{approvalActionText(action)}</span>
+                        {approvalAction === action ? <CheckCircle2 size={15} /> : null}
+                      </button>
+                    ))}
+                    <label
+                      className={`rounded-xl border px-3 py-2 transition ${
+                        approvalAction === 'reject'
+                          ? 'border-[rgba(244,114,182,0.42)] bg-rose-500/[0.08]'
+                          : 'border-white/10 bg-black/10 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 text-sm text-slate-300">
+                        <input
+                          type="radio"
+                          className="h-4 w-4 accent-[#63cab7]"
+                          checked={approvalAction === 'reject'}
+                          onChange={() => setApprovalAction('reject')}
+                        />
+                        拒绝，因为
+                      </span>
+                      <textarea
+                        value={approvalComment}
+                        onFocus={() => setApprovalAction('reject')}
+                        onChange={(event) => setApprovalComment(event.target.value)}
+                        placeholder="请填写原因"
+                        rows={3}
+                        className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-[rgba(99,202,183,0.45)]"
+                      />
+                    </label>
+                  </div>
+                  <Button
+                    className="mt-4 w-full"
+                    size="sm"
+                    onClick={handleSubmitStepApproval}
+                    disabled={submittingApproval || !waitingNode}
+                  >
+                    {submittingApproval ? '提交中...' : '提交'}
+                  </Button>
+                </div>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <Button
                   size="sm"
