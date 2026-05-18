@@ -2,7 +2,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   appendReportQa,
@@ -203,6 +203,7 @@ function MarkdownBody({ markdown, className = '' }: { markdown: string; classNam
 }
 
 export function ReportPreviewPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const reportIdFromUrl = searchParams.get('report_id');
   const taskIdFromUrl = searchParams.get('task_id');
@@ -242,6 +243,19 @@ export function ReportPreviewPage() {
   );
   const referencesBibtex = report?.references_bibtex?.trim()
     || sortedCitations.map((citation) => citation.bibtex?.trim()).filter(Boolean).join('\n\n');
+  const currentTaskId = useMemo(() => {
+    const reportTaskId = report?.task_id?.trim();
+    if (reportTaskId) {
+      return reportTaskId;
+    }
+
+    const taskIdFromReportList = reports.find((item) => item.report_id === reportId)?.task_id?.trim();
+    if (taskIdFromReportList) {
+      return taskIdFromReportList;
+    }
+
+    return taskIdFromUrl?.trim() ?? '';
+  }, [report?.task_id, reportId, reports, taskIdFromUrl]);
 
   const replaceSearchParams = (updates: Partial<Record<'report_id' | 'task_id', string | null | undefined>>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -274,6 +288,15 @@ export function ReportPreviewPage() {
     setQaQuestion('');
     setAppendInputs({});
     setCitationDetail(null);
+  };
+
+  const navigateToTaskProcess = (fallbackMessage: string) => {
+    if (!currentTaskId) {
+      setMessage(fallbackMessage);
+      return;
+    }
+
+    navigate(`/process?task_id=${encodeURIComponent(currentTaskId)}`);
   };
 
   useEffect(() => {
@@ -404,6 +427,7 @@ export function ReportPreviewPage() {
       const response = await createReportQa(reportId, { question });
       setQaList((prev) => [response.qa, ...prev]);
       setQaQuestion('');
+      navigateToTaskProcess('追问已提交，但暂时无法定位来源任务。请从历史记录打开对应调研流程。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '提交追问失败';
       setMessage(reason);
@@ -425,6 +449,7 @@ export function ReportPreviewPage() {
       const response = await appendReportQa(reportId, qaId, { append_text: appendText });
       setQaList((prev) => prev.map((item) => (item.qa_id === qaId ? response.qa : item)));
       setAppendInputs((prev) => ({ ...prev, [qaId]: '' }));
+      navigateToTaskProcess('追加追问已提交，但暂时无法定位来源任务。请从历史记录打开对应调研流程。');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '追加追问失败';
       setMessage(reason);
