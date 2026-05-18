@@ -50,6 +50,8 @@ export interface LoginResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+  persona?: UserPersona;
+  should_prompt_persona?: boolean;
 }
 
 export interface RegisterRequest {
@@ -68,6 +70,8 @@ export interface RegisterResponse {
   access_token: string;
   refresh_token: string;
   need_initialize: boolean;
+  persona?: UserPersona;
+  should_prompt_persona?: boolean;
 }
 
 export interface LogoutRequest {
@@ -159,6 +163,48 @@ export interface UserProfile {
   permissions: string[];
   email_verified: boolean;
   last_login_at: string | null;
+  persona?: UserPersona;
+  should_prompt_persona?: boolean;
+}
+
+export interface UserPersona {
+  has_persona: boolean;
+  content_markdown: string;
+  summary: string;
+  source_thread_id: string;
+  model_id: string;
+  skipped_at: string | null;
+  updated_at: string | null;
+  should_prompt_persona: boolean;
+}
+
+export type UserPersonaConversationStatus = 'draft' | 'completed' | 'failed';
+
+export interface UserPersonaConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface UserPersonaConversationResponse {
+  thread_id: string;
+  model_id: string;
+  status: UserPersonaConversationStatus;
+  latest_user_message: string;
+  latest_assistant_message: string;
+  last_error: string;
+  presented_report_markdown: string;
+  persona: UserPersona;
+  messages: UserPersonaConversationMessage[];
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface StartUserPersonaConversationRequest {
+  model_id?: string;
+}
+
+export interface SendUserPersonaMessageRequest {
+  message: string;
 }
 
 export interface UpdateUserProfileRequest {

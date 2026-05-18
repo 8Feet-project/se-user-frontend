@@ -952,6 +952,90 @@ select optgroup {
       rgba(255, 255, 255, 0.68);
   }
 
+  .persona-dialog {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.018)),
+      rgba(15, 31, 53, 0.96);
+  }
+
+  :root[data-theme='day'] .persona-dialog {
+    border-color: rgba(20, 125, 114, 0.16);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 248, 253, 0.9) 42%, rgba(236, 244, 251, 0.88) 100%),
+      rgba(255, 255, 255, 0.95);
+    box-shadow:
+      0 28px 64px rgba(88, 113, 140, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
+  :root[data-theme='day'] .persona-dialog-footer {
+    border-top-color: rgba(20, 125, 114, 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(239, 247, 252, 0.84)),
+      rgba(255, 255, 255, 0.68);
+  }
+
+  .persona-markdown {
+    @apply text-sm leading-6 text-slate-300;
+  }
+
+  .persona-markdown > * + * {
+    margin-top: 0.65rem;
+  }
+
+  .persona-markdown h1,
+  .persona-markdown h2,
+  .persona-markdown h3 {
+    @apply font-semibold text-slate-100;
+  }
+
+  .persona-markdown h1 {
+    @apply text-base;
+  }
+
+  .persona-markdown h2,
+  .persona-markdown h3 {
+    @apply text-sm;
+  }
+
+  .persona-markdown ul,
+  .persona-markdown ol {
+    @apply pl-5;
+  }
+
+  .persona-markdown ul {
+    list-style: disc;
+  }
+
+  .persona-markdown ol {
+    list-style: decimal;
+  }
+
+  .persona-markdown li + li {
+    margin-top: 0.35rem;
+  }
+
+  .persona-markdown code {
+    @apply rounded-md border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs text-slate-200;
+  }
+
+  :root[data-theme='day'] .persona-markdown {
+    color: var(--8feet-text-body) !important;
+  }
+
+  :root[data-theme='day'] .persona-markdown h1,
+  :root[data-theme='day'] .persona-markdown h2,
+  :root[data-theme='day'] .persona-markdown h3,
+  :root[data-theme='day'] .persona-markdown strong {
+    color: var(--8feet-text-strong) !important;
+  }
+
+  :root[data-theme='day'] .persona-markdown code {
+    border-color: rgba(20, 125, 114, 0.14);
+    background: rgba(20, 125, 114, 0.08) !important;
+    color: var(--8feet-text-strong) !important;
+  }
+
   .field-label {
     @apply mb-2 block text-sm font-medium text-slate-300;
   }

@@ -1,6 +1,6 @@
 ﻿import { Bot, MailCheck, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { register, sendEmailCode } from '@/api/client';
 import { AuthShell } from '@/components/common/AuthShell';
@@ -29,6 +29,7 @@ const steps = [
 ];
 
 export function RegisterPage() {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
@@ -64,6 +65,10 @@ export function RegisterPage() {
         invite_code: inviteCode.trim() || undefined,
       });
       saveAuthSession(response);
+      if (response.should_prompt_persona) {
+        navigate('/profile?persona_setup=1', { replace: true });
+        return;
+      }
       setRegisterSucceeded(true);
       setMessage('注册成功，已为你登录。');
     } catch (error) {

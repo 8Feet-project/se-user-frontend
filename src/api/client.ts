@@ -36,6 +36,7 @@ import {
   mockGetFavoriteItems,
   mockGetMessages,
   mockGetCurrentUserProfile,
+  mockGetUserPersona,
   mockUpdateCurrentUserProfile,
   mockHistoryTasks,
   mockLogin,
@@ -48,7 +49,11 @@ import {
   mockGetPlatformInitStatus,
   mockRefreshToken,
   mockRegister,
+  mockSendUserPersonaMessage,
   mockReloadResearchHistory,
+  mockSkipUserPersonaPrompt,
+  mockClearUserPersona,
+  mockStartUserPersonaConversation,
   mockGetReports,
   mockGetReportCitations,
   mockGetReportCitationDetail,
@@ -166,8 +171,10 @@ import type {
   RetryAnalysisResponse,
   SendEmailCodeRequest,
   SendEmailCodeResponse,
+  SendUserPersonaMessageRequest,
   ShareReportRequest,
   ShareReportResponse,
+  StartUserPersonaConversationRequest,
   SubmitTaskInterventionRequest,
   SubmitTaskInterventionResponse,
   TaskEvent,
@@ -186,6 +193,8 @@ import type {
   UpdateAlertResponse,
   UpdateUserProfileRequest,
   UpdateUserProfileResponse,
+  UserPersona,
+  UserPersonaConversationResponse,
   UserProfile,
   VerifyEmailRequest,
   VerifyEmailResponse,
@@ -495,6 +504,56 @@ export async function getCurrentUserProfile(): Promise<UserProfile> {
     return mockGetCurrentUserProfile();
   }
   return request<UserProfile>('/users/me');
+}
+
+export async function getUserPersona(): Promise<UserPersona> {
+  if (useMock) {
+    return mockGetUserPersona();
+  }
+  return request<UserPersona>('/users/me/persona');
+}
+
+export async function skipUserPersonaPrompt(): Promise<UserPersona> {
+  if (useMock) {
+    return mockSkipUserPersonaPrompt();
+  }
+  return request<UserPersona>('/users/me/persona/skip', {
+    method: 'POST',
+  });
+}
+
+export async function clearUserPersona(): Promise<UserPersona> {
+  if (useMock) {
+    return mockClearUserPersona();
+  }
+  return request<UserPersona>('/users/me/persona/clear', {
+    method: 'POST',
+  });
+}
+
+export async function startUserPersonaConversation(
+  payload: StartUserPersonaConversationRequest
+): Promise<UserPersonaConversationResponse> {
+  if (useMock) {
+    return mockStartUserPersonaConversation(payload);
+  }
+  return request<UserPersonaConversationResponse>('/users/me/persona/conversations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendUserPersonaMessage(
+  threadId: string,
+  payload: SendUserPersonaMessageRequest
+): Promise<UserPersonaConversationResponse> {
+  if (useMock) {
+    return mockSendUserPersonaMessage(threadId, payload);
+  }
+  return request<UserPersonaConversationResponse>(`/users/me/persona/conversations/${threadId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function updateCurrentUserProfile(

@@ -1,16 +1,33 @@
-﻿import { KeyRound, ShieldCheck } from 'lucide-react';
+﻿import { Bot, FileText, KeyRound, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
-import { changeCurrentUserPassword, getCurrentUserProfile, updateCurrentUserProfile } from '@/api/client';
+import { changeCurrentUserPassword, clearUserPersona, getCurrentUserProfile, updateCurrentUserProfile } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
+import { PersonaSetupDialog } from '@/components/persona/PersonaSetupDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { UserProfile } from '@/types';
+import type { UserPersona, UserProfile } from '@/types';
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
 
 export function ProfilePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [persona, setPersona] = useState<UserPersona | null>(null);
+  const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
+  const [personaOnboarding, setPersonaOnboarding] = useState(false);
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -28,7 +45,13 @@ export function ProfilePage() {
       setEmail(data.email);
       setPhone(data.phone ?? '');
       setAvatarUrl(data.avatar_url ?? '');
+      setPersona(data.persona ?? null);
       setMessage('');
+      const shouldOpenPersona = searchParams.get('persona_setup') === '1' || data.should_prompt_persona || data.persona?.should_prompt_persona;
+      if (shouldOpenPersona && !data.persona?.has_persona) {
+        setPersonaOnboarding(true);
+        setPersonaDialogOpen(true);
+      }
     } catch (error) {
       const reason = error instanceof Error ? error.message : '加载个人信息失败';
       setMessage(reason);
@@ -38,6 +61,23 @@ export function ProfilePage() {
   useEffect(() => {
     void loadProfile();
   }, []);
+
+  const updatePersonaState = (nextPersona: UserPersona) => {
+    setPersona(nextPersona);
+    setProfile((current) => current ? { ...current, persona: nextPersona, should_prompt_persona: nextPersona.should_prompt_persona } : current);
+    if (searchParams.get('persona_setup')) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete('persona_setup');
+        return next;
+      }, { replace: true });
+    }
+  };
+
+  const openPersonaDialog = (onboarding = false) => {
+    setPersonaOnboarding(onboarding);
+    setPersonaDialogOpen(true);
+  };
 
   const handleUpdateProfile = async () => {
     try {
@@ -74,6 +114,20 @@ export function ProfilePage() {
       setNewPassword('');
     } catch (error) {
       const reason = error instanceof Error ? error.message : '修改密码失败';
+      setMessage(reason);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClearPersona = async () => {
+    try {
+      setSubmitting(true);
+      const response = await clearUserPersona();
+      updatePersonaState(response);
+      setMessage('人设已清除，后续调研将不再使用人设背景。');
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '清除人设失败';
       setMessage(reason);
     } finally {
       setSubmitting(false);
@@ -175,6 +229,49 @@ export function ProfilePage() {
           </Card>
 
           <Card className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Bot size={16} className="text-[#63cab7]" />
+                <h3 className="text-xl font-semibold text-slate-100">调研人设</h3>
+              </div>
+              <span className={`rounded-full border px-3 py-1 text-xs ${
+                persona?.has_persona
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+              }`}>
+                {persona?.has_persona ? '已设定' : '未设定'}
+              </span>
+            </div>
+            <div className="panel-subtle p-4">
+              <div className="flex items-start gap-3">
+                <FileText size={16} className="mt-1 text-[#63cab7]" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm leading-6 text-slate-300">
+                    {persona?.has_persona
+                      ? (persona.summary || '已保存人设分析报告，后续调研会参考你的背景和偏好。')
+                      : '设定后，调研任务会参考你的身份、诉求、深度和报告风格偏好。'}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    最近更新：{formatDateTime(persona?.updated_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => openPersonaDialog(false)} disabled={!profile || submitting}>
+                <Bot />
+                {persona?.has_persona ? '重新设定' : '设定人设'}
+              </Button>
+              {persona?.has_persona ? (
+                <Button variant="destructive" onClick={handleClearPersona} disabled={submitting}>
+                  <Trash2 />
+                  清除人设
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+
+          <Card className="space-y-5">
             <div className="flex items-center gap-2">
               <KeyRound size={16} className="text-[#63cab7]" />
               <h3 className="text-xl font-semibold text-slate-100">修改密码</h3>
@@ -207,6 +304,20 @@ export function ProfilePage() {
 
         </div>
       </div>
+
+      <PersonaSetupDialog
+        open={personaDialogOpen}
+        onboarding={personaOnboarding}
+        persona={persona}
+        onOpenChange={(open) => {
+          setPersonaDialogOpen(open);
+          if (!open) {
+            setPersonaOnboarding(false);
+          }
+        }}
+        onPersonaChange={updatePersonaState}
+        onNotice={setMessage}
+      />
     </PageShell>
   );
 }

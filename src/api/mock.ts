@@ -87,8 +87,10 @@ import type {
   RetryAnalysisResponse,
   SendEmailCodeRequest,
   SendEmailCodeResponse,
+  SendUserPersonaMessageRequest,
   ShareReportRequest,
   ShareReportResponse,
+  StartUserPersonaConversationRequest,
   SubmitTaskInterventionRequest,
   SubmitTaskInterventionResponse,
   TaskEvent,
@@ -107,6 +109,8 @@ import type {
   UpdateAlertResponse,
   UpdateUserProfileRequest,
   UpdateUserProfileResponse,
+  UserPersona,
+  UserPersonaConversationResponse,
   UserProfile,
   VerifyEmailRequest,
   VerifyEmailResponse,
@@ -535,6 +539,17 @@ export const mockUserProfile: UserProfile = {
   permissions: ['user:profile:read', 'user:profile:write', 'research:task:create', 'report:read'],
   email_verified: true,
   last_login_at: null,
+};
+
+let mockUserPersona: UserPersona = {
+  has_persona: false,
+  content_markdown: '',
+  summary: '',
+  source_thread_id: '',
+  model_id: '',
+  skipped_at: null,
+  updated_at: null,
+  should_prompt_persona: true,
 };
 
 const adminPermissionTree: AdminPermissionTreeNode[] = [
@@ -1343,6 +1358,8 @@ export async function mockLogin(payload: LoginRequest): Promise<LoginResponse> {
     access_token: 'mock-access-token',
     refresh_token: 'mock-refresh-token',
     expires_in: 7200,
+    persona: { ...mockUserPersona },
+    should_prompt_persona: mockUserPersona.should_prompt_persona,
   };
 }
 
@@ -1357,6 +1374,8 @@ export async function mockRegister(payload: RegisterRequest): Promise<RegisterRe
     access_token: 'mock-access-token',
     refresh_token: 'mock-refresh-token',
     need_initialize: false,
+    persona: { ...mockUserPersona },
+    should_prompt_persona: true,
   };
 }
 
@@ -1431,7 +1450,127 @@ export async function mockPlatformInitialize(
 }
 
 export async function mockGetCurrentUserProfile(): Promise<UserProfile> {
-  return { ...mockUserProfile };
+  return {
+    ...mockUserProfile,
+    persona: { ...mockUserPersona },
+    should_prompt_persona: mockUserPersona.should_prompt_persona,
+  };
+}
+
+export async function mockGetUserPersona(): Promise<UserPersona> {
+  return { ...mockUserPersona };
+}
+
+export async function mockSkipUserPersonaPrompt(): Promise<UserPersona> {
+  mockUserPersona = {
+    ...mockUserPersona,
+    should_prompt_persona: false,
+    skipped_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  return { ...mockUserPersona };
+}
+
+export async function mockClearUserPersona(): Promise<UserPersona> {
+  mockUserPersona = {
+    has_persona: false,
+    content_markdown: '',
+    summary: '',
+    source_thread_id: '',
+    model_id: '',
+    skipped_at: null,
+    updated_at: new Date().toISOString(),
+    should_prompt_persona: true,
+  };
+  return { ...mockUserPersona };
+}
+
+export async function mockStartUserPersonaConversation(
+  payload: StartUserPersonaConversationRequest
+): Promise<UserPersonaConversationResponse> {
+  const modelId = payload.model_id || mockModelsAvailable.recommended_model_id || mockModelsAvailable.models[0]?.model_id || '';
+  return {
+    thread_id: `mock-persona-${Date.now()}`,
+    model_id: modelId,
+    status: 'draft',
+    latest_user_message: '',
+    latest_assistant_message: '我会用几个短问题帮你设定调研偏好。先选一个最接近你的身份：投资研究、企业经营、行业分析、产品/市场，或直接补充一句。',
+    last_error: '',
+    presented_report_markdown: '',
+    persona: { ...mockUserPersona },
+    messages: [
+      {
+        role: 'assistant',
+        content: '我会用几个短问题帮你设定调研偏好。先选一个最接近你的身份：投资研究、企业经营、行业分析、产品/市场，或直接补充一句。',
+      },
+    ],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export async function mockSendUserPersonaMessage(
+  threadId: string,
+  payload: SendUserPersonaMessageRequest
+): Promise<UserPersonaConversationResponse> {
+  const message = payload.message.trim();
+  const now = new Date().toISOString();
+  const isComplete = /完成|生成|报告|可以|提交|结束/.test(message);
+  const assistantMessage = isComplete
+    ? '已完成人设报告。后续调研会把这些偏好作为背景。'
+    : '已记录。接下来请选择你更看重的调研输出：关键结论、证据链、风险提示、可执行建议，或补充你的报告风格偏好。';
+
+  if (isComplete) {
+    const content = [
+      '# 用户调研人设分析',
+      '',
+      '## 背景画像',
+      message || '用户希望获得更贴合自身工作的调研支持。',
+      '',
+      '## 核心诉求',
+      '快速形成可追溯、可复核的商业调研判断。',
+      '',
+      '## 调研偏好',
+      '关注关键事实、来源可靠性、风险提示和结论依据。',
+      '',
+      '## 报告偏好',
+      '偏好结构清晰、先结论后论证的中文报告。',
+      '',
+      '## 给 8Feet 调研 AI 的上下文建议',
+      '在后续任务中优先突出证据质量、风险边界和可执行建议。',
+    ].join('\n');
+    mockUserPersona = {
+      has_persona: true,
+      content_markdown: content,
+      summary: '偏好结构清晰、证据充分、风险边界明确的商业调研报告。',
+      source_thread_id: threadId,
+      model_id: mockModelsAvailable.recommended_model_id || '',
+      skipped_at: null,
+      updated_at: now,
+      should_prompt_persona: false,
+    };
+  }
+
+  return {
+    thread_id: threadId,
+    model_id: mockUserPersona.model_id || mockModelsAvailable.recommended_model_id || '',
+    status: isComplete ? 'completed' : 'draft',
+    latest_user_message: message,
+    latest_assistant_message: assistantMessage,
+    last_error: '',
+    presented_report_markdown: isComplete ? mockUserPersona.content_markdown : '',
+    persona: { ...mockUserPersona },
+    messages: [
+      {
+        role: 'assistant',
+        content: '我会用几个短问题帮你设定调研偏好。先选一个最接近你的身份：投资研究、企业经营、行业分析、产品/市场，或直接补充一句。',
+      },
+      { role: 'user', content: message },
+      { role: 'assistant', content: assistantMessage },
+    ],
+    created_at: now,
+    updated_at: now,
+  };
 }
 
 export async function mockUpdateCurrentUserProfile(
