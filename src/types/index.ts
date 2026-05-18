@@ -187,7 +187,7 @@ export interface CreateResearchTaskRequest {
   object_name: string;
   object_type?: ObjectType;
   time_range: string;
-  source_authority: string;
+  source_authority: 'authoritative' | 'balanced' | 'unrestricted' | string;
   source_types?: string[];
   search_params?: Record<string, unknown>;
   llm_config_id?: number;

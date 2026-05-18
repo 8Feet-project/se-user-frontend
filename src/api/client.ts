@@ -225,6 +225,7 @@ function buildResearchTaskPayload(payload: CreateResearchTaskRequest) {
     source_authority: payload.source_authority,
     source_types: payload.source_types,
     search_params: payload.search_params,
+    user_source_requirements: payload.search_params?.user_source_requirements,
     llm_config_id: payload.llm_config_id,
     model_id: payload.model_id,
     multi_model_ids: payload.multi_model_ids,

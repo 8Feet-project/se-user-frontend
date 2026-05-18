@@ -1,16 +1,21 @@
 import {
-  Bot,
   CalendarDays,
   ChevronDown,
   Check,
   CornerDownLeft,
+  Database,
   FastForward,
+  FileText,
   Layers3,
+  Newspaper,
   Plus,
-  Search,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Star,
+  Target,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,8 +35,12 @@ import { Label } from '@/components/ui/label';
 import type { FavoriteItem, ModelAvailableItem } from '@/types';
 
 const objectTypes = ['company', 'stock', 'commodity'] as const;
-const defaultSourceAuthority = 'high';
-const defaultSourceTypes = ['news', 'report'];
+type SourceAuthority = 'authoritative' | 'balanced' | 'unrestricted';
+type LaunchConfigKey = 'timeRange' | 'sourceTypes' | 'sourceAuthority' | 'researchFocus';
+
+const defaultSourceAuthority: SourceAuthority = 'balanced';
+const defaultSourceTypes = ['official', 'data', 'research', 'news'];
+const defaultResearchFocus = ['overview'];
 
 const objectTypeOptions: Array<{
   value: (typeof objectTypes)[number];
@@ -50,11 +59,39 @@ const timeRangeOptions = [
   { value: '1y', label: '近 1 年' },
 ];
 
+const sourceAuthorityOptions: Array<{
+  value: SourceAuthority;
+  label: string;
+  description: string;
+}> = [
+  { value: 'authoritative', label: '权威', description: '优先官方披露、监管机构、交易所、公司官网和可复现结构化数据。' },
+  { value: 'balanced', label: '中等', description: '优先高可信来源，同时接受主流媒体、行业报告和专业数据库交叉验证。' },
+  { value: 'unrestricted', label: '无限制', description: '不限制来源范围，但低可信来源只能作为线索并明确标注不确定性。' },
+];
+
+const sourceTypeOptions = [
+  { value: 'official', label: '官方披露', description: '公告、监管、交易所、官网', icon: ShieldCheck },
+  { value: 'data', label: '结构化数据', description: '行情、财务、工商、处罚数据', icon: Database },
+  { value: 'research', label: '研报分析', description: '机构报告、行业研究', icon: FileText },
+  { value: 'news', label: '新闻舆情', description: '主流媒体与近期动态', icon: Newspaper },
+];
+
+const researchFocusOptions = [
+  { value: 'overview', label: '综合调研', description: '覆盖对象概况、证据、风险与结论' },
+  { value: 'finance', label: '财务经营', description: '经营数据、盈利质量和现金流' },
+  { value: 'competition', label: '竞争格局', description: '行业位置、竞品和替代风险' },
+  { value: 'risk', label: '风险合规', description: '监管、诉讼、处罚和政策影响' },
+  { value: 'recent', label: '近期动态', description: '公告、新闻、融资和舆情变化' },
+];
+
 export function TaskLaunchPage() {
   const navigate = useNavigate();
   const [objectName, setObjectName] = useState('');
   const [objectType, setObjectType] = useState<(typeof objectTypes)[number]>('company');
   const [timeRange, setTimeRange] = useState('30d');
+  const [sourceAuthority, setSourceAuthority] = useState<SourceAuthority>(defaultSourceAuthority);
+  const [sourceTypes, setSourceTypes] = useState<string[]>(defaultSourceTypes);
+  const [researchFocus, setResearchFocus] = useState<string[]>(defaultResearchFocus);
   const [modelId, setModelId] = useState('');
   const [enableCrossValidation, setEnableCrossValidation] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -67,6 +104,7 @@ export function TaskLaunchPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [activeConfigKey, setActiveConfigKey] = useState<LaunchConfigKey>('timeRange');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [favoriteUpdatingModelId, setFavoriteUpdatingModelId] = useState('');
 
@@ -149,8 +187,16 @@ export function TaskLaunchPage() {
         object_name: objectName.trim(),
         object_type: objectType,
         time_range: timeRange,
-        source_authority: defaultSourceAuthority,
-        source_types: defaultSourceTypes,
+        source_authority: sourceAuthority,
+        source_types: sourceTypes,
+        search_params: {
+          user_source_requirements: {
+            time_range: timeRange,
+            source_authority: sourceAuthority,
+            source_types: sourceTypes,
+            research_focus: researchFocus,
+          },
+        },
         model_id: (enableCrossValidation ? multiModelIds[0] : modelId) || undefined,
         multi_model_ids: enableCrossValidation ? multiModelIds : [],
         enable_cross_validation: enableCrossValidation,
@@ -191,6 +237,22 @@ export function TaskLaunchPage() {
 
     setModelId(targetModelId);
     setModelMenuOpen(false);
+  };
+
+  const toggleMultiValue = (currentValues: string[], value: string, fallbackValue: string) => {
+    if (currentValues.includes(value)) {
+      const nextValues = currentValues.filter((item) => item !== value);
+      return nextValues.length ? nextValues : [fallbackValue];
+    }
+    return [...currentValues, value];
+  };
+
+  const handleToggleSourceType = (value: string) => {
+    setSourceTypes((prev) => toggleMultiValue(prev, value, defaultSourceTypes[0]));
+  };
+
+  const handleToggleResearchFocus = (value: string) => {
+    setResearchFocus((prev) => toggleMultiValue(prev, value, defaultResearchFocus[0]));
   };
 
   const handleRemoveSelectedModel = (targetModelId: string) => {
@@ -260,6 +322,133 @@ export function TaskLaunchPage() {
 
   const currentObjectType = objectTypeOptions.find((item) => item.value === objectType) ?? objectTypeOptions[0];
   const currentTimeRange = timeRangeOptions.find((item) => item.value === timeRange)?.label ?? timeRange;
+  const currentAuthority = sourceAuthorityOptions.find((item) => item.value === sourceAuthority) ?? sourceAuthorityOptions[0];
+  const selectedSourceTypeLabels = sourceTypeOptions
+    .filter((item) => sourceTypes.includes(item.value))
+    .map((item) => item.label);
+  const selectedResearchFocusLabels = researchFocusOptions
+    .filter((item) => researchFocus.includes(item.value))
+    .map((item) => item.label);
+  const configItems: Array<{
+    key: LaunchConfigKey;
+    label: string;
+    value: string;
+    icon: LucideIcon;
+  }> = [
+    { key: 'timeRange', label: '时间范围', value: currentTimeRange, icon: CalendarDays },
+    { key: 'sourceTypes', label: '信息源类型', value: selectedSourceTypeLabels.join('、') || '未选择', icon: Layers3 },
+    { key: 'sourceAuthority', label: '来源要求', value: currentAuthority.label, icon: ShieldCheck },
+    { key: 'researchFocus', label: '调研重点', value: selectedResearchFocusLabels.join('、') || '未选择', icon: Target },
+  ];
+
+  const renderConfigSubmenu = () => {
+    if (activeConfigKey === 'timeRange') {
+      return (
+        <>
+          <div className="px-3 py-2">
+            <p className="text-xs font-medium text-slate-400">时间范围</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">告诉 AI 优先覆盖哪个时间窗口。</p>
+          </div>
+          {timeRangeOptions.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setTimeRange(item.value)}
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.05] hover:text-slate-100"
+            >
+              {item.label}
+              {timeRange === item.value ? <Check size={15} className="text-[#63cab7]" /> : null}
+            </button>
+          ))}
+        </>
+      );
+    }
+
+    if (activeConfigKey === 'sourceAuthority') {
+      return (
+        <>
+          <div className="px-3 py-2">
+            <p className="text-xs font-medium text-slate-400">子项信息来源要求</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">会作为用户要求写入调研 prompt。</p>
+          </div>
+          {sourceAuthorityOptions.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setSourceAuthority(item.value)}
+              className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
+            >
+              <span className="mt-0.5 flex h-5 w-5 items-center justify-center text-[#63cab7]">
+                {sourceAuthority === item.value ? <Check size={15} /> : null}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-slate-200">{item.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+              </span>
+            </button>
+          ))}
+        </>
+      );
+    }
+
+    if (activeConfigKey === 'sourceTypes') {
+      return (
+        <>
+          <div className="px-3 py-2">
+            <p className="text-xs font-medium text-slate-400">信息源类型</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">可多选，至少保留一项。</p>
+          </div>
+          {sourceTypeOptions.map((item) => {
+            const selected = sourceTypes.includes(item.value);
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => handleToggleSourceType(item.value)}
+                className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
+              >
+                <Icon size={16} className={selected ? 'mt-0.5 text-[#63cab7]' : 'mt-0.5 text-slate-500'} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-slate-200">{item.label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+                </span>
+                {selected ? <Check size={15} className="mt-0.5 text-[#63cab7]" /> : null}
+              </button>
+            );
+          })}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="px-3 py-2">
+          <p className="text-xs font-medium text-slate-400">调研重点</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">可多选，AI 会优先覆盖这些子项。</p>
+        </div>
+        {researchFocusOptions.map((item) => {
+          const selected = researchFocus.includes(item.value);
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => handleToggleResearchFocus(item.value)}
+              className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
+            >
+              <span className="mt-0.5 flex h-5 w-5 items-center justify-center text-[#63cab7]">
+                {selected ? <Check size={15} /> : null}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-slate-200">{item.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+              </span>
+            </button>
+          );
+        })}
+      </>
+    );
+  };
 
   return (
     <PageShell title="发起调研" hideHeader contentFrame={false}>
@@ -340,26 +529,39 @@ export function TaskLaunchPage() {
                       {plusMenuOpen ? (
                         <div
                           id="launch-plus-menu"
-                          className="absolute bottom-12 left-0 z-30 w-64 rounded-2xl border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.24)]"
+                          className="absolute bottom-12 left-0 z-40 grid w-[min(42rem,calc(100vw-2rem))] gap-2 rounded-2xl border border-[var(--8feet-line-soft)] bg-[var(--8feet-bg-card)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:grid-cols-[14rem_minmax(18rem,1fr)]"
                         >
-                          <p className="px-3 py-2 text-xs font-medium text-slate-500">时间范围</p>
-                          {timeRangeOptions.map((item) => (
-                            <button
-                              key={item.value}
-                              type="button"
-                              onClick={() => {
-                                setTimeRange(item.value);
-                                setPlusMenuOpen(false);
-                              }}
-                              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.05] hover:text-slate-100"
-                            >
-                              <span className="inline-flex items-center gap-2">
-                                <CalendarDays size={15} className="text-[#63cab7]" />
-                                {item.label}
-                              </span>
-                              {timeRange === item.value ? <Check size={15} className="text-[#63cab7]" /> : null}
-                            </button>
-                          ))}
+                          <div className="space-y-1 border-b border-white/10 pb-2 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-2">
+                            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500">
+                              <SlidersHorizontal size={14} />
+                              调研配置
+                            </div>
+                            {configItems.map((item) => {
+                              const active = activeConfigKey === item.key;
+                              const Icon = item.icon;
+                              return (
+                                <button
+                                  key={item.key}
+                                  type="button"
+                                  onMouseEnter={() => setActiveConfigKey(item.key)}
+                                  onFocus={() => setActiveConfigKey(item.key)}
+                                  onClick={() => setActiveConfigKey(item.key)}
+                                  className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                    active ? 'bg-white/[0.06] text-slate-100' : 'text-slate-300 hover:bg-white/[0.04] hover:text-slate-100'
+                                  }`}
+                                >
+                                  <Icon size={16} className={active ? 'mt-0.5 shrink-0 text-[#63cab7]' : 'mt-0.5 shrink-0 text-slate-500'} />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-medium">{item.label}</span>
+                                    <span className="mt-1 block truncate text-xs text-slate-500">{item.value}</span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="max-h-[22rem] overflow-y-auto pr-1">
+                            {renderConfigSubmenu()}
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -393,6 +595,14 @@ export function TaskLaunchPage() {
                     <span className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-slate-500">
                       <Layers3 size={15} />
                       {currentTimeRange}
+                    </span>
+                    <span className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-slate-500">
+                      <ShieldCheck size={15} />
+                      {currentAuthority.label}
+                    </span>
+                    <span className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-slate-500">
+                      <Target size={15} />
+                      {selectedResearchFocusLabels.length} 个重点
                     </span>
                   </div>
 
