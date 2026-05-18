@@ -917,6 +917,31 @@ function approvalActionText(action: ApprovalAction) {
   }
 }
 
+function authorityLabelFromReference(reference: {
+  authority_score?: number | string;
+  authority_tier?: string;
+  authority_label?: string;
+}) {
+  if (reference.authority_label) {
+    return reference.authority_label;
+  }
+  const score = Number(reference.authority_score);
+  if (Number.isFinite(score)) {
+    if (score <= 5) {
+      return `${Math.max(1, Math.min(5, Math.round(score)))}档`;
+    }
+    if (score >= 90) return '5档 官方/一手';
+    if (score >= 75) return '4档 专业/高可信';
+    if (score >= 55) return '3档 主流/可参考';
+    if (score >= 35) return '2档 二手/需核验';
+    return '1档 低可信/线索';
+  }
+  if (reference.authority_tier) {
+    return reference.authority_tier;
+  }
+  return '';
+}
+
 function deriveWorkflowProgress(
   nodes: WorkflowNode[],
   taskStatus?: ResearchTaskStatusResponse['status']
@@ -2020,6 +2045,7 @@ export function TaskProcessPage() {
                   <div className="max-h-[34rem] space-y-3 overflow-y-auto pr-1">
                     {sortedReferences.map((reference, index) => {
                       const number = reference.index_number && reference.index_number > 0 ? reference.index_number : index + 1;
+                      const authorityLabel = authorityLabelFromReference(reference);
                       return (
                         <div key={reference.reference_id || `${reference.url}-${index}`} className="panel-subtle p-3">
                           <div className="flex items-start gap-3">
@@ -2034,8 +2060,8 @@ export function TaskProcessPage() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             {reference.source_platform ? <span className="data-pill">{reference.source_platform}</span> : null}
                             {reference.source_type ? <span className="data-pill">{reference.source_type}</span> : null}
-                            {reference.authority_score !== undefined && reference.authority_score !== null ? (
-                              <span className="data-pill">权威度 {reference.authority_score}</span>
+                            {authorityLabel ? (
+                              <span className="data-pill">权威度 {authorityLabel}</span>
                             ) : null}
                           </div>
                           {reference.url ? (

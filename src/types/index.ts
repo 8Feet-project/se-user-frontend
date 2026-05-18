@@ -283,6 +283,8 @@ export interface TaskFactsResponse {
     source_type?: string;
     authority_score?: number | string;
     authority_tier?: string;
+    authority_label?: string;
+    authority_reason?: string;
     summary?: string;
     evidence_path?: string;
     accessed_at?: string;
