@@ -655,6 +655,10 @@ export interface ReportCitation {
   source_url: string;
   source_type?: string;
   source_platform?: string;
+  authority_score?: number | string;
+  authority_tier?: string;
+  authority_label?: string;
+  authority_reason?: string;
   accessed_at?: string;
   reproduction_code?: string;
   bibtex?: string;

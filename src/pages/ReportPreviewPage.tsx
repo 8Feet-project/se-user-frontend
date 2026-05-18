@@ -20,6 +20,7 @@ import {
   getReportQa,
   getReports,
 } from '@/api/client';
+import { AuthorityBadge } from '@/components/common/AuthorityBadge';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -193,13 +194,21 @@ function CitationMetaPills({ citation }: { citation: ReportCitation }) {
     citation.source_type,
     citation.accessed_at ? `访问：${formatDateTime(citation.accessed_at)}` : '',
   ].filter(Boolean);
+  const hasAuthority = Boolean(citation.authority_label || citation.authority_score || citation.authority_tier);
 
-  if (!pills.length) {
+  if (!pills.length && !hasAuthority) {
     return null;
   }
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
+      <AuthorityBadge
+        label={citation.authority_label}
+        score={citation.authority_score}
+        tier={citation.authority_tier}
+        reason={citation.authority_reason}
+        className="!px-2 !py-0 text-[11px]"
+      />
       {pills.map((pill) => (
         <span key={pill} className="data-pill !px-2 !py-0.5 text-[11px]">
           {pill}
@@ -962,6 +971,13 @@ export function ReportPreviewPage() {
             {citationDetail ? (
               <div className="panel-subtle space-y-3 p-4 text-sm leading-7 text-slate-300">
                 <p className="font-medium text-slate-100">{citationDetail.source_title}</p>
+                <AuthorityBadge
+                  label={citationDetail.authority_label}
+                  score={citationDetail.authority_score}
+                  tier={citationDetail.authority_tier}
+                  reason={citationDetail.authority_reason}
+                  className="w-fit"
+                />
                 <p><span className="text-slate-500">类型：</span>{citationDetail.source_type || '未知'}</p>
                 {citationDetail.source_platform ? <p><span className="text-slate-500">来源平台：</span>{citationDetail.source_platform}</p> : null}
                 <p><span className="text-slate-500">发布时间：</span>{formatDateTime(citationDetail.published_at) || '未知'}</p>
