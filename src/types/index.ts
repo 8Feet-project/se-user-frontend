@@ -194,6 +194,7 @@ export interface CreateResearchTaskRequest {
   model_id?: string;
   multi_model_ids?: string[];
   enable_cross_validation: boolean;
+  auto_advance?: boolean;
 }
 
 export interface CreateResearchTaskResponse {
@@ -258,6 +259,7 @@ export interface ResearchTaskStatusResponse {
   current_node_id?: string;
   current_node_name?: string;
   waiting_intervention?: boolean;
+  auto_advance?: boolean;
   metrics_summary?: Array<{ label: string; value: string | number }>;
   available_actions?: string[];
 }
@@ -388,6 +390,10 @@ export interface WorkflowNodePayload {
   report_created_at?: string;
   tool_names?: string[];
   report_tool_names?: string[];
+  next_action?: string;
+  execution_plan?: string;
+  approval_options?: string[];
+  auto_accepted?: boolean;
 }
 
 export interface WorkflowNode {
@@ -461,12 +467,25 @@ export interface TaskInterventionDetailResponse {
   preview_data: Record<string, unknown>;
 }
 
-export type TaskInterventionAction = 'confirm_continue' | 'update_rules' | 'skip_intervention';
+export type TaskInterventionAction =
+  | 'confirm_continue'
+  | 'update_rules'
+  | 'skip_intervention'
+  | 'accept'
+  | 'replan'
+  | 'reject';
 
 export interface SubmitTaskInterventionRequest {
   action: TaskInterventionAction;
   rule_changes?: string | Record<string, unknown>;
   comment?: string;
+}
+
+export interface UpdateTaskAutoAdvanceResponse {
+  task_id: string;
+  auto_advance: boolean;
+  task_status?: ResearchTaskStatus;
+  resumed?: boolean;
 }
 
 export interface SubmitTaskInterventionResponse {

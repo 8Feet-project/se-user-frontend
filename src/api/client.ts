@@ -71,6 +71,7 @@ import {
   mockUpdateAdminModel,
   mockUpdateAdminUser,
   mockUpdateAlert,
+  mockUpdateTaskAutoAdvance,
   mockSubmitTaskIntervention,
   mockVerifyEmail,
 } from './mock';
@@ -176,6 +177,7 @@ import type {
   TestAdminModelConnectionResponse,
   TriggerCrossValidationRequest,
   TriggerCrossValidationResponse,
+  UpdateTaskAutoAdvanceResponse,
   UpdateAdminModelRequest,
   UpdateAdminModelResponse,
   UpdateAdminUserRequest,
@@ -227,6 +229,7 @@ function buildResearchTaskPayload(payload: CreateResearchTaskRequest) {
     model_id: payload.model_id,
     multi_model_ids: payload.multi_model_ids,
     enable_cross_validation: payload.enable_cross_validation,
+    auto_advance: payload.auto_advance,
   };
 }
 
@@ -587,6 +590,19 @@ export async function getResearchTaskWorkflow(taskId: string): Promise<TaskWorkf
     return { ...mockTaskWorkflow, task_id: taskId || mockTaskWorkflow.task_id };
   }
   return request<TaskWorkflowResponse>(`/research/tasks/${taskId}/workflow`);
+}
+
+export async function updateTaskAutoAdvance(
+  taskId: string,
+  autoAdvance: boolean
+): Promise<UpdateTaskAutoAdvanceResponse> {
+  if (useMock) {
+    return mockUpdateTaskAutoAdvance(taskId, autoAdvance);
+  }
+  return request<UpdateTaskAutoAdvanceResponse>(`/research/tasks/${taskId}/auto-advance`, {
+    method: 'POST',
+    body: JSON.stringify({ auto_advance: autoAdvance }),
+  });
 }
 
 export async function getTaskFacts(taskId: string): Promise<TaskFactsResponse> {

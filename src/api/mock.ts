@@ -98,6 +98,7 @@ import type {
   TaskWorkflowResponse,
   TriggerCrossValidationRequest,
   TriggerCrossValidationResponse,
+  UpdateTaskAutoAdvanceResponse,
   UpdateAdminModelRequest,
   UpdateAdminModelResponse,
   UpdateAdminUserRequest,
@@ -279,12 +280,13 @@ export const mockTaskStatus: ResearchTaskStatusResponse = {
   current_node_id: 'agent-step-3',
   current_node_name: '结构化分析与交叉验证',
   waiting_intervention: true,
+  auto_advance: false,
   metrics_summary: [
     { label: '已采集事实', value: 128 },
     { label: '低置信度事实', value: 6 },
     { label: '待确认冲突簇', value: 2 },
   ],
-  available_actions: ['confirm_continue', 'update_rules', 'skip_intervention'],
+  available_actions: ['accept', 'replan', 'reject'],
 };
 
 export const mockTaskWorkflow: TaskWorkflowResponse = {
@@ -472,16 +474,20 @@ export const mockTaskWorkflow: TaskWorkflowResponse = {
     },
     {
       node_id: 'agent-step-3',
-      node_name: 'Agent 步骤 3',
-      node_kind: 'agent_step',
+      node_name: '确认下一步分析计划',
+      node_kind: 'human_review',
       node_status: 'waiting_user',
       description: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
       summary: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
       updated_at: '2026-04-06T09:04:00Z',
       can_intervene: true,
       payload: {
-        planning: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
-        tools: [],
+        event_type: 'step_approval',
+        next_action: '确认下一步分析计划',
+        execution_plan: '先统一游戏业务收入口径，再继续生成报告并标注采用的数据标准。',
+        text: '确认下一步分析计划\n先统一游戏业务收入口径，再继续生成报告并标注采用的数据标准。',
+        approval_options: ['accept', 'replan', 'reject'],
+        auto_accepted: false,
         source_node_ids: ['raw-11'],
       },
     },
@@ -1731,21 +1737,18 @@ const mockTaskInterventionsMap: Record<string, Record<string, TaskInterventionDe
     'agent-step-3': {
       task_id: 'task-002',
       node_id: 'agent-step-3',
-      node_name: '结构化分析与交叉验证',
-      intervention_type: 'manual_review',
+      node_name: '确认下一步分析计划',
+      intervention_type: 'step_approval',
       status: 'waiting_user',
-      reason: '检测到游戏业务收入口径存在差异，需要人工确认是否采用国际财务报告准则数据。',
-      suggested_action: '请确认数据口径后继续生成报告。',
+      reason: '先统一游戏业务收入口径，再继续生成报告并标注采用的数据标准。',
+      suggested_action: 'accept',
       current_params: {
-        report_mode: 'full',
-        confidence_threshold: 0.8,
-        contradiction_policy: 'hold_for_review',
+        next_action: '确认下一步分析计划',
+        execution_plan: '先统一游戏业务收入口径，再继续生成报告并标注采用的数据标准。',
       },
       preview_data: {
-        pending_facts: 12,
-        low_confidence_facts: 6,
-        contradiction_groups: 2,
-        sample_titles: ['动力电池价格战影响毛利率', '海外扩产节奏与订单兑现差异'],
+        approval_options: ['accept', 'replan', 'reject'],
+        auto_accepted: false,
       },
     },
   },
@@ -1767,9 +1770,52 @@ export async function mockGetTaskIntervention(
   return {
     node_id: nodeId,
     node_name: nodeId,
-    intervention_type: 'manual_review',
+    intervention_type: 'step_approval',
     current_params: { enabled: true },
-    preview_data: {},
+    preview_data: { approval_options: ['accept', 'replan', 'reject'] },
+  };
+}
+
+export async function mockUpdateTaskAutoAdvance(
+  taskId: string,
+  autoAdvance: boolean
+): Promise<UpdateTaskAutoAdvanceResponse> {
+  if (taskId === mockTaskStatus.task_id) {
+    mockTaskStatus.auto_advance = autoAdvance;
+  }
+
+  let resumed = false;
+  if (autoAdvance && taskId === 'task-002' && mockTaskStatus.waiting_intervention) {
+    resumed = true;
+    mockTaskStatus.status = 'analyzing';
+    mockTaskStatus.current_stage = 'analysis_resume';
+    mockTaskStatus.hint = '自动推进已接受当前计划，系统恢复结构化分析。';
+    mockTaskStatus.waiting_intervention = false;
+    mockTaskStatus.available_actions = ['retry_analysis', 'cancel_task'];
+    mockTaskWorkflow.waiting_intervention_node_id = undefined;
+    mockTaskWorkflow.nodes = mockTaskWorkflow.nodes.map((node) => {
+      if (node.node_id !== 'agent-step-3') {
+        return node;
+      }
+      return {
+        ...node,
+        node_status: 'completed',
+        summary: '自动推进已接受该步骤计划。',
+        finished_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        payload: {
+          ...(node.payload ?? {}),
+          auto_accepted: true,
+        },
+      };
+    });
+  }
+
+  return {
+    task_id: taskId,
+    auto_advance: autoAdvance,
+    task_status: mockTaskStatus.status,
+    resumed,
   };
 }
 
@@ -1786,17 +1832,17 @@ export async function mockSubmitTaskIntervention(
       task_id: taskId,
       node_id: nodeId,
       node_name: nodeId,
-      intervention_type: 'manual_review',
+      intervention_type: 'step_approval',
       status: 'waiting_user',
       current_params: {},
-      preview_data: {},
+      preview_data: { approval_options: ['accept', 'replan', 'reject'] },
     };
   }
 
   const target = mockTaskInterventionsMap[taskId][nodeId];
   const task = mockResearchTasks.list.find((item) => item.task_id === taskId);
 
-  if (payload.action === 'update_rules' && payload.rule_changes !== undefined) {
+  if ((payload.action === 'update_rules' || payload.action === 'replan') && payload.rule_changes !== undefined) {
     target.current_params = {
       ...target.current_params,
       rule_changes:
