@@ -1091,9 +1091,33 @@ export function TaskProcessPage() {
   const latestWorkflowNode = timelineNodes.length > 0 ? timelineNodes[timelineNodes.length - 1] : null;
   const latestWorkflowTime = latestWorkflowNode?.updated_at;
   const isTaskActive = Boolean(status && ACTIVE_TASK_STATUSES.has(status.status));
+  const isTaskCompleted = status?.status === 'completed';
   const liveSourceNode = waitingNode ?? activeNode ?? latestWorkflowNode;
   const liveText = workflowNodeLiveText(liveSourceNode) || status?.hint || '';
   const isLiveStreaming = Boolean(isTaskActive && !waitingNode && liveSourceNode && realtimeState !== 'idle');
+  const currentStageNodeText = status?.current_node_name ?? activeNode?.node_name ?? '--';
+  const completedFocusTitle = '调研已完成';
+  const completedFocusDescription = 'AI 已完成本次调研并生成最终报告。请点击“查看报告”查看完整结果；如需进一步核验，可以启动交叉验证。';
+  const completedJudgmentText = '主流程已经结束，当前页面保留流程记录和参考信息，最终结论以报告页内容为准。';
+  const completedLiveText = '完整最终回复已收纳到报告页，本页仅展示流程轨迹和操作入口。';
+  const focusTitle = isTaskCompleted
+    ? completedFocusTitle
+    : waitingNode
+      ? waitingNode.node_name
+      : currentStageNodeText === '--'
+        ? '等待任务加载'
+        : currentStageNodeText;
+  const focusDescription = isTaskCompleted
+    ? completedFocusDescription
+    : waitingNode
+      ? waitingNode.summary ?? waitingNode.description ?? '该节点正在等待人工决策。'
+      : activeNode?.summary ?? activeNode?.description ?? latestWorkflowNode?.summary ?? latestWorkflowNode?.description ?? '当前没有新的阻塞信号。';
+  const focusJudgmentText = isTaskCompleted
+    ? completedJudgmentText
+    : waitingNode
+      ? '该节点正在等待人工处理。请刷新流程，或联系管理员确认。'
+      : '流程仍可自动推进，建议结合事件流判断是否需要介入。';
+  const focusLiveText = isTaskCompleted ? completedLiveText : liveText;
   const lastRealtimePayload = lastRealtimeMessage?.payload ?? {};
   const lastRealtimeStepName = typeof lastRealtimePayload.step_name === 'string' ? lastRealtimePayload.step_name : '';
   const liveMeta = [
@@ -1210,7 +1234,16 @@ export function TaskProcessPage() {
                 <div className="panel-subtle p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">当前阶段</p>
                   <p className="mt-3 text-lg font-semibold text-slate-100">{status?.current_stage ?? '--'}</p>
-                  <p className="mt-1 text-sm text-slate-400">{status?.current_node_name ?? activeNode?.node_name ?? '--'}</p>
+                  {isTaskCompleted ? (
+                    <ExpandableReplyText
+                      text={currentStageNodeText}
+                      maxLength={72}
+                      className="mt-1"
+                      textClassName="text-sm leading-6 text-slate-400"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-400">{currentStageNodeText}</p>
+                  )}
                 </div>
                 <div className="panel-subtle p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">流程进度</p>
@@ -1260,30 +1293,24 @@ export function TaskProcessPage() {
                   {waitingNode ? '当前阻塞点' : '当前关注点'}
                 </p>
                 <p className="mt-3 text-xl font-semibold text-slate-100">
-                  {waitingNode
-                    ? waitingNode.node_name
-                    : status?.current_node_name ?? activeNode?.node_name ?? '等待任务加载'}
+                  {focusTitle}
                 </p>
                 <p className="mt-3 text-sm leading-7 text-slate-300">
-                  {waitingNode
-                    ? waitingNode.summary ?? waitingNode.description ?? '该节点正在等待人工决策。'
-                    : activeNode?.summary ?? activeNode?.description ?? latestWorkflowNode?.summary ?? latestWorkflowNode?.description ?? '当前没有新的阻塞信号。'}
+                  {focusDescription}
                 </p>
 
                 <div className="mt-5 grid gap-3">
                   <div className="panel-subtle p-4">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500">当前判断</p>
                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {waitingNode
-                        ? '该节点正在等待人工处理。请刷新流程，或联系管理员确认。'
-                        : '流程仍可自动推进，建议结合事件流判断是否需要介入。'}
+                      {focusJudgmentText}
                     </p>
                   </div>
                   <LiveStreamPanel
-                    title="实时输出"
-                    text={liveText}
+                    title={isTaskCompleted ? '完成提示' : '实时输出'}
+                    text={focusLiveText}
                     meta={liveMeta || (latestWorkflowTime ? formatTime(latestWorkflowTime) : undefined)}
-                    active={isLiveStreaming}
+                    active={!isTaskCompleted && isLiveStreaming}
                   />
                 </div>
               </div>
