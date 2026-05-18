@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Check,
   CornerDownLeft,
+  FastForward,
   Layers3,
   Plus,
   Search,
@@ -56,6 +57,7 @@ export function TaskLaunchPage() {
   const [timeRange, setTimeRange] = useState('30d');
   const [modelId, setModelId] = useState('');
   const [enableCrossValidation, setEnableCrossValidation] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [multiModelIds, setMultiModelIds] = useState<string[]>([]);
   const [favoriteModelItems, setFavoriteModelItems] = useState<FavoriteItem[]>([]);
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>([]);
@@ -152,6 +154,7 @@ export function TaskLaunchPage() {
         model_id: (enableCrossValidation ? multiModelIds[0] : modelId) || undefined,
         multi_model_ids: enableCrossValidation ? multiModelIds : [],
         enable_cross_validation: enableCrossValidation,
+        auto_advance: autoAdvance,
       });
       setMessage('任务已创建，正在进入流程页。');
       navigate(`/process?task_id=${response.task_id}`);
@@ -372,6 +375,19 @@ export function TaskLaunchPage() {
                     >
                       <Sparkles size={16} />
                       交叉验证
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAutoAdvance((prev) => !prev)}
+                      className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition ${
+                        autoAdvance
+                          ? 'border-[var(--8feet-line-accent-strong)] bg-[var(--8feet-teal-dim)] text-[#63cab7]'
+                          : 'border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-300 hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100'
+                      }`}
+                    >
+                      <FastForward size={16} />
+                      自动推进
                     </button>
 
                     <span className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-slate-500">
