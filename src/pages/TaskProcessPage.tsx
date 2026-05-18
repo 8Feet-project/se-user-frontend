@@ -928,13 +928,20 @@ function authorityLabelFromReference(reference: {
   const score = Number(reference.authority_score);
   if (Number.isFinite(score)) {
     if (score <= 5) {
-      return `${Math.max(1, Math.min(5, Math.round(score)))}档`;
+      const tierLabels: Record<number, string> = {
+        5: '官方/一手来源',
+        4: '专业高可信来源',
+        3: '主流可参考来源',
+        2: '二手待核验来源',
+        1: '低可信线索来源',
+      };
+      return tierLabels[Math.max(1, Math.min(5, Math.round(score)))] ?? '';
     }
-    if (score >= 90) return '5档 官方/一手';
-    if (score >= 75) return '4档 专业/高可信';
-    if (score >= 55) return '3档 主流/可参考';
-    if (score >= 35) return '2档 二手/需核验';
-    return '1档 低可信/线索';
+    if (score >= 90) return '官方/一手来源';
+    if (score >= 75) return '专业高可信来源';
+    if (score >= 55) return '主流可参考来源';
+    if (score >= 35) return '二手待核验来源';
+    return '低可信线索来源';
   }
   if (reference.authority_tier) {
     return reference.authority_tier;
