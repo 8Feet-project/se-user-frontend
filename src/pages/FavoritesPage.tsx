@@ -1,5 +1,6 @@
 import { Bot, FileText, Lightbulb, Plus, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   createFavoriteItem,
@@ -33,6 +34,7 @@ function favoriteTypeIcon(type: FavoriteType) {
 }
 
 export function FavoritesPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [models, setModels] = useState<ModelAvailableItem[]>([]);
@@ -157,6 +159,19 @@ export function FavoritesPage() {
     }
   };
 
+  const handleOpenFavoriteItem = (item: FavoriteItem) => {
+    if (item.favorite_type !== 'report') {
+      return;
+    }
+    if (!item.target_id.trim()) {
+      setMessage('这份报告暂时无法打开，请重新选择。');
+      return;
+    }
+    navigate(`/report?report_id=${encodeURIComponent(item.target_id)}`);
+  };
+
+  const isOpenableFavorite = (item: FavoriteItem) => item.favorite_type === 'report';
+
   return (
     <PageShell title="收藏夹">
       {message ? <div className="message-strip mb-6">{message}</div> : null}
@@ -192,7 +207,23 @@ export function FavoritesPage() {
                 <div className="panel-subtle p-4 text-sm text-slate-500">暂无已收藏的{favoriteTypeLabel(group.type)}。</div>
               ) : (
                 group.items.map((item) => (
-                  <div key={item.favorite_id} className="panel-subtle p-4">
+                  <div
+                    key={item.favorite_id}
+                    className={`panel-subtle p-4 ${isOpenableFavorite(item) ? 'cursor-pointer transition hover:border-[rgba(99,202,183,0.18)]' : ''}`}
+                    role={isOpenableFavorite(item) ? 'button' : undefined}
+                    tabIndex={isOpenableFavorite(item) ? 0 : undefined}
+                    aria-label={isOpenableFavorite(item) ? `打开报告 ${getFavoriteDisplayName(item)}` : undefined}
+                    onClick={() => handleOpenFavoriteItem(item)}
+                    onKeyDown={(event) => {
+                      if (!isOpenableFavorite(item)) {
+                        return;
+                      }
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpenFavoriteItem(item);
+                      }
+                    }}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-100">{getFavoriteDisplayName(item)}</p>
@@ -202,7 +233,10 @@ export function FavoritesPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => void handleDeleteItem(item.favorite_id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDeleteItem(item.favorite_id);
+                        }}
                         disabled={submitting}
                         aria-label={`取消收藏 ${getFavoriteDisplayName(item)}`}
                       >

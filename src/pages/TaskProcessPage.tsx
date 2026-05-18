@@ -101,11 +101,264 @@ function useStreamingText(text: string, active: boolean) {
   return visibleText;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readSerializedString(raw: string, quoteIndex: number) {
+  const quote = raw[quoteIndex];
+  if (quote !== "'" && quote !== '"') {
+    return undefined;
+  }
+
+  let result = '';
+  for (let index = quoteIndex + 1; index < raw.length; index += 1) {
+    const char = raw[index];
+    if (char === '\\') {
+      const next = raw[index + 1];
+      if (next === undefined) {
+        break;
+      }
+      if (next === 'n') result += '\n';
+      else if (next === 'r') result += '\r';
+      else if (next === 't') result += '\t';
+      else result += next;
+      index += 1;
+      continue;
+    }
+    if (char === quote) {
+      return result;
+    }
+    result += char;
+  }
+
+  return undefined;
+}
+
+function extractSerializedField(raw: string, field: string) {
+  const keyCandidates = [`'${field}'`, `"${field}"`];
+  for (const key of keyCandidates) {
+    const keyIndex = raw.indexOf(key);
+    if (keyIndex < 0) {
+      continue;
+    }
+    const colonIndex = raw.indexOf(':', keyIndex + key.length);
+    if (colonIndex < 0) {
+      continue;
+    }
+
+    let valueIndex = colonIndex + 1;
+    while (/\s/.test(raw[valueIndex] ?? '')) {
+      valueIndex += 1;
+    }
+
+    const quote = raw[valueIndex];
+    if (quote === "'" || quote === '"') {
+      return readSerializedString(raw, valueIndex);
+    }
+
+    const endIndex = raw.slice(valueIndex).search(/[,}]/);
+    const token = raw
+      .slice(valueIndex, endIndex >= 0 ? valueIndex + endIndex : undefined)
+      .trim();
+    return token || undefined;
+  }
+
+  return undefined;
+}
+
+function parseSerializedRecord(raw: string) {
+  const text = raw.trim();
+  if (!text.startsWith('{') || !text.endsWith('}')) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (isRecord(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // Some backend messages arrive as Python dict reprs, so fall back to field extraction.
+  }
+
+  const record: Record<string, unknown> = {};
+  const message = extractSerializedField(text, 'message');
+  const textValue = extractSerializedField(text, 'text');
+  const action = extractSerializedField(text, 'action');
+  const createReport = extractSerializedField(text, 'create_report');
+
+  if (message !== undefined) record.message = message;
+  if (textValue !== undefined) record.text = textValue;
+  if (action !== undefined) record.action = action;
+  if (createReport !== undefined) record.create_report = /^(true|1|yes)$/i.test(createReport);
+
+  return Object.keys(record).length > 0 ? record : null;
+}
+
+function stringField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
+function booleanField(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return /^(true|1|yes)$/i.test(value.trim());
+  return false;
+}
+
+function approvalOutcomeLabel(value?: string) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'accept' || normalized.includes('接受')) return '接受';
+  if (normalized === 'replan' || normalized.includes('重新') || normalized.includes('调整')) return '要求重新规划';
+  if (normalized === 'reject' || normalized.includes('拒绝')) return '拒绝';
+  if (normalized === 'update_rules' || normalized.includes('规则')) return '更新规则';
+  return value?.trim() ?? '';
+}
+
+function approvalResultText(value?: string) {
+  const label = approvalOutcomeLabel(value);
+  if (label === '接受') return '已接受';
+  if (label === '要求重新规划') return '需要重新规划';
+  if (label === '拒绝') return '已拒绝';
+  if (label === '更新规则') return '已更新规则';
+  return label || '已处理';
+}
+
+function cleanDisplayText(text: string) {
+  return text
+    .replace(/\\r\\n|\\n|\\r/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/调研任务\s*\[([^\]]+)]/g, '调研任务「$1」')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function friendlyRecordText(record: Record<string, unknown>) {
+  const metadata = isRecord(record.run_metadata) ? record.run_metadata : {};
+  const action = stringField(record, ['action', 'approval_action']) || stringField(metadata, ['approval_action']);
+  const message = cleanDisplayText(stringField(record, ['message', 'text', 'summary', 'detail']));
+  const createReport = booleanField(record, 'create_report') || booleanField(metadata, 'create_report');
+
+  if (message.includes('用户已对上一条关键步骤审批请求作出选择')) {
+    const approvalValue = message.match(/审批返回值:\s*([^\n]+)/)?.[1]?.trim() || action;
+    const reportSuffix = createReport ? '报告生成已加入后续流程。' : '';
+    return [`人工审批已${approvalOutcomeLabel(approvalValue) || '完成'}，流程将继续执行。`, reportSuffix]
+      .filter(Boolean)
+      .join('');
+  }
+
+  if (action) {
+    const messageOutcome = approvalOutcomeLabel(message);
+    const actionOutcome = approvalOutcomeLabel(action);
+    if (!message || messageOutcome === actionOutcome) {
+      return `处理结果：${approvalResultText(action)}。`;
+    }
+  }
+
+  if (message) {
+    return message;
+  }
+
+  return '';
+}
+
+function userFacingText(value: unknown, fallback = '流程状态已更新。') {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+
+  if (isRecord(value)) {
+    return friendlyRecordText(value) || fallback;
+  }
+
+  const rawText = cleanDisplayText(typeof value === 'string' ? value : String(value));
+  const parsedRecord = parseSerializedRecord(rawText);
+  if (parsedRecord) {
+    return friendlyRecordText(parsedRecord) || fallback;
+  }
+
+  if (rawText.startsWith('{') && rawText.endsWith('}')) {
+    return fallback;
+  }
+
+  return rawText;
+}
+
+function readableFieldLabel(key: string) {
+  const labels: Record<string, string> = {
+    input: '输入',
+    output: '输出',
+    query: '检索词',
+    queries: '检索词',
+    message: '消息',
+    action: '处理结果',
+    status: '状态',
+    error: '错误',
+    title: '标题',
+    report_id: '报告编号',
+    report_url: '报告链接',
+  };
+  return labels[key] ?? key.replace(/_/g, ' ');
+}
+
+function formatReadablePayloadValue(value: unknown, depth = 0): string {
+  if (value === undefined || value === null || value === '') {
+    return '暂无';
+  }
+
+  if (typeof value === 'string') {
+    return userFacingText(value, '技术详情已记录。') || '暂无';
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return '暂无';
+    }
+    return value
+      .slice(0, 20)
+      .map((item) => `${'  '.repeat(depth)}- ${formatReadablePayloadValue(item, depth + 1)}`)
+      .join('\n');
+  }
+
+  if (isRecord(value)) {
+    const friendly = friendlyRecordText(value);
+    if (friendly) {
+      return friendly;
+    }
+
+    const hiddenKeys = new Set(['run_metadata', 'approval_step_id', 'source_node_ids']);
+    const entries = Object.entries(value).filter(([, entryValue]) => entryValue !== undefined && entryValue !== null && entryValue !== '');
+    const visibleEntries = entries.filter(([key]) => !hiddenKeys.has(key));
+    if (visibleEntries.length === 0) {
+      return '技术详情已记录。';
+    }
+
+    return visibleEntries
+      .slice(0, 20)
+      .map(([key, entryValue]) => `${readableFieldLabel(key)}：${formatReadablePayloadValue(entryValue, depth + 1)}`)
+      .join('\n');
+  }
+
+  return String(value);
+}
+
 function formatPayloadPreview(value: unknown, maxLength = 180) {
   if (value === undefined || value === null || value === '') {
     return '暂无';
   }
-  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  const text = formatReadablePayloadValue(value);
   const compact = text.replace(/\s+/g, ' ').trim();
   if (!compact) {
     return '暂无';
@@ -117,7 +370,7 @@ function formatPayloadBlock(value: unknown) {
   if (value === undefined || value === null || value === '') {
     return '暂无';
   }
-  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  return formatReadablePayloadValue(value);
 }
 
 function workflowNodeLiveText(node?: WorkflowNode | null) {
@@ -126,7 +379,7 @@ function workflowNodeLiveText(node?: WorkflowNode | null) {
   }
   const payloadText = typeof node.payload?.text === 'string' ? node.payload.text : '';
   const planningText = node.node_kind === 'agent_step' ? agentStepPlanning(node as VisibleWorkflowNode) : '';
-  return String(payloadText || planningText || node.summary || node.description || node.node_name || '').trim();
+  return userFacingText(payloadText || planningText || node.summary || node.description || node.node_name || '').trim();
 }
 
 function realtimeReasonText(reason?: string) {
@@ -245,7 +498,7 @@ function agentStepPlanning(node: VisibleWorkflowNode) {
   if (node.node_kind !== 'agent_step') {
     return '';
   }
-  return String(node.payload?.planning || node.summary || node.description || '').trim();
+  return userFacingText(node.payload?.planning || node.summary || node.description || '').trim();
 }
 
 function isReportToolName(toolName?: string) {
@@ -326,14 +579,14 @@ function SubAgentNodeCard({
 }) {
   const isAgentStep = node.node_kind === 'agent_step';
   const planningText = isAgentStep
-    ? String(node.payload?.planning || node.summary || node.description || '').trim()
+    ? userFacingText(node.payload?.planning || node.summary || node.description || '').trim()
     : '';
   const nodeTitle = isAgentStep
     ? (planningText || '子代理已执行一轮工具调用')
-    : node.node_name;
+    : userFacingText(node.node_name);
   const bodyText = isAgentStep
     ? ''
-    : node.summary ?? node.description ?? '';
+    : userFacingText(node.summary ?? node.description ?? '');
   const compactNodeTitle = nodeTitle.replace(/\s+/g, ' ').trim();
   const visibleNodeTitle =
     compactNodeTitle.length > 120 ? `${compactNodeTitle.slice(0, 120)}...` : compactNodeTitle;
@@ -480,7 +733,7 @@ function ToolCallCard({
   onOpenReport: (url: string) => void;
 }) {
   const toolTitle = tool.display_name || tool.tool_name || `工具 ${index + 1}`;
-  const statusLine = tool.status_text || (tool.finished_at ? '工具已完成' : '工具执行中');
+  const statusLine = userFacingText(tool.status_text || (tool.finished_at ? '工具已完成' : '工具执行中'));
   const hidePayload = Boolean(tool.hide_payload || isReportToolName(tool.tool_name));
   const reportUrl = reportUrlFromPayload(taskId, tool);
   const hasSubAgents = Boolean(tool.subagent_workflows && tool.subagent_workflows.length > 0);
@@ -1199,8 +1452,8 @@ export function TaskProcessPage() {
   const focusDescription = isTaskCompleted
     ? completedFocusDescription
     : waitingNode
-      ? waitingNode.summary ?? waitingNode.description ?? '该节点正在等待人工决策。'
-      : activeNode?.summary ?? activeNode?.description ?? latestWorkflowNode?.summary ?? latestWorkflowNode?.description ?? '当前没有新的阻塞信号。';
+      ? userFacingText(waitingNode.summary ?? waitingNode.description ?? '该节点正在等待人工决策。')
+      : userFacingText(activeNode?.summary ?? activeNode?.description ?? latestWorkflowNode?.summary ?? latestWorkflowNode?.description ?? '当前没有新的阻塞信号。');
   const focusJudgmentText = isTaskCompleted
     ? completedJudgmentText
     : waitingNode
@@ -1455,10 +1708,10 @@ export function TaskProcessPage() {
                       const stepReportUrl = reportUrlFromPayload(taskId, step.payload);
                       const stepTitle = isAgentStep
                         ? (planningText || step.summary || 'Agent 已执行一轮工具调用')
-                        : step.node_name;
+                        : userFacingText(step.node_name);
                       const bodyText = isAgentStep
                         ? ''
-                        : step.summary ?? step.description ?? '该节点尚未返回更多说明。';
+                        : userFacingText(step.summary ?? step.description ?? '该节点尚未返回更多说明。');
                       const markerClass =
                         step.node_status === 'completed'
                           ? 'border-emerald-500/30 bg-emerald-500/14 text-emerald-300'
