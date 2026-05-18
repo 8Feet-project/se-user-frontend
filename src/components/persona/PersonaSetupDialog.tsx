@@ -127,13 +127,20 @@ export function PersonaSetupDialog({
 
   const handleSend = async (message?: string) => {
     const content = (message ?? input).trim();
-    if (!content || !conversation) {
+    if (!content || !conversation || busy) {
       return;
     }
+    const optimisticConversation: UserPersonaConversationResponse = {
+      ...conversation,
+      latest_user_message: content,
+      messages: [...conversation.messages, { role: 'user', content }],
+      updated_at: new Date().toISOString(),
+    };
+    setConversation(optimisticConversation);
+    setInput('');
     try {
       setBusy(true);
       setError('');
-      setInput('');
       const response = await sendUserPersonaMessage(conversation.thread_id, { message: content });
       setConversation(response);
       onPersonaChange(response.persona);
