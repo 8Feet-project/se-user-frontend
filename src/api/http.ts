@@ -29,9 +29,14 @@ function handleAuthFailure(message?: string) {
   redirectToWelcome(message || '登录状态已失效，请重新登录。');
 }
 
-function buildUrl(path: string, query?: Record<string, string | number | boolean | undefined>) {
+export function buildApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const base = `${API_BASE_URL}${API_PREFIX}${normalizedPath}`;
+  const apiPath = normalizedPath.startsWith(`${API_PREFIX}/`) ? normalizedPath.slice(API_PREFIX.length) : normalizedPath;
+  const base = `${API_BASE_URL}${API_PREFIX}${apiPath}`;
   if (!query) {
     return base;
   }
@@ -54,7 +59,7 @@ export async function request<T>(
 ): Promise<T> {
   const accessToken = localStorage.getItem('access_token');
   const hasBody = options.body !== undefined && options.body !== null;
-  const response = await fetch(buildUrl(path, query), {
+  const response = await fetch(buildApiUrl(path, query), {
     ...options,
     headers: {
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),

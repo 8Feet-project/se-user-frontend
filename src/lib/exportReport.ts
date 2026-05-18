@@ -1,4 +1,5 @@
 import type { ReportDetail } from '@/types';
+import { buildApiUrl } from '@/api/http';
 
 type ExportFormat = 'pdf' | 'md' | 'html';
 
@@ -105,6 +106,50 @@ function downloadBlob(blob: Blob, filename: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function openDownloadLink(url: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) {
+    return null;
+  }
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].trim().replace(/^"|"$/g, ''));
+  }
+  const filenameMatch = header.match(/filename="?([^";]+)"?/i);
+  return filenameMatch?.[1] ? filenameMatch[1].trim() : null;
+}
+
+export async function downloadReportFile(downloadUrl: string) {
+  if (/^https?:\/\//i.test(downloadUrl)) {
+    const url = new URL(downloadUrl);
+    if (url.origin !== window.location.origin) {
+      openDownloadLink(downloadUrl);
+      return;
+    }
+  }
+
+  const accessToken = localStorage.getItem('access_token');
+  const response = await fetch(buildApiUrl(downloadUrl), {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+  if (!response.ok) {
+    throw new Error(`下载失败 (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const filename = filenameFromContentDisposition(response.headers.get('content-disposition')) || 'report-export';
+  downloadBlob(blob, filename);
 }
 
 export function downloadReport(report: ReportDetail, format: ExportFormat) {

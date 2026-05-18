@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
-import { downloadReport } from '@/lib/exportReport';
+import { downloadReport, downloadReportFile } from '@/lib/exportReport';
 import type { FavoriteItem, ReportCitation, ReportCitationDetail, ReportDetail, ReportListItem, ReportQaItem } from '@/types';
 
 import './ReportPreviewPage.css';
@@ -717,7 +717,7 @@ export function ReportPreviewPage() {
           if (!status.download_url) {
             throw new Error('导出完成，但暂时没有下载链接。');
           }
-          triggerDownload(status.download_url);
+          await downloadReportFile(status.download_url);
           setMessage('报告导出完成，下载已开始。');
           return;
         }
