@@ -39,6 +39,10 @@
   color: rgb(203 213 225);
 }
 
+.report-markdown p {
+  white-space: pre-wrap;
+}
+
 .report-paragraph-group {
   position: relative;
   margin: -0.35rem -0.7rem;
