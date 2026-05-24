@@ -5,10 +5,12 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Database,
   FileSearch,
   GitBranch,
   ListChecks,
+  Network,
   PlayCircle,
   Presentation,
   RefreshCcw,
@@ -35,7 +37,6 @@ import { AuthorityBadge } from '@/components/common/AuthorityBadge';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import type {
   CrossValidationResultResponse,
@@ -61,6 +62,19 @@ const ACTIVE_TASK_STATUSES = new Set([
 ]);
 
 type RealtimeState = 'idle' | 'connecting' | 'connected' | 'polling';
+type ThreadRole = 'primary' | 'cross_model' | 'integrator';
+
+type ThreadOption = {
+  id: string;
+  role: ThreadRole;
+  label: string;
+  status?: ResearchTaskStatusResponse['status'] | CrossValidationResultResponse['status'] | string;
+  taskId?: string;
+  threadId?: string;
+  modelId?: string;
+  summary?: string;
+  error?: string;
+};
 
 function useStreamingText(text: string, active: boolean) {
   const [visibleText, setVisibleText] = useState(text);
@@ -877,6 +891,19 @@ function crossValidationStatusText(status?: CrossValidationResultResponse['statu
   }
 }
 
+function crossThreadRoleText(role: ThreadRole) {
+  switch (role) {
+    case 'primary':
+      return '主任务';
+    case 'cross_model':
+      return '模型线程';
+    case 'integrator':
+      return '整合线程';
+    default:
+      return '线程';
+  }
+}
+
 function realtimeStateText(state: RealtimeState) {
   switch (state) {
     case 'connecting':
@@ -1028,6 +1055,129 @@ function mergeWorkflowNodes(nodes: WorkflowNode[]) {
   return visibleNodes;
 }
 
+function crossActorFromNode(node: WorkflowNode) {
+  return String(node.payload?.actor || '').trim();
+}
+
+function crossThreadIdFromNode(node: WorkflowNode) {
+  return String(node.payload?.thread_id || '').trim();
+}
+
+function crossRunIdFromNode(node: WorkflowNode) {
+  return String(node.payload?.cross_validation_run_id || '').trim();
+}
+
+function modelNameFromOutput(output: CrossValidationResultResponse['model_outputs'][number], index: number) {
+  const model = output.model ?? {};
+  const name = String(model.model_name ?? model.model_id ?? output.model_id ?? '').trim();
+  return name || `模型 ${index + 1}`;
+}
+
+function buildCrossThreadOptions(
+  groupTaskId: string,
+  workflow: TaskWorkflowResponse | null,
+  result: CrossValidationResultResponse | null,
+  currentStatus?: ResearchTaskStatusResponse['status']
+): ThreadOption[] {
+  const options: ThreadOption[] = [
+    {
+      id: `task:${groupTaskId}`,
+      role: 'primary',
+      label: '主任务',
+      taskId: groupTaskId,
+      status: currentStatus,
+    },
+  ];
+
+  const existingIds = new Set(options.map((item) => item.id));
+  for (const [index, output] of (result?.model_outputs ?? []).entries()) {
+    const childTaskId = output.child_task_id ? String(output.child_task_id) : '';
+    const optionId = childTaskId || output.thread_id || `model:${output.model_id || index}`;
+    if (existingIds.has(optionId)) {
+      continue;
+    }
+    existingIds.add(optionId);
+    options.push({
+      id: optionId,
+      role: 'cross_model',
+      label: modelNameFromOutput(output, index),
+      taskId: childTaskId || undefined,
+      threadId: output.thread_id,
+      modelId: output.model_id,
+      status: output.status,
+      summary: output.summary,
+      error: output.error,
+    });
+  }
+
+  const nodes = workflow?.nodes ?? [];
+  for (const node of nodes) {
+    const payload = node.payload ?? {};
+    const childTasks = Array.isArray(payload.child_tasks) ? payload.child_tasks : [];
+    for (const item of childTasks) {
+      if (!isRecord(item)) {
+        continue;
+      }
+      const childTaskId = String(item.child_task_id || '').trim();
+      if (!childTaskId || existingIds.has(childTaskId)) {
+        continue;
+      }
+      const model = isRecord(item.model) ? item.model : {};
+      const label = String(model.model_name || model.model_id || '').trim() || `模型线程 ${options.length}`;
+      existingIds.add(childTaskId);
+      options.push({
+        id: childTaskId,
+        role: 'cross_model',
+        label,
+        taskId: childTaskId,
+        status: String(item.status || 'queued'),
+      });
+    }
+  }
+
+  const integratorNode = [...nodes].reverse().find((node) => crossActorFromNode(node) === 'integrator');
+  const integratorThreadId = integratorNode ? crossThreadIdFromNode(integratorNode) : '';
+  const runId = result?.run_id || (integratorNode ? crossRunIdFromNode(integratorNode) : '');
+  if ((runId || integratorThreadId || result?.report_content) && !existingIds.has('integrator')) {
+    options.push({
+      id: 'integrator',
+      role: 'integrator',
+      label: '总结 Agent',
+      threadId: integratorThreadId,
+      status: result?.status,
+      summary: result?.consensus_summary,
+    });
+  }
+
+  return options;
+}
+
+function workflowForThread(
+  source: TaskWorkflowResponse | null,
+  thread: ThreadOption | null,
+  groupTaskId: string
+): TaskWorkflowResponse | null {
+  if (!source || !thread) {
+    return source;
+  }
+  if (thread.role === 'primary') {
+    return source;
+  }
+  if (thread.role !== 'integrator') {
+    return source;
+  }
+
+  const nodes = source.nodes.filter((node) => crossActorFromNode(node) === 'integrator');
+  const nodeIdSet = new Set(nodes.map((node) => node.node_id));
+  return {
+    task_id: groupTaskId,
+    nodes,
+    edges: source.edges.filter((edge) => nodeIdSet.has(edge.from) && nodeIdSet.has(edge.to)),
+    current_node: nodes[nodes.length - 1]?.node_id ?? '',
+    waiting_intervention_node_id: '',
+  };
+}
+
 export function TaskProcessPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1038,6 +1188,9 @@ export function TaskProcessPage() {
   const [status, setStatus] = useState<ResearchTaskStatusResponse | null>(null);
   const [workflow, setWorkflow] = useState<TaskWorkflowResponse | null>(null);
   const [facts, setFacts] = useState<TaskFactsResponse | null>(null);
+  const [groupStatus, setGroupStatus] = useState<ResearchTaskStatusResponse | null>(null);
+  const [groupWorkflow, setGroupWorkflow] = useState<TaskWorkflowResponse | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState('');
   const [crossValidationTrigger, setCrossValidationTrigger] =
     useState<TriggerCrossValidationResponse | null>(null);
   const [crossValidationResult, setCrossValidationResult] =
@@ -1080,11 +1233,11 @@ export function TaskProcessPage() {
     return response.list;
   }, []);
 
-  const loadTaskData = useCallback(async (targetTaskId: string) => {
+  const loadTaskData = useCallback(async (targetTaskId: string, displayTaskId = targetTaskId) => {
     const [statusResult, workflowResult, factsResult] = await Promise.all([
-      getResearchTaskStatus(targetTaskId),
-      getResearchTaskWorkflow(targetTaskId),
-      getTaskFacts(targetTaskId),
+      getResearchTaskStatus(displayTaskId),
+      getResearchTaskWorkflow(displayTaskId),
+      getTaskFacts(displayTaskId),
     ]);
 
     setStatus(statusResult);
@@ -1100,9 +1253,14 @@ export function TaskProcessPage() {
     } finally {
       setLoadingCrossValidationResult(false);
     }
+
+    if (displayTaskId === targetTaskId) {
+      setGroupStatus(statusResult);
+      setGroupWorkflow(workflowResult);
+    }
   }, []);
 
-  const refreshTaskSnapshot = useCallback(async (targetTaskId: string, includeCandidates = false) => {
+  const refreshTaskSnapshot = useCallback(async (targetTaskId: string, includeCandidates = false, nextDisplayTaskId = targetTaskId) => {
     if (!targetTaskId) {
       return;
     }
@@ -1114,9 +1272,9 @@ export function TaskProcessPage() {
     realtimeRefreshInFlightRef.current = true;
     try {
       if (includeCandidates) {
-        await Promise.all([loadTaskCandidates(), loadTaskData(targetTaskId)]);
+        await Promise.all([loadTaskCandidates(), loadTaskData(targetTaskId, nextDisplayTaskId)]);
       } else {
-        await loadTaskData(targetTaskId);
+        await loadTaskData(targetTaskId, nextDisplayTaskId);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '同步任务进展失败');
@@ -1124,19 +1282,19 @@ export function TaskProcessPage() {
       realtimeRefreshInFlightRef.current = false;
       if (realtimeRefreshQueuedRef.current) {
         realtimeRefreshQueuedRef.current = false;
-        void refreshTaskSnapshot(targetTaskId, includeCandidates);
+        void refreshTaskSnapshot(targetTaskId, includeCandidates, nextDisplayTaskId);
       }
     }
   }, [loadTaskCandidates, loadTaskData]);
 
-  const scheduleRealtimeRefresh = useCallback((targetTaskId: string, includeCandidates = false) => {
+  const scheduleRealtimeRefresh = useCallback((targetTaskId: string, includeCandidates = false, nextDisplayTaskId = targetTaskId) => {
     if (realtimeRefreshTimerRef.current !== null) {
       window.clearTimeout(realtimeRefreshTimerRef.current);
     }
 
     realtimeRefreshTimerRef.current = window.setTimeout(() => {
       realtimeRefreshTimerRef.current = null;
-      void refreshTaskSnapshot(targetTaskId, includeCandidates);
+      void refreshTaskSnapshot(targetTaskId, includeCandidates, nextDisplayTaskId);
     }, 350);
   }, [refreshTaskSnapshot]);
 
@@ -1184,11 +1342,35 @@ export function TaskProcessPage() {
     setAutoAdvance(Boolean(status?.auto_advance));
   }, [status?.auto_advance, taskId]);
 
+  const currentTask = useMemo(() => tasks.find((item) => item.task_id === taskId) ?? null, [tasks, taskId]);
+  const isCrossValidationGroup = Boolean(
+    groupStatus?.cross_validation_enabled ||
+      currentTask?.cross_validation_enabled ||
+      crossValidationResult?.run_id ||
+      crossValidationResult?.model_outputs?.length
+  );
+  const threadOptions = useMemo(
+    () => taskId && isCrossValidationGroup
+      ? buildCrossThreadOptions(taskId, groupWorkflow ?? workflow, crossValidationResult, groupStatus?.status ?? status?.status)
+      : [],
+    [crossValidationResult, groupStatus?.status, groupWorkflow, isCrossValidationGroup, status?.status, taskId, workflow]
+  );
+  const activeThread = useMemo(() => {
+    if (!isCrossValidationGroup) {
+      return threadOptions[0] ?? null;
+    }
+    return threadOptions.find((item) => item.id === activeThreadId) ?? threadOptions[0] ?? null;
+  }, [activeThreadId, isCrossValidationGroup, threadOptions]);
+  const displayTaskId = activeThread?.role === 'cross_model' && activeThread.taskId ? activeThread.taskId : taskId;
+
   useEffect(() => {
     if (!taskId) {
       setStatus(null);
       setWorkflow(null);
       setFacts(null);
+      setGroupStatus(null);
+      setGroupWorkflow(null);
+      setActiveThreadId('');
       setCrossValidationTrigger(null);
       setCrossValidationResult(null);
       setLastRealtimeMessage(null);
@@ -1199,7 +1381,7 @@ export function TaskProcessPage() {
     const loadData = async () => {
       try {
         setLastRealtimeMessage(null);
-        await loadTaskData(taskId);
+        await loadTaskData(taskId, displayTaskId);
         setMessage('');
       } catch (error) {
         setMessage(error instanceof Error ? error.message : '加载任务执行态失败');
@@ -1207,7 +1389,33 @@ export function TaskProcessPage() {
     };
 
     void loadData();
-  }, [loadTaskData, taskId]);
+  }, [displayTaskId, loadTaskData, taskId]);
+
+  useEffect(() => {
+    if (!isCrossValidationGroup) {
+      if (activeThreadId) {
+        setActiveThreadId('');
+      }
+      return;
+    }
+    if (!activeThreadId && threadOptions[0]) {
+      setActiveThreadId(threadOptions[0].id);
+      return;
+    }
+    if (activeThreadId && !threadOptions.some((item) => item.id === activeThreadId)) {
+      setActiveThreadId(threadOptions[0]?.id ?? '');
+    }
+  }, [activeThreadId, isCrossValidationGroup, threadOptions]);
+
+  useEffect(() => {
+    if (!taskId || activeThread?.role !== 'integrator') {
+      return;
+    }
+    const nextWorkflow = workflowForThread(groupWorkflow, activeThread, taskId);
+    setStatus(groupStatus);
+    setWorkflow(nextWorkflow);
+    setFacts(null);
+  }, [activeThread, groupStatus, groupWorkflow, taskId]);
 
   useEffect(() => () => {
     if (realtimeRefreshTimerRef.current !== null) {
@@ -1216,12 +1424,13 @@ export function TaskProcessPage() {
   }, []);
 
   useEffect(() => {
-    if (!taskId) {
+    const realtimeTaskId = displayTaskId || taskId;
+    if (!realtimeTaskId) {
       setRealtimeState('idle');
       return;
     }
 
-    const realtimeUrl = buildResearchTaskRealtimeUrl(taskId);
+    const realtimeUrl = buildResearchTaskRealtimeUrl(realtimeTaskId);
     if (!realtimeUrl) {
       setRealtimeState('polling');
       return;
@@ -1244,14 +1453,14 @@ export function TaskProcessPage() {
       } catch {
         payload = null;
       }
-      if (payload?.task_id && payload.task_id !== taskId) {
+      if (payload?.task_id && payload.task_id !== realtimeTaskId) {
         return;
       }
       if (payload?.type === 'connection_ack' || payload?.type === 'pong') {
         return;
       }
       setLastRealtimeMessage(payload);
-      scheduleRealtimeRefresh(taskId, payload?.reason !== 'references_changed');
+      scheduleRealtimeRefresh(taskId, payload?.reason !== 'references_changed', displayTaskId);
     };
 
     socket.onerror = () => {
@@ -1270,7 +1479,7 @@ export function TaskProcessPage() {
       closedByEffect = true;
       socket.close();
     };
-  }, [scheduleRealtimeRefresh, taskId]);
+  }, [displayTaskId, scheduleRealtimeRefresh, taskId]);
 
   useEffect(() => {
     if (!taskId || realtimeState === 'connected') {
@@ -1281,11 +1490,11 @@ export function TaskProcessPage() {
     }
 
     const intervalId = window.setInterval(() => {
-      scheduleRealtimeRefresh(taskId, true);
+      scheduleRealtimeRefresh(taskId, true, displayTaskId);
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [realtimeState, scheduleRealtimeRefresh, status, taskId]);
+  }, [displayTaskId, realtimeState, scheduleRealtimeRefresh, status, taskId]);
 
   const waitingNode = useMemo(
     () => workflow?.nodes.find((node) => node.node_id === workflow.waiting_intervention_node_id) ?? null,
@@ -1309,7 +1518,7 @@ export function TaskProcessPage() {
     }
     try {
       setSubmitting(true);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId, displayTaskId)]);
       setMessage('流程数据已刷新。');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '刷新流程失败');
@@ -1326,7 +1535,7 @@ export function TaskProcessPage() {
     try {
       setSubmitting(true);
       const result = await cancelResearchTask(taskId);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId, displayTaskId)]);
       setMessage(`任务已更新为${statusText(result.status)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '取消任务失败');
@@ -1344,7 +1553,8 @@ export function TaskProcessPage() {
       setSubmitting(true);
       const result = await triggerCrossValidation(taskId);
       setCrossValidationTrigger(result);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId, taskId)]);
+      setActiveThreadId('integrator');
       setMessage(`交叉验证已触发，当前状态：${crossValidationStatusText(result.status)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '启动交叉验证失败');
@@ -1375,6 +1585,11 @@ export function TaskProcessPage() {
       setMessage('请先选择任务。');
       return;
     }
+    if (isCrossValidationGroup) {
+      setAutoAdvance(true);
+      setMessage('交叉验证任务始终自动推进，不可关闭。');
+      return;
+    }
 
     const nextAutoAdvance = !autoAdvance;
     setAutoAdvance(nextAutoAdvance);
@@ -1382,7 +1597,7 @@ export function TaskProcessPage() {
       setUpdatingAutoAdvance(true);
       const result = await updateTaskAutoAdvance(taskId, nextAutoAdvance);
       setAutoAdvance(result.auto_advance);
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId, displayTaskId)]);
       setMessage(
         result.auto_advance
           ? result.resumed
@@ -1416,7 +1631,7 @@ export function TaskProcessPage() {
       });
       setApprovalAction('accept');
       setApprovalComment('');
-      await Promise.all([loadTaskCandidates(), loadTaskData(taskId)]);
+      await Promise.all([loadTaskCandidates(), loadTaskData(taskId, displayTaskId)]);
       setMessage(`已提交：${approvalActionText(approvalAction)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '提交确认结果失败');
@@ -1425,7 +1640,6 @@ export function TaskProcessPage() {
     }
   };
 
-  const currentTask = useMemo(() => tasks.find((item) => item.task_id === taskId) ?? null, [tasks, taskId]);
   const workflowNodes = workflow?.nodes ?? [];
   const timelineNodes = useMemo(
     () => mergeWorkflowNodes(workflowNodes),
@@ -1510,7 +1724,11 @@ export function TaskProcessPage() {
       waitingNode?.description ||
       '等待 AI 提供执行计划。'
   );
-  const showApprovalPanel = Boolean(waitingNode && !autoAdvance);
+  const showApprovalPanel = Boolean(waitingNode && !autoAdvance && !isCrossValidationGroup);
+  const primaryThreadCount = Math.max(0, threadOptions.filter((item) => item.role === 'cross_model').length);
+  const visibleTaskName = currentTask?.object_name ?? groupStatus?.object_name ?? status?.object_name ?? '请选择一个调研任务';
+  const visibleTaskType = groupStatus?.object_type ?? status?.object_type ?? currentTask?.object_type ?? '--';
+  const reportTaskId = activeThread?.role === 'cross_model' && activeThread.taskId ? activeThread.taskId : taskId;
 
   return (
     <PageShell
@@ -1522,7 +1740,7 @@ export function TaskProcessPage() {
             <RefreshCcw size={14} />
             刷新流程
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${taskId}`)} disabled={!taskId}>
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${reportTaskId}`)} disabled={!reportTaskId}>
             <FileSearch size={14} />
             查看报告
           </Button>
@@ -1542,12 +1760,14 @@ export function TaskProcessPage() {
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-2xl font-semibold tracking-tight text-slate-100">
-                    {currentTask?.object_name ?? status?.object_name ?? '请选择一个调研任务'}
+                    {visibleTaskName}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
                     {!taskId
                       ? '先选择一个任务，界面会自动加载当前节点、过程事件与介入入口。'
-                      : status?.hint ?? '系统正在持续同步流程状态。'}
+                      : isCrossValidationGroup
+                        ? `交叉验证工作区包含 ${primaryThreadCount} 个模型线程和 1 个总结 Agent，可在同一组内切换查看。`
+                        : status?.hint ?? '系统正在持续同步流程状态。'}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1561,26 +1781,109 @@ export function TaskProcessPage() {
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ChevronsUpDown size={15} className="shrink-0 text-[#63cab7]" />
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">任务组</p>
+                  </div>
+                  <span className="text-xs text-slate-500">{tasks.length} 个主任务</span>
+                </div>
+                <div className="grid max-h-56 gap-2 overflow-y-auto pr-1 md:grid-cols-2 2xl:grid-cols-3">
+                  {tasks.map((task) => {
+                    const selected = task.task_id === taskId;
+                    return (
+                      <button
+                        key={task.task_id}
+                        type="button"
+                        onClick={() => {
+                          setActiveThreadId('');
+                          setTaskId(task.task_id);
+                          replaceTaskParam(task.task_id);
+                        }}
+                        className={`min-w-0 rounded-xl border p-3 text-left transition ${
+                          selected
+                            ? 'border-[rgba(99,202,183,0.45)] bg-[rgba(99,202,183,0.11)]'
+                            : 'border-white/10 bg-black/10 hover:border-white/20 hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-100">{task.object_name}</span>
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${statusTone(task.status)}`}>
+                            {statusText(task.status)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="data-pill !px-2 !py-0.5 text-[10px]">{task.object_type}</span>
+                          {task.cross_validation_enabled ? (
+                            <span className="data-pill !px-2 !py-0.5 text-[10px]">交叉验证组</span>
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {tasks.length === 0 ? (
+                    <div className="rounded-xl border border-white/10 bg-black/10 p-3 text-sm text-slate-500">
+                      暂无可打开的调研任务。
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {isCrossValidationGroup && threadOptions.length > 0 ? (
+                <div className="rounded-2xl border border-[rgba(99,202,183,0.18)] bg-[rgba(99,202,183,0.06)] p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Network size={15} className="shrink-0 text-[#63cab7]" />
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">线程切换</p>
+                    </div>
+                    <span className="text-xs text-slate-500">N+1：{primaryThreadCount}+1</span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-4">
+                    {threadOptions.map((thread) => {
+                      const selected = activeThread?.id === thread.id;
+                      const disabled = thread.role === 'cross_model' && !thread.taskId;
+                      return (
+                        <button
+                          key={thread.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setActiveThreadId(thread.id)}
+                          className={`min-w-0 rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ${
+                            selected
+                              ? 'border-[rgba(99,202,183,0.55)] bg-[rgba(99,202,183,0.16)]'
+                              : 'border-white/10 bg-black/10 hover:border-[rgba(99,202,183,0.3)] hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-100">{thread.label}</span>
+                            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${statusTone(thread.status as WorkflowNodeStatus)}`}>
+                              {thread.role === 'integrator'
+                                ? crossValidationStatusText(thread.status as CrossValidationResultResponse['status'])
+                                : statusText(thread.status as ResearchTaskStatusResponse['status'])}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span className="data-pill !px-2 !py-0.5 text-[10px]">{crossThreadRoleText(thread.role)}</span>
+                            {thread.threadId ? <span className="data-pill !px-2 !py-0.5 text-[10px]">thread</span> : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="panel-subtle p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">当前任务</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">当前线程</p>
                   <div className="mt-3">
-                    <Select
-                      id="process-task-id"
-                      value={taskId}
-                      onChange={(event) => {
-                        const nextTaskId = event.target.value;
-                        setTaskId(nextTaskId);
-                        replaceTaskParam(nextTaskId);
-                      }}
-                    >
-                      <option value="">请选择任务</option>
-                      {tasks.map((task) => (
-                        <option key={task.task_id} value={task.task_id}>
-                          {task.object_name} / {statusText(task.status)}
-                        </option>
-                      ))}
-                    </Select>
+                    <p className="truncate text-lg font-semibold text-slate-100">
+                      {activeThread?.label ?? visibleTaskName}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {activeThread ? crossThreadRoleText(activeThread.role) : '主任务'}
+                    </p>
                   </div>
                 </div>
                 <div className="panel-subtle p-4">
@@ -1624,8 +1927,9 @@ export function TaskProcessPage() {
                   />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="data-pill">对象：{status?.object_type ?? currentTask?.object_type ?? '--'}</span>
+                  <span className="data-pill">对象：{visibleTaskType}</span>
                   {facts ? <span className="data-pill">事实：{facts.fact_count}</span> : null}
+                  {isCrossValidationGroup ? <span className="data-pill">交叉验证：自动推进锁定</span> : null}
                 </div>
                 {stageItems.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -1706,7 +2010,7 @@ export function TaskProcessPage() {
                       const planningText = agentStepPlanning(step);
                       const isAgentStep = step.node_kind === 'agent_step';
                       const reportNode = isReportNode(step);
-                      const stepReportUrl = reportUrlFromPayload(taskId, step.payload);
+                      const stepReportUrl = reportUrlFromPayload(reportTaskId, step.payload);
                       const stepTitle = isAgentStep
                         ? (planningText || step.summary || 'Agent 已执行一轮工具调用')
                         : userFacingText(step.node_name);
@@ -1789,7 +2093,7 @@ export function TaskProcessPage() {
                                         key={`${step.node_id}-${tool.execution_id ?? toolIndex}`}
                                         tool={tool}
                                         index={toolIndex}
-                                        taskId={taskId}
+                                        taskId={reportTaskId}
                                         onOpenReport={(url) => navigate(url)}
                                       />
                                     ))}
@@ -1992,7 +2296,7 @@ export function TaskProcessPage() {
                 <Button size="sm" variant="secondary" onClick={handleCancelTask} disabled={submitting || !taskId}>
                   取消任务
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${taskId}`)} disabled={!taskId}>
+                <Button size="sm" variant="secondary" onClick={() => navigate(`/report?task_id=${reportTaskId}`)} disabled={!reportTaskId}>
                   查看报告
                 </Button>
               </div>

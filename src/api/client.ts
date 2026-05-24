@@ -118,6 +118,7 @@ import type {
   CreateReportQaResponse,
   CreateResearchTaskRequest,
   CreateResearchTaskResponse,
+  CrossValidationModelOutput,
   CrossValidationResultResponse,
   CurrentUserPermissionsResponse,
   DeleteAdminModelResponse,
@@ -246,6 +247,7 @@ function buildResearchTaskPayload(payload: CreateResearchTaskRequest) {
 type BackendResearchTaskListItem = Partial<ResearchTaskListItem> & {
   id?: StringLikeId;
   task_id?: StringLikeId;
+  parent_task_id?: StringLikeId;
   object_type?: string;
 };
 
@@ -256,15 +258,20 @@ function mapResearchTaskListItem(item: BackendResearchTaskListItem): ResearchTas
     object_type: normalizeObjectType(item.object_type) ?? 'company',
     status: item.status ?? 'pending',
     created_at: item.created_at ?? '',
+    parent_task_id: item.parent_task_id ? toStringId(item.parent_task_id) : undefined,
+    task_role: item.task_role,
+    cross_validation_enabled: item.cross_validation_enabled,
   };
 }
 
 type BackendCrossValidationResult = Omit<Partial<CrossValidationResultResponse>, 'model_outputs' | 'used_models'> & {
   difference_points?: string[];
   disagreements?: string[];
-  model_outputs?: Array<{
+  model_outputs?: Array<Partial<CrossValidationModelOutput> & {
     model_id?: StringLikeId;
-    summary?: string;
+    thread_id?: StringLikeId;
+    child_task_id?: StringLikeId;
+    child_report_id?: StringLikeId;
     conclusion?: string;
   }>;
   results?: Array<{
@@ -283,10 +290,24 @@ function mapCrossValidationResult(
     payload.model_outputs?.map((item) => ({
       model_id: toStringId(item.model_id),
       summary: item.summary ?? item.conclusion ?? '',
+      status: item.status,
+      thread_id: item.thread_id ? toStringId(item.thread_id) : undefined,
+      child_task_id: item.child_task_id ? toStringId(item.child_task_id) : undefined,
+      child_report_id: item.child_report_id ? toStringId(item.child_report_id) : undefined,
+      model: item.model,
+      error: item.error,
+      latency_ms: item.latency_ms,
     })) ??
     payload.results?.map((item) => ({
       model_id: toStringId(item.model_id ?? item.model),
       summary: item.summary ?? item.conclusion ?? '',
+      status: undefined,
+      thread_id: undefined,
+      child_task_id: undefined,
+      child_report_id: undefined,
+      model: undefined,
+      error: undefined,
+      latency_ms: undefined,
     })) ??
     [];
 
@@ -299,6 +320,8 @@ function mapCrossValidationResult(
     used_models: payload.used_models?.map((item) => toStringId(item)) ?? outputs.map((item) => item.model_id),
     consensus_summary: payload.consensus_summary,
     consensus_score: payload.consensus_score,
+    run_id: payload.run_id ? toStringId(payload.run_id) : undefined,
+    report_content: payload.report_content,
     updated_at: payload.updated_at,
   };
 }

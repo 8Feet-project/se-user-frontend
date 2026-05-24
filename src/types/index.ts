@@ -256,6 +256,9 @@ export interface ResearchTaskListItem {
   object_type: ObjectType;
   status: ResearchTaskStatus;
   created_at: string;
+  parent_task_id?: string;
+  task_role?: 'PRIMARY' | 'CROSS_MODEL' | string;
+  cross_validation_enabled?: boolean;
 }
 
 export interface ResearchTasksResponse {
@@ -302,6 +305,9 @@ export interface ResearchTaskStatusResponse {
   error_code?: string;
   object_name?: string;
   object_type?: ObjectType;
+  parent_task_id?: string;
+  task_role?: 'PRIMARY' | 'CROSS_MODEL' | string;
+  cross_validation_enabled?: boolean;
   current_node_id?: string;
   current_node_name?: string;
   waiting_intervention?: boolean;
@@ -380,6 +386,13 @@ export interface TriggerCrossValidationResponse {
 export interface CrossValidationModelOutput {
   model_id: string;
   summary: string;
+  status?: 'queued' | 'running' | 'completed' | 'failed' | string;
+  thread_id?: string;
+  child_task_id?: string;
+  child_report_id?: string;
+  model?: Record<string, unknown>;
+  error?: string;
+  latency_ms?: number;
 }
 
 export interface CrossValidationResultResponse {
@@ -391,6 +404,8 @@ export interface CrossValidationResultResponse {
   used_models: string[];
   consensus_summary?: string;
   consensus_score?: number;
+  run_id?: string;
+  report_content?: string;
   updated_at?: string;
 }
 
@@ -442,6 +457,21 @@ export interface WorkflowNodePayload {
   execution_plan?: string;
   approval_options?: string[];
   auto_accepted?: boolean;
+  cross_validation_run_id?: string;
+  actor?: string;
+  thread_id?: string;
+  child_task_id?: string | number;
+  model?: Record<string, unknown>;
+  model_count?: number;
+  status?: string;
+  error?: string;
+  latency_ms?: number;
+  report_paths?: string[];
+  child_tasks?: Array<Record<string, unknown>>;
+  models?: Array<Record<string, unknown>>;
+  integrator_model?: Record<string, unknown>;
+  input_count?: number;
+  copy_manifests?: Array<Record<string, unknown>>;
 }
 
 export interface WorkflowNode {
