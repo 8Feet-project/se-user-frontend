@@ -180,6 +180,10 @@ export function TaskLaunchPage() {
       setMessage('请先填写调研对象名称。');
       return;
     }
+    if (enableCrossValidation && multiModelIds.length < 2) {
+      setMessage('交叉验证至少需要选择 2 个模型。');
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -200,7 +204,7 @@ export function TaskLaunchPage() {
         model_id: (enableCrossValidation ? multiModelIds[0] : modelId) || undefined,
         multi_model_ids: enableCrossValidation ? multiModelIds : [],
         enable_cross_validation: enableCrossValidation,
-        auto_advance: autoAdvance,
+        auto_advance: enableCrossValidation ? true : autoAdvance,
       });
       setMessage('任务已创建，正在进入流程页。');
       navigate(`/process?task_id=${response.task_id}`);
@@ -581,12 +585,17 @@ export function TaskLaunchPage() {
 
                     <button
                       type="button"
-                      onClick={() => setAutoAdvance((prev) => !prev)}
+                      onClick={() => {
+                        if (!enableCrossValidation) {
+                          setAutoAdvance((prev) => !prev);
+                        }
+                      }}
+                      disabled={enableCrossValidation}
                       className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition ${
-                        autoAdvance
+                        enableCrossValidation || autoAdvance
                           ? 'border-[var(--8feet-line-accent-strong)] bg-[var(--8feet-teal-dim)] text-[#63cab7]'
                           : 'border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-300 hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100'
-                      }`}
+                      } disabled:cursor-not-allowed disabled:opacity-75`}
                     >
                       <FastForward size={16} />
                       自动推进
