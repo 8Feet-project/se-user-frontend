@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Settings2, ShieldCheck, Trash2, Wifi } from 'lucide-react';
+import { RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, Wifi } from 'lucide-react';
 import {
   assignAdminModelPermissions,
   createAdminModel,
   deleteAdminModel,
   getAdminModels,
   getCurrentUserPermissions,
+  setAdminDefaultSummaryModel,
   testAdminModelConnection,
   updateAdminModel,
 } from '../api/client';
@@ -44,6 +45,7 @@ export function AdminModelsPage() {
   const [selectedModelId, setSelectedModelId] = useState('');
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
+  const [defaultUpdating, setDefaultUpdating] = useState(false);
   const [testing, setTesting] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
@@ -119,6 +121,7 @@ export function AdminModelsPage() {
   }, [selectedModel]);
 
   const canAssignPermissions = currentPermissions.includes('admin:model:permission') || currentPermissions.includes('admin:model:write');
+  const canManageModels = currentPermissions.includes('admin:model:write');
 
   const validateForm = () => {
     const inputPrice = Number(form.input_price_1m);
@@ -295,6 +298,32 @@ export function AdminModelsPage() {
     }
   };
 
+  const handleSetDefaultSummaryModel = async (enabled: boolean) => {
+    if (!selectedModel) {
+      return;
+    }
+    if (!canManageModels) {
+      setFeedback({ tone: 'error', text: '你没有编辑模型配置的权限，请联系超级管理员。' });
+      return;
+    }
+    if (enabled && (!selectedModel.enabled || selectedModel.connectivity_status !== 'connected')) {
+      setFeedback({ tone: 'error', text: '只能将已启用且连接正常的模型设为总结默认推荐。' });
+      return;
+    }
+
+    setDefaultUpdating(true);
+    try {
+      await setAdminDefaultSummaryModel(selectedModel.model_id, enabled);
+      await loadModels();
+      setFeedback({ tone: 'success', text: enabled ? '已设为总结 Agent 默认推荐模型。' : '已取消总结默认推荐。' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '更新总结默认推荐失败';
+      setFeedback({ tone: 'error', text: reason });
+    } finally {
+      setDefaultUpdating(false);
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-6 text-slate-100">
       <header className="flex flex-col gap-4 rounded-[28px] border border-slate-800 bg-slate-900/60 p-6 xl:flex-row xl:items-center xl:justify-between">
@@ -359,6 +388,11 @@ export function AdminModelsPage() {
                     <Badge variant="secondary" className="bg-slate-800 text-slate-200">
                       {item.enabled ? '已启用' : '已停用'}
                     </Badge>
+                    {item.is_default_summary_model ? (
+                      <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-200">
+                        总结默认
+                      </Badge>
+                    ) : null}
                   </div>
                   <p className="mt-3 text-xs leading-5 text-slate-500">{item.granted_scope_summary || '未配置授权范围'}</p>
                 </button>
@@ -474,11 +508,27 @@ export function AdminModelsPage() {
               <Button onClick={() => void handleAssignPermissions()} className="rounded-2xl bg-emerald-500 text-white hover:bg-emerald-400" disabled={!selectedModel}>
                 分配模型权限
               </Button>
+              <Button
+                onClick={() => void handleSetDefaultSummaryModel(!selectedModel?.is_default_summary_model)}
+                variant="secondary"
+                className="rounded-2xl bg-[rgba(99,202,183,0.14)] text-[#9be7d9] hover:bg-[rgba(99,202,183,0.22)]"
+                disabled={!selectedModel || defaultUpdating}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {defaultUpdating
+                  ? '更新中...'
+                  : selectedModel?.is_default_summary_model
+                    ? '取消总结默认'
+                    : '设为总结默认'}
+              </Button>
             </div>
             {selectedModel ? (
               <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
                 当前选择模型：<span className="font-medium text-white">{selectedModel.model_name}</span>，连接状态为{' '}
                 <span className="text-sky-300">{selectedModel.connectivity_status}</span>，授权摘要：{selectedModel.granted_scope_summary || '未配置'}。
+                {selectedModel.is_default_summary_model ? (
+                  <span className="ml-2 text-emerald-200">交叉验证总结 Agent 会优先使用该模型。</span>
+                ) : null}
               </div>
             ) : null}
             <p className="mt-4 text-xs leading-5 text-slate-500">

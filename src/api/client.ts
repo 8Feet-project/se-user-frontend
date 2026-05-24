@@ -4,6 +4,7 @@ import {
   mockCreateAdminModel,
   mockCreateAdminUser,
   mockCreateAlert,
+  mockSetAdminDefaultSummaryModel,
   mockCreateFavoriteItem,
   mockCreateResearchTask,
   mockDeleteAdminModel,
@@ -88,6 +89,7 @@ import type {
   AdminLogExportResponse,
   AdminLogExportStatusResponse,
   AdminLogsResponse,
+  AdminDefaultSummaryModelResponse,
   AdminModelItem,
   AdminModelListResponse,
   AdminModelPermissionRequest,
@@ -357,6 +359,8 @@ function mapAdminModel(item: BackendAdminModelItem): AdminModelItem {
     connectivity_status: item.connectivity_status ?? (online ? 'connected' : 'failed'),
     updated_at: item.updated_at ?? '',
     granted_scope_summary: item.granted_scope_summary,
+    is_default_summary_model: Boolean(item.is_default_summary_model),
+    default_summary_object_types: item.default_summary_object_types ?? [],
   };
 }
 
@@ -1180,6 +1184,19 @@ export async function assignAdminModelPermissions(
   return request<AdminModelPermissionResponse>(`/admin/models/${modelId}/permissions`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function setAdminDefaultSummaryModel(
+  modelId: string,
+  enabled: boolean
+): Promise<AdminDefaultSummaryModelResponse> {
+  if (useMock) {
+    return mockSetAdminDefaultSummaryModel(modelId, enabled);
+  }
+  return request<AdminDefaultSummaryModelResponse>(`/admin/models/${modelId}/default-summary`, {
+    method: 'POST',
+    body: JSON.stringify({ enabled }),
   });
 }
 

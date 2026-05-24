@@ -883,6 +883,8 @@ export interface AdminModelItem {
   connectivity_status: AdminModelConnectivityStatus;
   updated_at: string;
   granted_scope_summary?: string;
+  is_default_summary_model?: boolean;
+  default_summary_object_types?: string[];
 }
 
 export interface AdminModelListResponse {
@@ -949,6 +951,12 @@ export interface AdminModelPermissionRequest extends AdminModelPermissionGrant {
 export interface AdminModelPermissionResponse {
   model_id: string;
   granted_count: number;
+}
+
+export interface AdminDefaultSummaryModelResponse {
+  model_id: string;
+  is_default_summary_model: boolean;
+  default_summary_object_types: string[];
 }
 
 export interface AdminPermissionTreeNode {

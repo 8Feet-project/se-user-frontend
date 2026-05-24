@@ -6,6 +6,7 @@ import type {
   AdminLogExportResponse,
   AdminLogExportStatusResponse,
   AdminLogsResponse,
+  AdminDefaultSummaryModelResponse,
   AdminModelListResponse,
   AdminModelPermissionRequest,
   AdminModelPermissionResponse,
@@ -607,6 +608,8 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     connectivity_status: 'connected',
     updated_at: '2026-04-18T08:30:00Z',
     granted_scope_summary: '产品部、研究部可用',
+    is_default_summary_model: true,
+    default_summary_object_types: ['COMPANY', 'STOCK', 'PRODUCT'],
   },
   {
     model_id: 'model-gpt-4.1',
@@ -623,6 +626,8 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     connectivity_status: 'connected',
     updated_at: '2026-04-19T03:20:00Z',
     granted_scope_summary: '仅管理员可用',
+    is_default_summary_model: false,
+    default_summary_object_types: [],
   },
   {
     model_id: 'model-qwen-max',
@@ -639,6 +644,8 @@ let mockAdminModels: AdminModelListResponse['list'] = [
     connectivity_status: 'failed',
     updated_at: '2026-04-17T12:10:00Z',
     granted_scope_summary: '停用中',
+    is_default_summary_model: false,
+    default_summary_object_types: [],
   },
 ];
 
@@ -1015,6 +1022,8 @@ export async function mockCreateAdminModel(
     connectivity_status: 'unknown',
     updated_at: new Date().toISOString(),
     granted_scope_summary: '未分配',
+    is_default_summary_model: false,
+    default_summary_object_types: [],
   });
   mockAdminModelPermissions[modelId] = { user_ids: [], group_ids: [] };
   return {
@@ -1069,6 +1078,10 @@ export async function mockUpdateAdminModel(
     if (payload.enabled !== undefined) {
       target.enabled = payload.enabled;
       updatedFields.push('enabled');
+      if (!payload.enabled) {
+        target.is_default_summary_model = false;
+        target.default_summary_object_types = [];
+      }
     }
     if (payload.api_key !== undefined) {
       updatedFields.push('api_key');
@@ -1078,6 +1091,28 @@ export async function mockUpdateAdminModel(
   return {
     model_id: modelId,
     updated_fields: updatedFields,
+  };
+}
+
+export async function mockSetAdminDefaultSummaryModel(
+  modelId: string,
+  enabled: boolean
+): Promise<AdminDefaultSummaryModelResponse> {
+  const target = mockAdminModels.find((item) => item.model_id === modelId);
+  if (enabled) {
+    mockAdminModels = mockAdminModels.map((item) => ({
+      ...item,
+      is_default_summary_model: item.model_id === modelId,
+      default_summary_object_types: item.model_id === modelId ? ['COMPANY', 'STOCK', 'PRODUCT'] : [],
+    }));
+  } else if (target) {
+    target.is_default_summary_model = false;
+    target.default_summary_object_types = [];
+  }
+  return {
+    model_id: modelId,
+    is_default_summary_model: Boolean(enabled),
+    default_summary_object_types: enabled ? ['COMPANY', 'STOCK', 'PRODUCT'] : [],
   };
 }
 
