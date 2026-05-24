@@ -647,7 +647,11 @@ export interface AlertItem {
   push_in_app: boolean;
   push_email: boolean;
   schedule_rule: string;
+  schedule_time: string;
   status: AlertStatus;
+  next_run_at?: string;
+  last_triggered_at?: string;
+  last_task_id?: string;
 }
 
 export interface AlertsResponse {
@@ -661,6 +665,13 @@ export interface CreateAlertRequest {
   push_in_app: boolean;
   push_email: boolean;
   schedule_rule: string;
+  schedule_time: string;
+  time_range?: string;
+  source_authority?: string;
+  source_types?: string[];
+  research_focus?: string[];
+  search_params?: Record<string, unknown>;
+  model_id?: string;
 }
 
 export interface CreateAlertResponse {
@@ -673,11 +684,14 @@ export interface UpdateAlertRequest {
   push_email?: boolean;
   status?: AlertStatus;
   schedule_rule?: string;
+  schedule_time?: string;
 }
 
 export interface UpdateAlertResponse {
   alert_id: string;
   updated_fields: string[];
+  triggered_task_id?: string;
+  trigger_error?: string;
 }
 
 export interface DeleteAlertResponse {
@@ -688,6 +702,7 @@ export interface MessageItem {
   message_id: string;
   title: string;
   content: string;
+  action_url?: string;
   read_status: boolean;
   created_at: string;
 }

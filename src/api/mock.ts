@@ -937,7 +937,11 @@ let mockAlerts: AlertItem[] = [
     push_in_app: true,
     push_email: false,
     schedule_rule: 'daily',
+    schedule_time: '09:00',
     status: 'enabled',
+    next_run_at: '2026-05-25T09:00:00+08:00',
+    last_triggered_at: '',
+    last_task_id: '',
   },
   {
     alert_id: 'alert-002',
@@ -946,7 +950,11 @@ let mockAlerts: AlertItem[] = [
     push_in_app: true,
     push_email: true,
     schedule_rule: 'weekly',
+    schedule_time: '18:30',
     status: 'disabled',
+    next_run_at: '',
+    last_triggered_at: '',
+    last_task_id: '',
   },
 ];
 
@@ -955,6 +963,7 @@ let mockMessages: MessageItem[] = [
     message_id: 'msg-001',
     title: '调研任务完成',
     content: 'task-001 已完成并生成报告。',
+    action_url: '/report?task_id=task-001&report_id=report-001',
     read_status: false,
     created_at: '2026-04-06T09:00:00Z',
   },
@@ -962,6 +971,7 @@ let mockMessages: MessageItem[] = [
     message_id: 'msg-002',
     title: '提醒触发',
     content: '腾讯控股出现新的公告信息。',
+    action_url: '/process?task_id=task-001',
     read_status: true,
     created_at: '2026-04-05T13:30:00Z',
   },
@@ -2454,7 +2464,11 @@ export async function mockCreateAlert(payload: CreateAlertRequest): Promise<Crea
     push_in_app: payload.push_in_app,
     push_email: payload.push_email,
     schedule_rule: payload.schedule_rule,
+    schedule_time: payload.schedule_time,
     status: 'enabled',
+    next_run_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    last_triggered_at: '',
+    last_task_id: '',
   });
   return {
     alert_id: alertId,
@@ -2485,10 +2499,29 @@ export async function mockUpdateAlert(
       target.schedule_rule = payload.schedule_rule;
       updatedFields.push('schedule_rule');
     }
+    if (payload.schedule_time !== undefined) {
+      target.schedule_time = payload.schedule_time;
+      updatedFields.push('schedule_time');
+    }
+    if (payload.status === 'enabled') {
+      const taskId = `task-${Date.now()}`;
+      target.last_triggered_at = new Date().toISOString();
+      target.last_task_id = taskId;
+      target.next_run_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      mockMessages.unshift({
+        message_id: `msg-${Date.now()}`,
+        title: `${target.object_name} 定时调研已启动`,
+        content: `系统已按提醒设置启动新的调研任务，任务编号：${taskId}。`,
+        action_url: `/process?task_id=${taskId}`,
+        read_status: false,
+        created_at: new Date().toISOString(),
+      });
+    }
   }
   return {
     alert_id: alertId,
     updated_fields: updatedFields,
+    triggered_task_id: target?.last_task_id,
   };
 }
 
