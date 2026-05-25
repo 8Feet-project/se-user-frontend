@@ -389,7 +389,7 @@ export function AdminModelsPage() {
                       {item.enabled ? '已启用' : '已停用'}
                     </Badge>
                     {item.is_default_summary_model ? (
-                      <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-200">
+                      <Badge variant="secondary" className="admin-summary-default-badge">
                         总结默认
                       </Badge>
                     ) : null}
@@ -511,7 +511,7 @@ export function AdminModelsPage() {
               <Button
                 onClick={() => void handleSetDefaultSummaryModel(!selectedModel?.is_default_summary_model)}
                 variant="secondary"
-                className="rounded-2xl bg-[rgba(99,202,183,0.14)] text-[#9be7d9] hover:bg-[rgba(99,202,183,0.22)]"
+                className="admin-summary-default-button rounded-2xl font-semibold disabled:opacity-70"
                 disabled={!selectedModel || defaultUpdating}
               >
                 <Sparkles className="mr-2 h-4 w-4" />

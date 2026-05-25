@@ -1268,32 +1268,39 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
   };
 }
 
-export async function getAdminDashboardOverview(): Promise<AdminDashboardOverviewResponse> {
+export interface AdminDashboardTimeParams extends Record<string, string | number | boolean | undefined> {
+  start_time?: string;
+  end_time?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function getAdminDashboardOverview(params: AdminDashboardTimeParams = {}): Promise<AdminDashboardOverviewResponse> {
   if (useMock) {
     return mockGetAdminDashboardOverview();
   }
-  return request<AdminDashboardOverviewResponse>('/admin/dashboard/overview');
+  return request<AdminDashboardOverviewResponse>('/admin/dashboard/overview', {}, params);
 }
 
-export async function getAdminObjectDistribution(): Promise<AdminObjectDistributionResponse> {
+export async function getAdminObjectDistribution(params: AdminDashboardTimeParams = {}): Promise<AdminObjectDistributionResponse> {
   if (useMock) {
     return mockGetAdminObjectDistribution();
   }
-  return request<AdminObjectDistributionResponse>('/admin/dashboard/object-distribution');
+  return request<AdminObjectDistributionResponse>('/admin/dashboard/object-distribution', {}, params);
 }
 
-export async function getAdminModelUsage(): Promise<AdminModelUsageResponse> {
+export async function getAdminModelUsage(params: AdminDashboardTimeParams = {}): Promise<AdminModelUsageResponse> {
   if (useMock) {
     return mockGetAdminModelUsage();
   }
-  return request<AdminModelUsageResponse>('/admin/dashboard/model-usage');
+  return request<AdminModelUsageResponse>('/admin/dashboard/model-usage', {}, params);
 }
 
-export async function getAdminUserActivity(): Promise<AdminUserActivityResponse> {
+export async function getAdminUserActivity(params: AdminDashboardTimeParams = {}): Promise<AdminUserActivityResponse> {
   if (useMock) {
     return mockGetAdminUserActivity();
   }
-  return request<AdminUserActivityResponse>('/admin/dashboard/user-activity');
+  return request<AdminUserActivityResponse>('/admin/dashboard/user-activity', {}, params);
 }
 
 export async function getAdminLogs(params: {

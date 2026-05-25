@@ -1735,7 +1735,7 @@ export function TaskProcessPage() {
       title="调研流程"
       subtitle="查看当前任务状态、流程节点、参考信息和可执行操作。"
       action={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="secondary" onClick={handleRefreshTaskData} disabled={submitting || !taskId}>
             <RefreshCcw size={14} />
             刷新流程

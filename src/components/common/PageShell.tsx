@@ -287,7 +287,7 @@ export function PageShell({
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{subtitle}</p>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 items-start gap-3 self-start">
+                    <div className="flex min-h-12 shrink-0 items-center gap-3 self-start sm:mt-7">
                       <ThemeToggle />
                       {action}
                     </div>

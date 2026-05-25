@@ -320,6 +320,38 @@ body {
   color: #be123c !important;
 }
 
+.admin-summary-default-button {
+  border: 1px solid rgba(99, 202, 183, 0.34);
+  background: rgba(99, 202, 183, 0.14);
+  color: #baf4ea;
+}
+
+.admin-summary-default-button:hover {
+  background: rgba(99, 202, 183, 0.22);
+}
+
+.admin-summary-default-badge {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+}
+
+:root[data-theme='day'] .admin-summary-default-button {
+  border-color: rgba(15, 107, 97, 0.38) !important;
+  background: rgba(20, 125, 114, 0.14) !important;
+  color: #0f4f48 !important;
+}
+
+:root[data-theme='day'] .admin-summary-default-button:hover {
+  background: rgba(20, 125, 114, 0.22) !important;
+}
+
+:root[data-theme='day'] .admin-summary-default-badge {
+  border-color: rgba(4, 120, 87, 0.34) !important;
+  background: rgba(4, 120, 87, 0.14) !important;
+  color: #065f46 !important;
+}
+
 :root[data-theme='day'] .theme-input,
 :root[data-theme='day'] input[data-slot='input'],
 :root[data-theme='day'] select,

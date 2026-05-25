@@ -1056,6 +1056,7 @@ export interface AdminDashboardOverviewResponse {
   total_research_requests: number;
   dau: number;
   mau: number;
+  operation_log_total?: number;
   active_users_trend: Array<{ date: string; value: number }>;
   raw?: unknown;
 }
@@ -1064,6 +1065,7 @@ export interface AdminObjectDistributionResponse {
   company_ratio: number;
   stock_ratio: number;
   commodity_ratio: number;
+  total?: number;
 }
 
 export interface AdminModelUsageResponse {
@@ -1072,6 +1074,7 @@ export interface AdminModelUsageResponse {
     model_name: string;
     provider: string;
     call_count: number;
+    is_deleted?: boolean;
   }>;
   trend_series: Array<{
     date: string;
@@ -1091,6 +1094,7 @@ export interface AdminLogListItem {
   user_keyword: string;
   object_type?: ObjectType;
   model_id?: string;
+  model_name?: string;
   action_summary: string;
   created_at: string;
 }
@@ -1111,10 +1115,12 @@ export interface AdminLogDetail {
 }
 
 export interface ExportAdminLogsRequest {
-  level?: AdminLogLevel;
+  level?: AdminLogLevel | string;
+  user_keyword?: string;
+  model_id?: string;
   start_time: string;
   end_time: string;
-  object_type?: ObjectType;
+  object_type?: ObjectType | string;
   module?: string;
   format: 'csv' | 'xlsx';
 }
