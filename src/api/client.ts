@@ -92,6 +92,7 @@ import type {
   AdminDefaultSummaryModelResponse,
   AdminModelItem,
   AdminModelListResponse,
+  AdminModelPermissionOptions,
   AdminModelPermissionRequest,
   AdminModelPermissionResponse,
   AdminModelUsageResponse,
@@ -341,6 +342,12 @@ type BackendAdminModelItem = Partial<AdminModelItem> & {
   params?: Record<string, unknown>;
 };
 
+type BackendAdminModelListResponse = {
+  list: BackendAdminModelItem[];
+  total: number;
+  permission_options?: AdminModelPermissionOptions;
+};
+
 function mapAdminModel(item: BackendAdminModelItem): AdminModelItem {
   const enabled = item.enabled ?? item.is_enabled ?? false;
   const online = item.is_online ?? enabled;
@@ -359,6 +366,10 @@ function mapAdminModel(item: BackendAdminModelItem): AdminModelItem {
     connectivity_status: item.connectivity_status ?? (online ? 'connected' : 'failed'),
     updated_at: item.updated_at ?? '',
     granted_scope_summary: item.granted_scope_summary,
+    permission_users: item.permission_users ?? [],
+    permission_groups: item.permission_groups ?? [],
+    permission_user_ids: item.permission_user_ids ?? item.permission_users?.map((user) => user.user_id) ?? [],
+    permission_group_ids: item.permission_group_ids ?? item.permission_groups?.map((group) => group.group_id) ?? [],
     is_default_summary_model: Boolean(item.is_default_summary_model),
     default_summary_object_types: item.default_summary_object_types ?? [],
   };
@@ -1122,10 +1133,11 @@ export async function getAdminModels(): Promise<AdminModelListResponse> {
   if (useMock) {
     return mockGetAdminModels();
   }
-  const response = await request<{ list: BackendAdminModelItem[]; total: number }>('/admin/models/');
+  const response = await request<BackendAdminModelListResponse>('/admin/models/');
   return {
     list: response.list.map(mapAdminModel),
     total: response.total,
+    permission_options: response.permission_options,
   };
 }
 

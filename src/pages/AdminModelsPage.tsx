@@ -15,9 +15,10 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { MultiSelect } from '../components/ui/multi-select';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import type { AdminModelItem, AdminModelPermissionRequest } from '../types';
+import type { AdminModelItem, AdminModelPermissionOptions, AdminModelPermissionRequest } from '../types';
 
 const defaultForm = {
   model_name: '',
@@ -31,13 +32,7 @@ const defaultForm = {
 };
 
 const priceMin = 0;
-
-function parseUserIds(value: string) {
-  return value
-    .split(',')
-    .map((item) => Number(item.trim()))
-    .filter((item) => Number.isInteger(item) && item > 0);
-}
+const emptyPermissionOptions: AdminModelPermissionOptions = { users: [], groups: [] };
 
 export function AdminModelsPage() {
   const [models, setModels] = useState<AdminModelItem[]>([]);
@@ -49,16 +44,15 @@ export function AdminModelsPage() {
   const [testing, setTesting] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
-  const [permissionPayload, setPermissionPayload] = useState<AdminModelPermissionRequest>({
-    user_ids: [1001],
-    group_ids: ['group-admin'],
-  });
+  const [permissionOptions, setPermissionOptions] = useState<AdminModelPermissionOptions>(emptyPermissionOptions);
+  const [permissionPayload, setPermissionPayload] = useState<AdminModelPermissionRequest>({});
 
   const loadModels = async () => {
     setLoading(true);
     try {
       const response = await getAdminModels();
       setModels(response.list);
+      setPermissionOptions(response.permission_options ?? emptyPermissionOptions);
       const current = response.list[0];
       if (current) {
         setSelectedModelId((prev) => (prev && response.list.some((item) => item.model_id === prev) ? prev : current.model_id));
@@ -106,6 +100,7 @@ export function AdminModelsPage() {
   useEffect(() => {
     if (!selectedModel) {
       setForm(defaultForm);
+      setPermissionPayload({});
       return;
     }
     setForm({
@@ -118,7 +113,39 @@ export function AdminModelsPage() {
       description: selectedModel.description ?? '',
       enabled: String(selectedModel.enabled),
     });
+    setPermissionPayload({
+      user_ids: selectedModel.permission_user_ids ?? selectedModel.permission_users?.map((user) => user.user_id) ?? [],
+      group_ids: selectedModel.permission_group_ids ?? selectedModel.permission_groups?.map((group) => group.group_id) ?? [],
+    });
   }, [selectedModel]);
+
+  const permissionUserOptions = useMemo(
+    () =>
+      permissionOptions.users.map((user) => ({
+        value: String(user.user_id),
+        label: `${user.nickname || user.username} · ${user.username} · #${user.user_id}`,
+      })),
+    [permissionOptions.users]
+  );
+
+  const permissionGroupOptions = useMemo(
+    () =>
+      permissionOptions.groups.map((group) => ({
+        value: group.group_id,
+        label: `${group.label} · ${group.group_id}`,
+      })),
+    [permissionOptions.groups]
+  );
+
+  const selectedPermissionUserValues = useMemo(
+    () => (permissionPayload.user_ids ?? []).map((item) => String(item)),
+    [permissionPayload.user_ids]
+  );
+
+  const selectedPermissionGroupValues = useMemo(
+    () => permissionPayload.group_ids ?? [],
+    [permissionPayload.group_ids]
+  );
 
   const canAssignPermissions = currentPermissions.includes('admin:model:permission') || currentPermissions.includes('admin:model:write');
   const canManageModels = currentPermissions.includes('admin:model:write');
@@ -282,16 +309,11 @@ export function AdminModelsPage() {
       return;
     }
 
-    const hasGrantTarget = (permissionPayload.user_ids?.length ?? 0) > 0 || (permissionPayload.group_ids?.length ?? 0) > 0;
-    if (!hasGrantTarget) {
-      setFeedback({ tone: 'error', text: '请至少指定 1 个用户或用户组。' });
-      return;
-    }
-
     try {
       await assignAdminModelPermissions(selectedModel.model_id, permissionPayload);
       await loadModels();
-      setFeedback({ tone: 'success', text: '模型权限已分配。' });
+      const hasGrantTarget = (permissionPayload.user_ids?.length ?? 0) > 0 || (permissionPayload.group_ids?.length ?? 0) > 0;
+      setFeedback({ tone: 'success', text: hasGrantTarget ? '模型权限已分配。' : '模型权限已清空。' });
     } catch (error) {
       const reason = error instanceof Error ? error.message : '模型权限分配失败';
       setFeedback({ tone: 'error', text: reason });
@@ -475,30 +497,45 @@ export function AdminModelsPage() {
               <ShieldCheck className="h-5 w-5 text-slate-500" />
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Field label="授权用户 ID（正整数，逗号分隔）">
-                <Input
-                  value={(permissionPayload.user_ids ?? []).join(',')}
-                  onChange={(event) =>
+              <Field label="授权用户">
+                <MultiSelect
+                  options={permissionUserOptions}
+                  value={selectedPermissionUserValues}
+                  onValueChange={(values) =>
                     setPermissionPayload((prev) => ({
                       ...prev,
-                      user_ids: parseUserIds(event.target.value),
+                      user_ids: values.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0),
                     }))
                   }
-                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  placeholder="选择可使用该模型的用户"
+                  emptyIndicator="没有可选用户"
+                  maxCount={2}
+                  modalPopover
+                  deduplicateOptions
+                  className="border-slate-700 bg-slate-950/80"
                 />
               </Field>
-              <Field label="授权用户组 ID（逗号分隔）">
-                <Input
-                  value={(permissionPayload.group_ids ?? []).join(',')}
-                  onChange={(event) =>
+              <Field label="授权用户组">
+                <MultiSelect
+                  options={permissionGroupOptions}
+                  value={selectedPermissionGroupValues}
+                  onValueChange={(values) =>
                     setPermissionPayload((prev) => ({
                       ...prev,
-                      group_ids: event.target.value.split(',').map((item) => item.trim()).filter(Boolean),
+                      group_ids: values,
                     }))
                   }
-                  className="h-12 rounded-2xl border-slate-700 bg-slate-950/80 px-4 text-slate-100"
+                  placeholder="选择可使用该模型的用户组"
+                  emptyIndicator="没有可选用户组"
+                  maxCount={2}
+                  modalPopover
+                  deduplicateOptions
+                  className="border-slate-700 bg-slate-950/80"
                 />
               </Field>
+            </div>
+            <div className="mt-3 text-xs text-slate-500">
+              当前选择 {permissionPayload.user_ids?.length ?? 0} 个用户、{permissionPayload.group_ids?.length ?? 0} 个用户组。
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button onClick={() => void handleTestConnection()} variant="secondary" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200" disabled={!selectedModel || testing}>

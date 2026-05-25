@@ -883,6 +883,24 @@ export type AdminModelConnectivityStatus = 'connected' | 'failed' | 'unknown' | 
 export type AdminLogLevel = 'debug' | 'info' | 'warning' | 'error';
 export type DashboardTimeScope = 'today' | '7d' | '30d' | 'custom';
 
+export interface AdminModelPermissionUser {
+  user_id: number;
+  username: string;
+  nickname: string;
+  email?: string;
+}
+
+export interface AdminModelPermissionGroup {
+  group_id: string;
+  role: string;
+  label: string;
+}
+
+export interface AdminModelPermissionOptions {
+  users: AdminModelPermissionUser[];
+  groups: AdminModelPermissionGroup[];
+}
+
 export interface AdminModelItem {
   model_id: string;
   model_name: string;
@@ -898,6 +916,10 @@ export interface AdminModelItem {
   connectivity_status: AdminModelConnectivityStatus;
   updated_at: string;
   granted_scope_summary?: string;
+  permission_users?: AdminModelPermissionUser[];
+  permission_groups?: AdminModelPermissionGroup[];
+  permission_user_ids?: number[];
+  permission_group_ids?: string[];
   is_default_summary_model?: boolean;
   default_summary_object_types?: string[];
 }
@@ -905,6 +927,7 @@ export interface AdminModelItem {
 export interface AdminModelListResponse {
   list: AdminModelItem[];
   total: number;
+  permission_options?: AdminModelPermissionOptions;
 }
 
 export interface CreateAdminModelRequest {

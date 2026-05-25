@@ -592,6 +592,12 @@ const adminPermissionTree: AdminPermissionTreeNode[] = [
   },
 ];
 
+const mockModelPermissionGroups = [
+  { group_id: 'group-super-admin', role: 'super_admin' as const, label: '超级管理员' },
+  { group_id: 'group-admin', role: 'admin' as const, label: '管理员' },
+  { group_id: 'group-user', role: 'user' as const, label: '普通用户' },
+];
+
 let mockAdminModels: AdminModelListResponse['list'] = [
   {
     model_id: 'model-deepseek-v3',
@@ -654,6 +660,31 @@ const mockAdminModelPermissions: Record<string, AdminModelPermissionRequest> = {
   'model-gpt-4.1': { user_ids: [1001], group_ids: ['group-admin'] },
   'model-qwen-max': { user_ids: [], group_ids: [] },
 };
+
+function syncMockModelPermissionDetail(modelId: string) {
+  const target = mockAdminModels.find((item) => item.model_id === modelId);
+  if (!target) {
+    return;
+  }
+  const grants = mockAdminModelPermissions[modelId] ?? { user_ids: [], group_ids: [] };
+  const users = (grants.user_ids ?? [])
+    .map((userId) => mockAdminUsers.find((user) => user.user_id === userId))
+    .filter((user): user is AdminUserListItem => Boolean(user))
+    .map((user) => ({
+      user_id: user.user_id,
+      username: user.username,
+      nickname: user.nickname,
+      email: user.email,
+    }));
+  const groups = (grants.group_ids ?? [])
+    .map((groupId) => mockModelPermissionGroups.find((group) => group.group_id === groupId || group.role === groupId))
+    .filter((group): group is typeof mockModelPermissionGroups[number] => Boolean(group));
+
+  target.permission_users = users;
+  target.permission_groups = groups;
+  target.permission_user_ids = users.map((user) => user.user_id);
+  target.permission_group_ids = groups.map((group) => group.group_id);
+}
 
 let mockAdminUsers: AdminUserListItem[] = [
   {
@@ -1007,9 +1038,20 @@ const mockModelsAvailable: ModelsAvailableResponse = {
 };
 
 export async function mockGetAdminModels(): Promise<AdminModelListResponse> {
+  mockAdminModels.forEach((item) => syncMockModelPermissionDetail(item.model_id));
   return {
     list: mockAdminModels.map((item) => ({ ...item })),
     total: mockAdminModels.length,
+    permission_options: {
+      users: mockAdminUsers
+        .map((user) => ({
+          user_id: user.user_id,
+          username: user.username,
+          nickname: user.nickname,
+          email: user.email,
+        })),
+      groups: mockModelPermissionGroups.map((group) => ({ ...group })),
+    },
   };
 }
 
@@ -1032,6 +1074,10 @@ export async function mockCreateAdminModel(
     connectivity_status: 'unknown',
     updated_at: new Date().toISOString(),
     granted_scope_summary: '未分配',
+    permission_users: [],
+    permission_groups: [],
+    permission_user_ids: [],
+    permission_group_ids: [],
     is_default_summary_model: false,
     default_summary_object_types: [],
   });
@@ -1165,6 +1211,7 @@ export async function mockAssignAdminModelPermissions(
   if (target) {
     const grantedCount = (payload.user_ids?.length ?? 0) + (payload.group_ids?.length ?? 0);
     target.granted_scope_summary = grantedCount > 0 ? `已分配 ${grantedCount} 个主体` : '未分配';
+    syncMockModelPermissionDetail(modelId);
     target.updated_at = new Date().toISOString();
   }
 
