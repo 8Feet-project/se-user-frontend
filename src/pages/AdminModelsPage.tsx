@@ -38,6 +38,7 @@ export function AdminModelsPage() {
   const [models, setModels] = useState<AdminModelItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [creatingModel, setCreatingModel] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
   const [defaultUpdating, setDefaultUpdating] = useState(false);
@@ -55,7 +56,12 @@ export function AdminModelsPage() {
       setPermissionOptions(response.permission_options ?? emptyPermissionOptions);
       const current = response.list[0];
       if (current) {
-        setSelectedModelId((prev) => (prev && response.list.some((item) => item.model_id === prev) ? prev : current.model_id));
+        setSelectedModelId((prev) => {
+          if (creatingModel) {
+            return prev;
+          }
+          return prev && response.list.some((item) => item.model_id === prev) ? prev : current.model_id;
+        });
       } else {
         setSelectedModelId('');
       }
@@ -80,8 +86,11 @@ export function AdminModelsPage() {
   }, []);
 
   const selectedModel = useMemo(() => {
+    if (creatingModel) {
+      return null;
+    }
     return models.find((item) => item.model_id === selectedModelId) ?? null;
-  }, [models, selectedModelId]);
+  }, [creatingModel, models, selectedModelId]);
 
   const visibleModels = useMemo(() => {
     if (!selectedModelId) {
@@ -166,6 +175,14 @@ export function AdminModelsPage() {
     return '';
   };
 
+  const handleStartCreate = () => {
+    setCreatingModel(true);
+    setSelectedModelId('');
+    setForm(defaultForm);
+    setPermissionPayload({});
+    setFeedback(null);
+  };
+
   const handleCreate = async () => {
     const validationError = validateForm();
     if (validationError) {
@@ -188,12 +205,17 @@ export function AdminModelsPage() {
 
       const testResult = await testAdminModelConnection(response.model_id);
       if (!testResult.success) {
-        await deleteAdminModel(response.model_id);
+        setCreatingModel(false);
         await loadModels();
-        setFeedback({ tone: 'error', text: '连接测试失败，请检查 API 密钥或网络配置。模型没有保存。' });
+        setSelectedModelId(response.model_id);
+        setFeedback({
+          tone: 'error',
+          text: `模型已保存，但连接测试失败：${testResult.message || '请检查 API 密钥或网络配置。'}`,
+        });
         return;
       }
 
+      setCreatingModel(false);
       await loadModels();
       setSelectedModelId(response.model_id);
       setFeedback({ tone: 'success', text: '模型创建成功并通过连通性校验，配置已生效。' });
@@ -255,6 +277,14 @@ export function AdminModelsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveModel = async () => {
+    if (creatingModel || !selectedModel) {
+      await handleCreate();
+      return;
+    }
+    await handleUpdate();
   };
 
   const handleDelete = async () => {
@@ -356,10 +386,15 @@ export function AdminModelsPage() {
             配置模型接入参数，检查连接状态，并管理谁可以使用这些模型。
           </p>
         </div>
-        <Button variant="secondary" onClick={() => void loadModels()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          {loading ? '刷新中...' : '刷新模型'}
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={handleStartCreate} className="rounded-2xl bg-sky-500 text-white hover:bg-sky-400" disabled={saving}>
+            新增模型
+          </Button>
+          <Button variant="secondary" onClick={() => void loadModels()} className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {loading ? '刷新中...' : '刷新模型'}
+          </Button>
+        </div>
       </header>
 
       {feedback ? (
@@ -392,7 +427,10 @@ export function AdminModelsPage() {
                 <button
                   key={item.model_id}
                   type="button"
-                  onClick={() => setSelectedModelId(item.model_id)}
+                  onClick={() => {
+                    setCreatingModel(false);
+                    setSelectedModelId(item.model_id);
+                  }}
                   className={`w-full rounded-3xl border p-4 text-left transition ${
                     active
                       ? 'border-sky-500/50 bg-sky-500/10 shadow-lg shadow-sky-950/20'
@@ -475,13 +513,10 @@ export function AdminModelsPage() {
               </Field>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button onClick={() => void handleCreate()} className="rounded-2xl bg-sky-500 text-white hover:bg-sky-400" disabled={saving}>
-                {saving ? '提交中...' : '新增模型'}
+              <Button onClick={() => void handleSaveModel()} variant="secondary" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200" disabled={saving}>
+                {saving ? '提交中...' : '保存修改'}
               </Button>
-              <Button onClick={() => void handleUpdate()} variant="secondary" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200" disabled={!selectedModel || saving}>
-                保存修改
-              </Button>
-              <Button onClick={() => void handleDelete()} variant="secondary" className="rounded-2xl bg-rose-500/15 text-rose-100 hover:bg-rose-500/25" disabled={!selectedModel}>
+              <Button onClick={() => void handleDelete()} variant="secondary" className="rounded-2xl bg-rose-500/15 text-rose-100 hover:bg-rose-500/25" disabled={!selectedModel || creatingModel}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 删除模型
               </Button>
