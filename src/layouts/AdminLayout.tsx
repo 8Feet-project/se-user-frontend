@@ -74,13 +74,15 @@ export function AdminLayout() {
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-6">
         <aside className="relative z-10 flex flex-col rounded-[32px] border border-[var(--8feet-line-accent)] bg-[var(--8feet-bg-elevated)] p-5 shadow-[var(--8feet-shadow-panel)] backdrop-blur-2xl">
           <div className="space-y-3 border-b border-[rgba(99,202,183,0.1)] pb-5">
-            <div className="flex items-start justify-between gap-4">
+            <div className="relative flex min-w-0 items-start justify-between gap-4">
               <BrandLink
                 title="8Feet Admin"
+                className="relative z-20 min-w-0 overflow-visible"
                 badgeClassName="h-10 w-10 rounded-[18px] border border-[rgba(99,202,183,0.3)] bg-[rgba(99,202,183,0.08)]"
-                titleClassName="text-xs uppercase tracking-[0.32em] text-slate-500"
+                textClassName="min-w-0 overflow-visible"
+                titleClassName="text-xs uppercase tracking-[0.3em] text-slate-500"
               />
-              <ThemeToggle className="scale-[0.74] origin-top-right" />
+              <ThemeToggle className="relative z-0 shrink-0 scale-[0.74] origin-top-right" />
             </div>
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-tight text-white">系统管理后台</h1>

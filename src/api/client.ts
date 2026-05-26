@@ -333,10 +333,6 @@ type BackendAdminModelItem = Partial<AdminModelItem> & {
   api_endpoint?: string;
   is_enabled?: boolean;
   is_online?: boolean;
-  pricing?: {
-    input?: number;
-    output?: number;
-  };
   params?: Record<string, unknown>;
 };
 
@@ -357,8 +353,6 @@ function mapAdminModel(item: BackendAdminModelItem): AdminModelItem {
     context_window: item.context_window ?? 4096,
     temperature: item.temperature ?? Number(item.params?.temperature ?? 0.2),
     max_output_tokens: item.max_output_tokens ?? 2048,
-    input_price_1m: item.input_price_1m ?? item.pricing?.input ?? 0,
-    output_price_1m: item.output_price_1m ?? item.pricing?.output ?? 0,
     description: item.description,
     enabled,
     connectivity_status: item.connectivity_status ?? (online ? 'connected' : 'failed'),
@@ -408,8 +402,8 @@ function toBackendAdminModelPayload(payload: CreateAdminModelRequest | UpdateAdm
     api_endpoint: payload.api_base_url,
     api_base_url: payload.api_base_url,
     api_key: payload.api_key,
-    input_price_1m: payload.input_price_1m,
-    output_price_1m: payload.output_price_1m,
+    context_window: payload.context_window,
+    temperature: payload.temperature,
     description: payload.description,
     is_enabled: payload.enabled,
     enabled: payload.enabled,

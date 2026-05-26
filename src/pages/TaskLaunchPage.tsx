@@ -324,6 +324,18 @@ export function TaskLaunchPage() {
     [availableModels, selectedModelIds]
   );
 
+  const visibleModelDescription = useMemo(() => {
+    if (selectedModels.length === 1) {
+      return selectedModels[0].description || '未填写模型描述';
+    }
+    if (selectedModels.length > 1) {
+      const describedModels = selectedModels
+        .map((model) => `${model.model_name}：${model.description || '未填写模型描述'}`);
+      return describedModels.join('；');
+    }
+    return recommendedModel?.description || '';
+  }, [recommendedModel?.description, selectedModels]);
+
   const currentObjectType = objectTypeOptions.find((item) => item.value === objectType) ?? objectTypeOptions[0];
   const currentTimeRange = timeRangeOptions.find((item) => item.value === timeRange)?.label ?? timeRange;
   const currentAuthority = sourceAuthorityOptions.find((item) => item.value === sourceAuthority) ?? sourceAuthorityOptions[0];
@@ -514,6 +526,11 @@ export function TaskLaunchPage() {
                     </span>
                   ))}
                 </div>
+                {visibleModelDescription ? (
+                  <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">
+                    模型描述：{visibleModelDescription}
+                  </p>
+                ) : null}
 
                 <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
@@ -649,15 +666,24 @@ export function TaskLaunchPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleToggleModelSelection(model.model_id)}
-                                    className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition ${
+                                    className={`flex min-w-0 flex-1 items-start gap-2 rounded-lg px-2 py-2 text-left text-sm transition ${
                                       selected ? 'text-[#63cab7]' : 'text-slate-300 hover:text-slate-100'
                                     }`}
                                   >
-                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center pt-0.5">
                                       {selected ? <Check size={16} /> : null}
                                     </span>
-                                    <span className="min-w-0 flex-1 truncate">{model.model_name}</span>
-                                    <span className="shrink-0 text-xs text-slate-500">{model.provider}</span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        <span className="min-w-0 flex-1 truncate">{model.model_name}</span>
+                                        <span className="shrink-0 text-xs text-slate-500">{model.provider}</span>
+                                      </span>
+                                      {model.description ? (
+                                        <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500">
+                                          {model.description}
+                                        </span>
+                                      ) : null}
+                                    </span>
                                   </button>
                                   <button
                                     type="button"

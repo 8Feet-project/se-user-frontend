@@ -205,6 +205,11 @@ export function PersonaSetupDialog({
                   </option>
                 ))}
               </Select>
+              {models.find((model) => model.model_id === selectedModelId)?.description ? (
+                <p className="mt-2 text-xs leading-5 text-slate-400">
+                  {models.find((model) => model.model_id === selectedModelId)?.description}
+                </p>
+              ) : null}
               <Button className="mt-3 w-full" onClick={handleStart} disabled={busy || Boolean(conversation) || !models.length}>
                 {busy && !conversation ? <RefreshCw className="animate-spin" /> : <Bot />}
                 开始设定

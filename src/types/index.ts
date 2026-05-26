@@ -270,6 +270,7 @@ export interface ModelAvailableItem {
   model_id: string;
   model_name: string;
   provider: string;
+  description?: string;
 }
 
 export interface ModelsAvailableResponse {
@@ -903,8 +904,6 @@ export interface AdminModelItem {
   context_window: number;
   temperature: number;
   max_output_tokens?: number;
-  input_price_1m?: number;
-  output_price_1m?: number;
   description?: string;
   enabled: boolean;
   connectivity_status: AdminModelConnectivityStatus;
@@ -932,8 +931,6 @@ export interface CreateAdminModelRequest {
   context_window?: number;
   temperature?: number;
   max_output_tokens?: number;
-  input_price_1m: number;
-  output_price_1m: number;
   description?: string;
   enabled: boolean;
 }
@@ -951,8 +948,6 @@ export interface UpdateAdminModelRequest {
   context_window?: number;
   temperature?: number;
   max_output_tokens?: number;
-  input_price_1m?: number;
-  output_price_1m?: number;
   description?: string;
   enabled?: boolean;
 }
