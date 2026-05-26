@@ -602,7 +602,7 @@ export interface ResearchHistoryDetail {
   created_at: string;
 }
 
-export type FavoriteType = 'insight' | 'report' | 'model';
+export type FavoriteType = 'report' | 'model';
 
 export interface FavoriteItem {
   favorite_id: string;

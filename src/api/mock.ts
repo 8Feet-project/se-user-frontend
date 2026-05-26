@@ -949,14 +949,8 @@ let mockFavoriteItems: FavoriteItemsResponse = {
       target_id: 'report-001',
       remark: '重点参考',
     },
-    {
-      favorite_id: 'fav-002',
-      favorite_type: 'insight',
-      target_id: 'insight-002',
-      remark: '行业观点',
-    },
   ],
-  total: 2,
+  total: 1,
 };
 
 let mockAlerts: AlertItem[] = [

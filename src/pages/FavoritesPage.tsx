@@ -1,4 +1,4 @@
-import { Bot, FileText, Lightbulb, Plus, Star } from 'lucide-react';
+import { Bot, FileText, Plus, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,18 +19,16 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { FavoriteItem, FavoriteType, ModelAvailableItem, ReportListItem } from '@/types';
 
-const favoriteTypes: FavoriteType[] = ['report', 'model', 'insight'];
+const favoriteTypes: FavoriteType[] = ['report', 'model'];
 
 function favoriteTypeLabel(type: FavoriteType) {
-  if (type === 'insight') return '洞察';
   if (type === 'report') return '报告';
   return '模型';
 }
 
 function favoriteTypeIcon(type: FavoriteType) {
   if (type === 'report') return <FileText size={16} className="text-[#63cab7]" />;
-  if (type === 'model') return <Bot size={16} className="text-[#63cab7]" />;
-  return <Lightbulb size={16} className="text-[#63cab7]" />;
+  return <Bot size={16} className="text-[#63cab7]" />;
 }
 
 export function FavoritesPage() {
@@ -69,24 +67,16 @@ export function FavoritesPage() {
         .filter((report) => !findFavoriteItem(items, 'report', report.report_id))
         .map((report) => ({ id: report.report_id, label: report.title }));
     }
-    if (favoriteType === 'model') {
-      return models
-        .filter((model) => !findFavoriteItem(items, 'model', model.model_id))
-        .map((model) => ({ id: model.model_id, label: `${model.model_name}（${model.provider}）` }));
-    }
-    return items
-      .filter((item) => item.favorite_type === 'insight')
-      .map((item) => ({ id: item.target_id, label: item.remark || item.target_id }));
+    return models
+      .filter((model) => !findFavoriteItem(items, 'model', model.model_id))
+      .map((model) => ({ id: model.model_id, label: `${model.model_name}（${model.provider}）` }));
   }, [favoriteType, items, models, reports]);
 
   const getFavoriteDisplayName = (item: FavoriteItem) => {
     if (item.favorite_type === 'report') {
       return reportTitleById.get(item.target_id) || item.remark || '未命名报告';
     }
-    if (item.favorite_type === 'model') {
-      return modelNameById.get(item.target_id) || item.remark || '未命名模型';
-    }
-    return item.remark || item.target_id || '未命名洞察';
+    return modelNameById.get(item.target_id) || item.remark || '未命名模型';
   };
 
   const loadItems = async () => {
