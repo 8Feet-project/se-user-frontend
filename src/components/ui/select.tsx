@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 const selectVariants = cva(
   [
-    'flex w-full appearance-none rounded-2xl border bg-[#07111f] px-4 py-3 text-sm text-slate-100 outline-none transition-all',
+    'flex w-full appearance-none rounded-2xl border bg-[#07111f] px-4 text-sm leading-normal text-slate-100 outline-none transition-all',
     'border-[rgba(99,202,183,0.2)] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]',
     'focus:border-[rgba(99,202,183,0.55)] focus:ring-2 focus:ring-[rgba(99,202,183,0.15)]',
     'disabled:cursor-not-allowed disabled:opacity-50',
@@ -16,8 +16,8 @@ const selectVariants = cva(
         default: '',
       },
       size: {
-        default: 'h-12',
-        sm: 'h-10 text-[13px]',
+        default: 'h-12 py-2',
+        sm: 'h-10 py-1 text-[13px] leading-normal',
       },
     },
     defaultVariants: {

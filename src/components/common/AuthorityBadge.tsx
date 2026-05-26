@@ -21,7 +21,7 @@ const scoreLabels: Record<number, string> = {
 const toneClasses: Record<AuthorityBadgeTone, string> = {
   primary: 'border-emerald-300/45 bg-emerald-400/12 text-emerald-100',
   strong: 'border-sky-300/45 bg-sky-400/12 text-sky-100',
-  standard: 'border-cyan-300/35 bg-cyan-400/10 text-cyan-100',
+  standard: 'border-teal-300/55 bg-teal-500/18 text-teal-50',
   caution: 'border-amber-300/40 bg-amber-400/12 text-amber-100',
   weak: 'border-rose-300/35 bg-rose-400/10 text-rose-100',
 };
@@ -80,6 +80,8 @@ export function AuthorityBadge({ label, score, tier, reason, className }: Author
     <span
       className={cn(
         'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium leading-5',
+        'authority-badge',
+        `authority-badge-${tone}`,
         toneClasses[tone],
         className
       )}

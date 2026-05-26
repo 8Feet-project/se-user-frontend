@@ -352,6 +352,12 @@ body {
   color: #065f46 !important;
 }
 
+:root[data-theme='day'] .authority-badge-standard {
+  border-color: rgba(8, 126, 115, 0.42) !important;
+  background: rgba(8, 126, 115, 0.16) !important;
+  color: #075e55 !important;
+}
+
 :root[data-theme='day'] .theme-input,
 :root[data-theme='day'] input[data-slot='input'],
 :root[data-theme='day'] select,
