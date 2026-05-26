@@ -547,8 +547,6 @@ export function TaskLaunchPage() {
                                 <button
                                   key={item.key}
                                   type="button"
-                                  onMouseEnter={() => setActiveConfigKey(item.key)}
-                                  onFocus={() => setActiveConfigKey(item.key)}
                                   onClick={() => setActiveConfigKey(item.key)}
                                   className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                     active ? 'bg-white/[0.06] text-slate-100' : 'text-slate-300 hover:bg-white/[0.04] hover:text-slate-100'
@@ -563,7 +561,7 @@ export function TaskLaunchPage() {
                               );
                             })}
                           </div>
-                          <div className="max-h-[22rem] overflow-y-auto pr-1">
+                          <div className="h-[22rem] overflow-y-auto pr-1">
                             {renderConfigSubmenu()}
                           </div>
                         </div>
