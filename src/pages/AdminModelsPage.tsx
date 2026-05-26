@@ -622,8 +622,8 @@ export function AdminModelsPage() {
       </section>
 
       <Dialog open={modelDialogOpen} onOpenChange={(open) => (saving ? undefined : setModelDialogOpen(open))}>
-        <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden border-slate-800 bg-slate-900 p-0 text-slate-100 shadow-2xl sm:max-w-2xl">
-          <DialogHeader className="border-b border-slate-800 bg-slate-950/70 px-6 py-5 pr-12 text-left">
+        <DialogContent className="admin-model-dialog flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden border-slate-800 bg-slate-900 p-0 text-slate-100 shadow-2xl sm:max-w-2xl">
+          <DialogHeader className="admin-model-dialog-header border-b border-slate-800 bg-slate-950/70 px-6 py-5 pr-12 text-left">
             <DialogTitle className="text-xl font-semibold text-slate-100">
               {modelFormMode === 'create' ? '新增模型配置' : '编辑模型配置'}
             </DialogTitle>
@@ -632,17 +632,17 @@ export function AdminModelsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="admin-model-dialog-body min-h-0 flex-1 overflow-y-auto">
             <ModelFormSection title="基础信息">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="模型名称">
-                  <Input value={form.model_name} onChange={(event) => setForm((prev) => ({ ...prev, model_name: event.target.value }))} className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
+                  <Input value={form.model_name} onChange={(event) => setForm((prev) => ({ ...prev, model_name: event.target.value }))} className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
                 </Field>
                 <Field label="提供商">
-                  <Input value={form.provider} onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))} className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
+                  <Input value={form.provider} onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))} className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
                 </Field>
                 <Field label="启用状态">
-                  <Select value={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.value }))} className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100">
+                  <Select value={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.value }))} className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100">
                     <option value="true">启用</option>
                     <option value="false">停用</option>
                   </Select>
@@ -654,12 +654,12 @@ export function AdminModelsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <Field label="API Base URL">
-                    <Input value={form.api_base_url} onChange={(event) => setForm((prev) => ({ ...prev, api_base_url: event.target.value }))} className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
+                    <Input value={form.api_base_url} onChange={(event) => setForm((prev) => ({ ...prev, api_base_url: event.target.value }))} className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" />
                   </Field>
                 </div>
                 <div className="md:col-span-2">
                   <Field label="API Key">
-                    <Input value={form.api_key} onChange={(event) => setForm((prev) => ({ ...prev, api_key: event.target.value }))} className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" placeholder={modelFormMode === 'edit' ? '留空表示不更新' : ''} />
+                    <Input value={form.api_key} onChange={(event) => setForm((prev) => ({ ...prev, api_key: event.target.value }))} className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100" placeholder={modelFormMode === 'edit' ? '留空表示不更新' : ''} />
                   </Field>
                 </div>
               </div>
@@ -676,7 +676,7 @@ export function AdminModelsPage() {
                     value={form.context_window}
                     onChange={(event) => setForm((prev) => ({ ...prev, context_window: event.target.value }))}
                     onBlur={() => setForm((prev) => ({ ...prev, context_window: String(normalizeContextWindow(prev.context_window)) }))}
-                    className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100"
+                    className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100"
                   />
                 </ModelFormInputCard>
                 <ModelFormInputCard label="温度参数" hint="超过 1.5 自动置为 1.5。">
@@ -688,7 +688,7 @@ export function AdminModelsPage() {
                     value={form.temperature}
                     onChange={(event) => setForm((prev) => ({ ...prev, temperature: event.target.value }))}
                     onBlur={() => setForm((prev) => ({ ...prev, temperature: String(normalizeTemperature(prev.temperature)) }))}
-                    className="h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100"
+                    className="admin-model-control h-11 rounded-xl border-slate-700 bg-slate-950/80 px-3 text-slate-100"
                   />
                 </ModelFormInputCard>
                 <div className="md:col-span-2">
@@ -696,7 +696,7 @@ export function AdminModelsPage() {
                     <Textarea
                       value={form.description}
                       onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                      className="min-h-24 rounded-xl border-slate-700 bg-slate-950/80 px-3 py-3 text-slate-100"
+                      className="admin-model-control min-h-24 rounded-xl border-slate-700 bg-slate-950/80 px-3 py-3 text-slate-100"
                       placeholder="填写模型推荐使用场景、优势和限制"
                     />
                   </Field>
@@ -705,11 +705,11 @@ export function AdminModelsPage() {
             </ModelFormSection>
           </div>
 
-          <div className="flex shrink-0 justify-end gap-3 border-t border-slate-800 bg-slate-950/70 px-6 py-4">
-            <Button type="button" variant="secondary" onClick={() => setModelDialogOpen(false)} disabled={saving} className="rounded-xl border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800">
+          <div className="admin-model-dialog-footer flex shrink-0 justify-end gap-3 border-t border-slate-800 bg-slate-950/70 px-6 py-4">
+            <Button type="button" variant="secondary" onClick={() => setModelDialogOpen(false)} disabled={saving} className="admin-model-cancel-button rounded-xl border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800">
               取消
             </Button>
-            <Button type="button" onClick={() => void handleSaveModel()} disabled={saving} className="rounded-xl bg-sky-500 text-white hover:bg-sky-400">
+            <Button type="button" onClick={() => void handleSaveModel()} disabled={saving} className="admin-model-save-button rounded-xl bg-sky-500 text-white hover:bg-sky-400">
               {saving ? '提交中...' : modelFormMode === 'create' ? '保存新增' : '保存修改'}
             </Button>
           </div>
@@ -722,7 +722,7 @@ export function AdminModelsPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <Label className="text-slate-300">{label}</Label>
+      <Label className="admin-model-field-label text-slate-300">{label}</Label>
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -730,9 +730,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function ModelFormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-b border-slate-800 px-6 py-5 last:border-b-0">
-      <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300">
-        <span className="h-2 w-2 rounded-full bg-sky-500" />
+    <section className="admin-model-form-section border-b border-slate-800 px-6 py-5 last:border-b-0">
+      <div className="admin-model-section-title mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300">
+        <span className="admin-model-section-dot h-2 w-2 rounded-full bg-sky-500" />
         {title}
       </div>
       {children}
@@ -742,10 +742,10 @@ function ModelFormSection({ title, children }: { title: string; children: React.
 
 function ModelFormInputCard({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-      <Label className="text-slate-300">{label}</Label>
+    <div className="admin-model-input-card rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+      <Label className="admin-model-field-label text-slate-300">{label}</Label>
       <div className="mt-2">{children}</div>
-      <p className="mt-2 text-xs text-slate-500">{hint}</p>
+      <p className="admin-model-card-hint mt-2 text-xs text-slate-500">{hint}</p>
     </div>
   );
 }
