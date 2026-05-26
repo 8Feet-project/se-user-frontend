@@ -196,7 +196,7 @@ export function AdminModelsPage() {
         model_name: form.model_name.trim(),
         provider: form.provider.trim(),
         api_base_url: form.api_base_url.trim(),
-        api_key: form.api_key,
+        api_key: form.api_key.trim(),
         input_price_1m: Number(form.input_price_1m),
         output_price_1m: Number(form.output_price_1m),
         description: form.description.trim() || undefined,
@@ -204,7 +204,7 @@ export function AdminModelsPage() {
       });
 
       const testResult = await testAdminModelConnection(response.model_id);
-      if (!testResult.success) {
+      if (response.connectivity_status === 'failed' || !testResult.success) {
         setCreatingModel(false);
         await loadModels();
         setSelectedModelId(response.model_id);
@@ -254,7 +254,7 @@ export function AdminModelsPage() {
         model_name: form.model_name.trim(),
         provider: form.provider.trim(),
         api_base_url: form.api_base_url.trim(),
-        api_key: form.api_key || undefined,
+        api_key: form.api_key.trim() || undefined,
         input_price_1m: Number(form.input_price_1m),
         output_price_1m: Number(form.output_price_1m),
         description: form.description.trim() || undefined,
@@ -265,7 +265,10 @@ export function AdminModelsPage() {
       if (!testResult.success) {
         await updateAdminModel(selectedModel.model_id, rollbackPayload);
         await loadModels();
-        setFeedback({ tone: 'error', text: '连接测试失败，请检查 API 密钥或网络配置。本次修改没有生效。' });
+        setFeedback({
+          tone: 'error',
+          text: `连接测试失败，本次修改没有生效：${testResult.message || '请检查 API 密钥或网络配置。'}`,
+        });
         return;
       }
 
