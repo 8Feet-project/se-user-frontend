@@ -80,7 +80,6 @@ import type {
   ReportsResponse,
   ReportVersionsResponse,
   ResearchHistoryDetail,
-  ResearchHistoryReloadResponse,
   ResearchTaskStatusResponse,
   ResearchTasksResponse,
   ResetAdminUserPasswordResponse,
@@ -2159,16 +2158,6 @@ export async function mockGetResearchHistoryDetail(taskId: string): Promise<Rese
   return {
     ...mockHistoryDetail,
     task_id: taskId || mockHistoryDetail.task_id,
-  };
-}
-
-export async function mockReloadResearchHistory(
-  taskId: string
-): Promise<ResearchHistoryReloadResponse> {
-  return {
-    task_id: taskId,
-    report_id: `report-from-${taskId}`,
-    redirect_url: `/report?task_id=${taskId}`,
   };
 }
 

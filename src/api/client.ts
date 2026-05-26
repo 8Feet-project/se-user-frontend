@@ -51,7 +51,6 @@ import {
   mockRefreshToken,
   mockRegister,
   mockSendUserPersonaMessage,
-  mockReloadResearchHistory,
   mockSkipUserPersonaPrompt,
   mockClearUserPersona,
   mockStartUserPersonaConversation,
@@ -165,7 +164,6 @@ import type {
   ReportsResponse,
   ReportVersionsResponse,
   ResearchHistoryDetail,
-  ResearchHistoryReloadResponse,
   ResearchHistoryResponse,
   ResearchTaskListItem,
   ResearchTaskStatusResponse,
@@ -843,17 +841,6 @@ export async function getResearchHistoryDetail(taskId: string): Promise<Research
     return mockGetResearchHistoryDetail(taskId);
   }
   return request<ResearchHistoryDetail>(`/research/history/${taskId}`);
-}
-
-export async function reloadResearchHistory(
-  taskId: string
-): Promise<ResearchHistoryReloadResponse> {
-  if (useMock) {
-    return mockReloadResearchHistory(taskId);
-  }
-  return request<ResearchHistoryReloadResponse>(`/research/history/${taskId}/reload`, {
-    method: 'POST',
-  });
 }
 
 export async function getReportDetail(

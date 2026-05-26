@@ -602,12 +602,6 @@ export interface ResearchHistoryDetail {
   created_at: string;
 }
 
-export interface ResearchHistoryReloadResponse {
-  task_id: string;
-  report_id?: string;
-  redirect_url: string;
-}
-
 export type FavoriteType = 'insight' | 'report' | 'model';
 
 export interface FavoriteItem {

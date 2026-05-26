@@ -1,4 +1,4 @@
-import { Clock3, FileSearch, History, RotateCcw, Sparkles, Star } from 'lucide-react';
+import { Clock3, FileSearch, History, Sparkles, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,13 +9,12 @@ import {
   getFavoriteItems,
   getResearchHistory,
   getResearchHistoryDetail,
-  reloadResearchHistory,
 } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
-import type { FavoriteItem, HistoryTaskItem, ResearchHistoryDetail, ResearchHistoryReloadResponse } from '@/types';
+import type { FavoriteItem, HistoryTaskItem, ResearchHistoryDetail } from '@/types';
 
 function objectTypeLabel(type: HistoryTaskItem['object_type']) {
   if (type === 'company') return '公司';
@@ -42,7 +41,6 @@ export function HistoryFavoritesPage() {
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ResearchHistoryDetail | null>(null);
   const [favoriteReportItems, setFavoriteReportItems] = useState<FavoriteItem[]>([]);
-  const [reloadResult, setReloadResult] = useState<ResearchHistoryReloadResponse | null>(null);
   const [message, setMessage] = useState('');
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
   const [favoritingTaskId, setFavoritingTaskId] = useState<string | null>(null);
@@ -89,26 +87,6 @@ export function HistoryFavoritesPage() {
     }
 
     navigate(`/process?task_id=${task.task_id}`);
-  };
-
-  const handleReloadTask = async (taskId: string) => {
-    try {
-      setSubmittingTaskId(taskId);
-      const result = await reloadResearchHistory(taskId);
-      setReloadResult(result);
-      await loadData();
-      setMessage('历史任务已重新加载。');
-      if (result.report_id) {
-        navigate(`/report?report_id=${result.report_id}`);
-      } else if (result.redirect_url) {
-        navigate(result.redirect_url);
-      }
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : '重载历史失败';
-      setMessage(reason);
-    } finally {
-      setSubmittingTaskId(null);
-    }
   };
 
   const handleFavoriteReport = async (task: HistoryTaskItem | ResearchHistoryDetail) => {
@@ -221,17 +199,6 @@ export function HistoryFavoritesPage() {
                         variant="secondary"
                         onClick={(event) => {
                           event.stopPropagation();
-                          void handleReloadTask(task.task_id);
-                        }}
-                        disabled={submittingTaskId === task.task_id}
-                      >
-                        重载结果
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(event) => {
-                          event.stopPropagation();
                           navigate(`/process?task_id=${task.task_id}`);
                         }}
                       >
@@ -270,13 +237,13 @@ export function HistoryFavoritesPage() {
               })
             ) : loaded ? (
               <div className="panel-subtle p-5 text-sm text-slate-500">
-                当前暂无历史任务。待完成一次调研后，这里会显示可复查、可重载、可跳转的任务记录。
+                当前暂无历史任务。待完成一次调研后，这里会显示可复查、可跳转的任务记录。
               </div>
             ) : null}
           </div>
         </Card>
 
-        <div className="space-y-6">
+        <div>
           <Card variant="glow" className="space-y-5">
             <div className="flex items-center gap-2">
               <FileSearch size={16} className="text-[#63cab7]" />
@@ -323,28 +290,6 @@ export function HistoryFavoritesPage() {
               </div>
             ) : (
               <div className="panel-subtle p-4 text-sm text-slate-500">从左侧选择一条历史任务查看详情。</div>
-            )}
-          </Card>
-
-          <Card className="space-y-5">
-            <div className="flex items-center gap-2">
-              <RotateCcw size={16} className="text-[#63cab7]" />
-              <h3 className="text-xl font-semibold text-slate-100">重载结果</h3>
-            </div>
-            {reloadResult ? (
-              <div className="panel-subtle space-y-3 p-4 text-sm text-slate-300">
-                <p>
-                  历史任务已完成重新加载，可继续查看流程或打开更新后的报告。
-                </p>
-                {reloadResult.redirect_url ? (
-                  <p>
-                    <span className="text-slate-500">跳转链接：</span>
-                    {reloadResult.redirect_url}
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <div className="panel-subtle p-4 text-sm text-slate-500">还没有执行过重载操作。</div>
             )}
           </Card>
         </div>
