@@ -259,19 +259,6 @@ export function TaskLaunchPage() {
     setResearchFocus((prev) => toggleMultiValue(prev, value, defaultResearchFocus[0]));
   };
 
-  const handleRemoveSelectedModel = (targetModelId: string) => {
-    if (enableCrossValidation) {
-      const nextModelIds = multiModelIds.filter((item) => item !== targetModelId);
-      setMultiModelIds(nextModelIds);
-      setModelId((prev) => (prev === targetModelId ? nextModelIds[0] ?? '' : prev));
-      return;
-    }
-
-    if (modelId === targetModelId) {
-      setModelId('');
-    }
-  };
-
   const handleToggleFavoriteModel = async (model: ModelAvailableItem) => {
     const existing = favoriteModelItems.find((item) => item.target_id === model.model_id);
     try {
@@ -496,24 +483,6 @@ export function TaskLaunchPage() {
                   className="h-auto min-h-[5.5rem] border-0 bg-transparent px-0 py-0 text-lg text-slate-100 shadow-none placeholder:text-slate-500 focus-visible:ring-0 sm:text-xl"
                 />
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {selectedModels.map((model) => (
-                    <span
-                      key={model.model_id}
-                      className="group/model inline-flex h-8 items-center gap-2 rounded-xl border border-[var(--8feet-line-soft)] bg-white/[0.04] px-3 text-xs font-medium text-slate-300"
-                    >
-                      {model.model_name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSelectedModel(model.model_id)}
-                        className="hidden rounded-full text-slate-500 transition hover:text-slate-100 group-hover/model:inline-flex"
-                        aria-label={`取消选择 ${model.model_name}`}
-                      >
-                        <X size={13} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
                 <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">

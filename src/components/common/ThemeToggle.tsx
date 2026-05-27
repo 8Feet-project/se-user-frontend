@@ -1,3 +1,5 @@
+import { Moon, Sun } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 import { useTheme } from './ThemeProvider';
@@ -10,33 +12,14 @@ export function ThemeToggle({ className }: { className?: string }) {
     <button
       type="button"
       aria-label={isDay ? '切换到夜间模式' : '切换到白天模式'}
-      aria-pressed={isDay}
       onClick={toggleTheme}
-      className={cn('theme-toggle', isDay && 'theme-toggle-day', className)}
+      className={cn(
+        'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--8feet-line-soft)] bg-white/[0.04] text-slate-400 transition hover:border-[var(--8feet-line-accent-strong)] hover:text-slate-100',
+        isDay && 'border-slate-200 bg-white text-slate-500 hover:border-teal-300 hover:text-slate-700',
+        className,
+      )}
     >
-      <span className="theme-toggle-label">PM</span>
-      <span className="theme-toggle-track">
-        <span className="theme-toggle-scene theme-toggle-scene-day">
-          <span className="theme-cloud theme-cloud-one" />
-          <span className="theme-cloud theme-cloud-two" />
-          <span className="theme-skyline theme-skyline-far" />
-          <span className="theme-skyline theme-skyline-near" />
-        </span>
-        <span className="theme-toggle-scene theme-toggle-scene-night">
-          <span className="theme-star theme-star-one" />
-          <span className="theme-star theme-star-two" />
-          <span className="theme-star theme-star-three" />
-          <span className="theme-star theme-star-four" />
-          <span className="theme-skyline theme-skyline-far" />
-          <span className="theme-skyline theme-skyline-near" />
-        </span>
-        <span className="theme-toggle-knob">
-          <span className="theme-toggle-crater theme-toggle-crater-one" />
-          <span className="theme-toggle-crater theme-toggle-crater-two" />
-          <span className="theme-toggle-crater theme-toggle-crater-three" />
-        </span>
-      </span>
-      <span className="theme-toggle-label">AM</span>
+      {isDay ? <Moon size={15} /> : <Sun size={15} />}
     </button>
   );
 }
