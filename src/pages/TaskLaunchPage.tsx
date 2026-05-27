@@ -324,18 +324,6 @@ export function TaskLaunchPage() {
     [availableModels, selectedModelIds]
   );
 
-  const visibleModelDescription = useMemo(() => {
-    if (selectedModels.length === 1) {
-      return selectedModels[0].description || '未填写模型描述';
-    }
-    if (selectedModels.length > 1) {
-      const describedModels = selectedModels
-        .map((model) => `${model.model_name}：${model.description || '未填写模型描述'}`);
-      return describedModels.join('；');
-    }
-    return recommendedModel?.description || '';
-  }, [recommendedModel?.description, selectedModels]);
-
   const currentObjectType = objectTypeOptions.find((item) => item.value === objectType) ?? objectTypeOptions[0];
   const currentTimeRange = timeRangeOptions.find((item) => item.value === timeRange)?.label ?? timeRange;
   const currentAuthority = sourceAuthorityOptions.find((item) => item.value === sourceAuthority) ?? sourceAuthorityOptions[0];
@@ -526,12 +514,6 @@ export function TaskLaunchPage() {
                     </span>
                   ))}
                 </div>
-                {visibleModelDescription ? (
-                  <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">
-                    模型描述：{visibleModelDescription}
-                  </p>
-                ) : null}
-
                 <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">
