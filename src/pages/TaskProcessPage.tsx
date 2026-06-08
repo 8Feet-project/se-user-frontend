@@ -2326,13 +2326,13 @@ export function TaskProcessPage() {
                     {sortedReferences.map((reference, index) => {
                       const number = reference.index_number && reference.index_number > 0 ? reference.index_number : index + 1;
                       return (
-                        <div key={reference.reference_id || `${reference.url}-${index}`} className="panel-subtle p-3">
+                        <div key={reference.reference_id || `${reference.url}-${index}`} className="panel-subtle min-w-0 p-3">
                           <div className="flex items-start gap-3">
                             <span className="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-[rgba(99,202,183,0.25)] bg-[rgba(99,202,183,0.09)] px-2 text-xs font-semibold text-[#8ce5d6]">
                               {number}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium leading-6 text-slate-100">{reference.title}</p>
+                              <p className="break-words text-sm font-medium leading-6 text-slate-100 [overflow-wrap:anywhere]">{reference.title}</p>
                               {reference.cite_key ? <p className="mt-1 break-all text-xs text-slate-500">@{reference.cite_key}</p> : null}
                             </div>
                           </div>
@@ -2357,9 +2357,11 @@ export function TaskProcessPage() {
                             </p>
                           ) : null}
                           {reference.summary ? (
-                            <details className="mt-3 rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                            <details className="mt-3 min-w-0 rounded-xl border border-white/8 bg-black/10 px-3 py-2">
                               <summary className="cursor-pointer text-xs text-slate-400">查看摘要</summary>
-                              <p className="mt-2 text-xs leading-5 text-slate-300">{reference.summary}</p>
+                              <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-slate-300 [overflow-wrap:anywhere]">
+                                {reference.summary}
+                              </p>
                             </details>
                           ) : null}
                         </div>
