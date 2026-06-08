@@ -37,7 +37,7 @@ const isValidReportId = (value: string | null | undefined) => Boolean(value?.tri
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 type ReportMode = 'brief' | 'full';
 const CITE_MARK_RE = /\[@([A-Za-z0-9_.:-]+)\]/g;
-const CITE_MARK_GROUP_RE = /(?:\[@[A-Za-z0-9_.:-]+\]\s*)+/g;
+const CITE_MARK_GROUP_RE = /(?:\[@[A-Za-z0-9_.:-]+\][^\S\r\n]*)+/g;
 
 interface SelectedReportParagraph {
   id: string;
