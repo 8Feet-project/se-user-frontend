@@ -1161,7 +1161,17 @@ function workflowForThread(
     return source;
   }
   if (thread.role === 'primary') {
-    return source;
+    const nodes = source.nodes.filter((node) => crossActorFromNode(node) !== 'integrator');
+    const nodeIdSet = new Set(nodes.map((node) => node.node_id));
+    return {
+      task_id: groupTaskId,
+      nodes,
+      edges: source.edges.filter((edge) => nodeIdSet.has(edge.from) && nodeIdSet.has(edge.to)),
+      current_node: nodes[nodes.length - 1]?.node_id ?? '',
+      waiting_intervention_node_id: source.waiting_intervention_node_id && nodeIdSet.has(source.waiting_intervention_node_id)
+        ? source.waiting_intervention_node_id
+        : '',
+    };
   }
   if (thread.role !== 'integrator') {
     return source;
@@ -1408,14 +1418,16 @@ export function TaskProcessPage() {
   }, [activeThreadId, isCrossValidationGroup, threadOptions]);
 
   useEffect(() => {
-    if (!taskId || activeThread?.role !== 'integrator') {
+    if (!taskId || !isCrossValidationGroup || !activeThread || activeThread.role === 'cross_model') {
       return;
     }
     const nextWorkflow = workflowForThread(groupWorkflow, activeThread, taskId);
     setStatus(groupStatus);
     setWorkflow(nextWorkflow);
-    setFacts(null);
-  }, [activeThread, groupStatus, groupWorkflow, taskId]);
+    if (activeThread.role === 'integrator') {
+      setFacts(null);
+    }
+  }, [activeThread, groupStatus, groupWorkflow, isCrossValidationGroup, taskId]);
 
   useEffect(() => () => {
     if (realtimeRefreshTimerRef.current !== null) {
