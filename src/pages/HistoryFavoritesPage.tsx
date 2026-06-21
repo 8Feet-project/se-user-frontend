@@ -1,5 +1,5 @@
 import { Clock3, Cpu, FileSearch, Filter, History, RotateCcw, Sparkles, Star } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -49,6 +49,16 @@ function formatDateTime(value?: string | null) {
   });
 }
 
+// 把任意时间值转成 <input type="date"> 用的 YYYY-MM-DD
+function toDateInputValue(value: string | number | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function HistoryFavoritesPage() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
@@ -62,13 +72,20 @@ export function HistoryFavoritesPage() {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // 筛选条件
+  // 筛选条件：默认时间区间为「有数据那天 ~ 今天」
+  const todayValue = toDateInputValue(new Date());
   const [objectType, setObjectType] = useState<ObjectTypeFilter>('all');
   const [modelId, setModelId] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [endDate, setEndDate] = useState(todayValue);
+  const [dataStartDate, setDataStartDate] = useState('');
+  const rangeInitialized = useRef(false);
 
-  const hasActiveFilters = objectType !== 'all' || Boolean(modelId) || Boolean(startDate) || Boolean(endDate);
+  const hasActiveFilters =
+    objectType !== 'all' ||
+    Boolean(modelId) ||
+    (Boolean(startDate) && startDate !== dataStartDate) ||
+    endDate !== todayValue;
 
   // 初次加载：模型列表 + 收藏列表（用于收藏星标状态）
   useEffect(() => {
@@ -90,13 +107,24 @@ export function HistoryFavoritesPage() {
       try {
         const history = await getResearchHistory({
           page: 1,
-          page_size: 50,
+          page_size: 200,
           object_type: objectType === 'all' ? undefined : objectType,
           model_id: modelId || undefined,
           start_time: startDate || undefined,
           end_time: endDate || undefined,
         });
         if (!active) return;
+        // 首次加载后，把开始日期默认到最早一条记录那天（结束日期默认今天）
+        if (!rangeInitialized.current) {
+          rangeInitialized.current = true;
+          const earliest = history.list.reduce<string>(
+            (min, task) => (!min || task.created_at < min ? task.created_at : min),
+            ''
+          );
+          const earliestValue = earliest ? toDateInputValue(earliest) : todayValue;
+          setDataStartDate(earliestValue);
+          setStartDate(earliestValue);
+        }
         setTasks(history.list);
         setLoadError(false);
         setMessage('');
@@ -118,8 +146,8 @@ export function HistoryFavoritesPage() {
   const handleClearFilters = () => {
     setObjectType('all');
     setModelId('');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(dataStartDate);
+    setEndDate(todayValue);
   };
 
   const handleLoadDetail = async (taskId: string) => {
