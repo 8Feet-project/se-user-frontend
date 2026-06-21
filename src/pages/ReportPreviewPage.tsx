@@ -380,6 +380,7 @@ export function ReportPreviewPage() {
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx' | 'md' | 'html'>('pdf');
   const [exporting, setExporting] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
+  const [favoritingCitationId, setFavoritingCitationId] = useState<string | null>(null);
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const reportMarkdown = useMemo(() => {
     if (!report) {
@@ -559,7 +560,7 @@ export function ReportPreviewPage() {
 
     const loadFavoriteState = async () => {
       try {
-        const response = await getFavoriteItems({ favorite_type: 'report', page: 1, page_size: 200 });
+        const response = await getFavoriteItems({ page: 1, page_size: 200 });
         setFavoriteItems(response.list);
       } catch {
         setFavoriteItems([]);
@@ -686,6 +687,43 @@ export function ReportPreviewPage() {
       setMessage(reason);
     } finally {
       setFavoriting(false);
+    }
+  };
+
+  const handleFavoriteCitation = async (citation: ReportCitation) => {
+    const targetId = citation.citation_id;
+    if (!targetId) {
+      return;
+    }
+    setFavoritingCitationId(targetId);
+    setMessage('');
+    try {
+      const existing = findFavoriteItem(favoriteItems, 'info', targetId);
+      if (existing) {
+        await deleteFavoriteItem(existing.favorite_id);
+        setFavoriteItems((prev) => prev.filter((item) => item.favorite_id !== existing.favorite_id));
+        setMessage('已取消收藏该信息源。');
+        return;
+      }
+
+      const response = await createFavoriteItem({
+        favorite_type: 'info',
+        target_id: targetId,
+        remark: citation.source_title || citation.cite_key || '调研信息',
+      });
+      const created: FavoriteItem = {
+        favorite_id: response.favorite_id,
+        favorite_type: 'info',
+        target_id: targetId,
+        remark: citation.source_title || citation.cite_key || '调研信息',
+      };
+      setFavoriteItems((prev) => [...prev.filter((item) => !(item.favorite_type === 'info' && item.target_id === targetId)), created]);
+      setMessage('信息源已收藏。');
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '更新收藏失败';
+      setMessage(reason);
+    } finally {
+      setFavoritingCitationId(null);
     }
   };
 
@@ -936,6 +974,22 @@ export function ReportPreviewPage() {
                             打开来源
                           </Button>
                         ) : null}
+                        {(() => {
+                          const citationFavorited = Boolean(findFavoriteItem(favoriteItems, 'info', citation.citation_id));
+                          return (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => void handleFavoriteCitation(citation)}
+                              disabled={favoritingCitationId === citation.citation_id}
+                              aria-label={citationFavorited ? `取消收藏信息源 ${citation.source_title}` : `收藏信息源 ${citation.source_title}`}
+                            >
+                              <Star size={14} fill={citationFavorited ? 'currentColor' : 'none'} />
+                              {favoritingCitationId === citation.citation_id ? '更新中...' : citationFavorited ? '已收藏' : '收藏信息源'}
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

@@ -583,6 +583,9 @@ export interface HistoryTaskItem {
   report_id?: string;
   status: ResearchTaskStatus;
   created_at: string;
+  model_id?: string;
+  model_name?: string;
+  model_provider?: string;
 }
 
 export interface ResearchHistoryResponse {
@@ -601,15 +604,26 @@ export interface ResearchHistoryDetail {
   report_id?: string;
   status: ResearchTaskStatus;
   created_at: string;
+  model_id?: string;
+  model_name?: string;
+  model_provider?: string;
 }
 
-export type FavoriteType = 'report' | 'model';
+export interface ReloadResearchHistoryResponse {
+  task_id: string;
+  report_id: string;
+  redirect_url: string;
+  fact_dataset?: string;
+}
+
+export type FavoriteType = 'info' | 'report' | 'model';
 
 export interface FavoriteItem {
   favorite_id: string;
   favorite_type: FavoriteType;
   target_id: string;
   remark?: string;
+  created_at?: string;
 }
 
 export interface FavoriteItemsResponse {
@@ -631,6 +645,12 @@ export interface CreateFavoriteItemResponse {
 export interface DeleteFavoriteItemResponse {
   result: string;
   target_id: string;
+}
+
+export interface DeleteFavoriteItemsBatchResponse {
+  result: string;
+  deleted_count: number;
+  target_ids: string[];
 }
 
 export type AlertStatus = 'enabled' | 'disabled';

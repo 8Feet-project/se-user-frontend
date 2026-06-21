@@ -41,6 +41,7 @@ import type {
   DeleteAdminModelResponse,
   DeleteAlertResponse,
   DeleteFavoriteItemResponse,
+  DeleteFavoriteItemsBatchResponse,
   DeleteReportShareResponse,
   ExportAdminLogsRequest,
   ExportReportRequest,
@@ -124,6 +125,9 @@ export const mockHistoryTasks: HistoryTaskItem[] = [
     report_id: 'report-001',
     status: 'completed',
     created_at: '2026-03-28T09:30:00Z',
+    model_id: 'model-deepseek-v3',
+    model_name: 'DeepSeek V3',
+    model_provider: 'DeepSeek',
   },
   {
     task_id: 'task-002',
@@ -132,6 +136,9 @@ export const mockHistoryTasks: HistoryTaskItem[] = [
     report_id: 'report-002',
     status: 'analyzing',
     created_at: '2026-03-29T13:20:00Z',
+    model_id: 'model-gpt-4.1',
+    model_name: 'GPT-4.1',
+    model_provider: 'OpenAI',
   },
 ];
 
@@ -942,9 +949,24 @@ let mockFavoriteItems: FavoriteItemsResponse = {
       favorite_type: 'report',
       target_id: 'report-001',
       remark: '重点参考',
+      created_at: '2026-03-29T16:20:00Z',
+    },
+    {
+      favorite_id: 'fav-002',
+      favorite_type: 'model',
+      target_id: 'model-001',
+      remark: '常用模型',
+      created_at: '2026-03-28T10:05:00Z',
+    },
+    {
+      favorite_id: 'fav-003',
+      favorite_type: 'info',
+      target_id: 'citation-001',
+      remark: '腾讯控股年度报告',
+      created_at: '2026-03-29T17:00:00Z',
     },
   ],
-  total: 1,
+  total: 3,
 };
 
 let mockAlerts: AlertItem[] = [
@@ -2434,6 +2456,7 @@ export async function mockCreateFavoriteItem(
     favorite_type: payload.favorite_type,
     target_id: payload.target_id,
     remark: payload.remark,
+    created_at: new Date().toISOString(),
   });
   mockFavoriteItems.total = mockFavoriteItems.list.length;
   return {
@@ -2449,6 +2472,20 @@ export async function mockDeleteFavoriteItem(favoriteId: string): Promise<Delete
   return {
     result: 'ok',
     target_id: target?.target_id ?? '',
+  };
+}
+
+export async function mockDeleteFavoriteItemsBatch(
+  favoriteIds: string[]
+): Promise<DeleteFavoriteItemsBatchResponse> {
+  const idSet = new Set(favoriteIds);
+  const removed = mockFavoriteItems.list.filter((item) => idSet.has(item.favorite_id));
+  mockFavoriteItems.list = mockFavoriteItems.list.filter((item) => !idSet.has(item.favorite_id));
+  mockFavoriteItems.total = mockFavoriteItems.list.length;
+  return {
+    result: 'success',
+    deleted_count: removed.length,
+    target_ids: removed.map((item) => item.target_id),
   };
 }
 

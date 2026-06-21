@@ -33,6 +33,7 @@ import {
   mockGetTaskIntervention,
   mockDeleteAlert,
   mockDeleteFavoriteItem,
+  mockDeleteFavoriteItemsBatch,
   mockGetAlerts,
   mockGetFavoriteItems,
   mockGetMessages,
@@ -126,6 +127,7 @@ import type {
   DeleteAdminModelResponse,
   DeleteAlertResponse,
   DeleteFavoriteItemResponse,
+  DeleteFavoriteItemsBatchResponse,
   DeleteReportShareResponse,
   ExportAdminLogsRequest,
   ExportReportRequest,
@@ -156,6 +158,7 @@ import type {
   RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
+  ReloadResearchHistoryResponse,
   ReportCitationDetail,
   ReportCitationsResponse,
   ReportDetail,
@@ -816,10 +819,25 @@ export async function getResearchHistory(params: {
   page: number;
   page_size: number;
   object_type?: string;
+  model_id?: string;
+  start_time?: string;
+  end_time?: string;
   keyword?: string;
 }): Promise<ResearchHistoryResponse> {
   if (useMock) {
-    const list = [...mockHistoryTasks] as HistoryTaskItem[];
+    let list = [...mockHistoryTasks] as HistoryTaskItem[];
+    if (params.object_type && params.object_type !== 'all') {
+      list = list.filter((item) => item.object_type === params.object_type);
+    }
+    if (params.model_id) {
+      list = list.filter((item) => item.model_id === params.model_id);
+    }
+    if (params.start_time) {
+      list = list.filter((item) => item.created_at >= params.start_time!);
+    }
+    if (params.end_time) {
+      list = list.filter((item) => item.created_at <= `${params.end_time!}T23:59:59Z`);
+    }
     return {
       list,
       total: list.length,
@@ -835,6 +853,23 @@ export async function getResearchHistoryDetail(taskId: string): Promise<Research
     return mockGetResearchHistoryDetail(taskId);
   }
   return request<ResearchHistoryDetail>(`/research/history/${taskId}`);
+}
+
+export async function reloadResearchHistory(taskId: string): Promise<ReloadResearchHistoryResponse> {
+  if (useMock) {
+    const task = mockHistoryTasks.find((item) => item.task_id === taskId);
+    const reportId = task?.report_id ?? '';
+    const completed = task?.status === 'completed';
+    return {
+      task_id: taskId,
+      report_id: reportId,
+      redirect_url: reportId && completed ? `/report?report_id=${reportId}` : `/process?task_id=${taskId}`,
+      fact_dataset: `task-${taskId}`,
+    };
+  }
+  return request<ReloadResearchHistoryResponse>(`/research/history/${taskId}/reload`, {
+    method: 'POST',
+  });
 }
 
 export async function getReportDetail(
@@ -1008,6 +1043,18 @@ export async function deleteFavoriteItem(favoriteId: string): Promise<DeleteFavo
   }
   return request<DeleteFavoriteItemResponse>(`/favorites/items/${favoriteId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function deleteFavoriteItemsBatch(
+  favoriteIds: string[]
+): Promise<DeleteFavoriteItemsBatchResponse> {
+  if (useMock) {
+    return mockDeleteFavoriteItemsBatch(favoriteIds);
+  }
+  return request<DeleteFavoriteItemsBatchResponse>('/favorites/items/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ favorite_ids: favoriteIds }),
   });
 }
 

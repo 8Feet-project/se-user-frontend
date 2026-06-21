@@ -1,4 +1,4 @@
-import { Clock3, FileSearch, History, Sparkles, Star } from 'lucide-react';
+import { Clock3, Cpu, FileSearch, Filter, History, RotateCcw, Sparkles, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,14 +7,27 @@ import {
   deleteFavoriteItem,
   findFavoriteItem,
   getFavoriteItems,
+  getModelsAvailable,
   getResearchHistory,
   getResearchHistoryDetail,
+  reloadResearchHistory,
 } from '@/api/client';
 import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
-import type { FavoriteItem, HistoryTaskItem, ResearchHistoryDetail } from '@/types';
+import type { FavoriteItem, HistoryTaskItem, ModelAvailableItem, ObjectType, ResearchHistoryDetail } from '@/types';
+
+type ObjectTypeFilter = ObjectType | 'all';
+
+const objectTypeOptions: Array<{ value: ObjectTypeFilter; label: string }> = [
+  { value: 'all', label: '全部类型' },
+  { value: 'company', label: '公司' },
+  { value: 'stock', label: '股票' },
+  { value: 'commodity', label: '商品' },
+];
 
 function objectTypeLabel(type: HistoryTaskItem['object_type']) {
   if (type === 'company') return '公司';
@@ -39,32 +52,75 @@ function formatDateTime(value?: string | null) {
 export function HistoryFavoritesPage() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<HistoryTaskItem[]>([]);
+  const [models, setModels] = useState<ModelAvailableItem[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ResearchHistoryDetail | null>(null);
   const [favoriteReportItems, setFavoriteReportItems] = useState<FavoriteItem[]>([]);
   const [message, setMessage] = useState('');
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
   const [favoritingTaskId, setFavoritingTaskId] = useState<string | null>(null);
+  const [reloadingTaskId, setReloadingTaskId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  const loadData = async () => {
-    try {
-      const [history, favorites] = await Promise.all([
-        getResearchHistory({ page: 1, page_size: 10 }),
+  // 筛选条件
+  const [objectType, setObjectType] = useState<ObjectTypeFilter>('all');
+  const [modelId, setModelId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const hasActiveFilters = objectType !== 'all' || Boolean(modelId) || Boolean(startDate) || Boolean(endDate);
+
+  // 初次加载：模型列表 + 收藏列表（用于收藏星标状态）
+  useEffect(() => {
+    const loadAux = async () => {
+      const [modelsResult, favoritesResult] = await Promise.allSettled([
+        getModelsAvailable(),
         getFavoriteItems({ favorite_type: 'report', page: 1, page_size: 200 }),
       ]);
-      setTasks(history.list);
-      setFavoriteReportItems(favorites.list);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : '加载历史失败';
-      setMessage(reason);
-    } finally {
-      setLoaded(true);
-    }
-  };
-
-  useEffect(() => {
-    void loadData();
+      if (modelsResult.status === 'fulfilled') setModels(modelsResult.value.models);
+      if (favoritesResult.status === 'fulfilled') setFavoriteReportItems(favoritesResult.value.list);
+    };
+    void loadAux();
   }, []);
+
+  // 筛选条件变化时实时刷新列表；带竞态保护，避免先发请求覆盖后发结果
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      try {
+        const history = await getResearchHistory({
+          page: 1,
+          page_size: 50,
+          object_type: objectType === 'all' ? undefined : objectType,
+          model_id: modelId || undefined,
+          start_time: startDate || undefined,
+          end_time: endDate || undefined,
+        });
+        if (!active) return;
+        setTasks(history.list);
+        setLoadError(false);
+        setMessage('');
+      } catch (error) {
+        if (!active) return;
+        setTasks([]);
+        setLoadError(true);
+        setMessage(error instanceof Error ? error.message : '加载历史失败');
+      } finally {
+        if (active) setLoaded(true);
+      }
+    };
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [objectType, modelId, startDate, endDate]);
+
+  const handleClearFilters = () => {
+    setObjectType('all');
+    setModelId('');
+    setStartDate('');
+    setEndDate('');
+  };
 
   const handleLoadDetail = async (taskId: string) => {
     try {
@@ -80,13 +136,18 @@ export function HistoryFavoritesPage() {
     }
   };
 
-  const handleOpenHistoryItem = (task: HistoryTaskItem) => {
-    if (task.report_id && task.status === 'completed') {
-      navigate(`/report?report_id=${task.report_id}`);
-      return;
+  // 复现历史报告：重新加载当时的信息源、分析结果与完整报告
+  const handleReloadReport = async (task: HistoryTaskItem | ResearchHistoryDetail) => {
+    try {
+      setReloadingTaskId(task.task_id);
+      const result = await reloadResearchHistory(task.task_id);
+      navigate(result.redirect_url);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '复现历史报告失败';
+      setMessage(reason);
+    } finally {
+      setReloadingTaskId(null);
     }
-
-    navigate(`/process?task_id=${task.task_id}`);
   };
 
   const handleFavoriteReport = async (task: HistoryTaskItem | ResearchHistoryDetail) => {
@@ -130,9 +191,7 @@ export function HistoryFavoritesPage() {
   const selectedDetailReportFavorited = Boolean(findFavoriteItem(favoriteReportItems, 'report', selectedDetail?.report_id));
 
   return (
-    <PageShell
-      title="历史记录"
-    >
+    <PageShell title="历史记录">
       {message ? <div className="message-strip mb-6">{message}</div> : null}
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)]">
@@ -153,6 +212,69 @@ export function HistoryFavoritesPage() {
             <h2 className="text-2xl font-semibold text-slate-100">调研历史</h2>
           </div>
 
+          {/* 筛选控件：对象类型 / 模型 / 时间区间 */}
+          <div className="panel-subtle space-y-3 rounded-[24px] p-4">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+              <Filter size={13} className="text-[#63cab7]" />
+              筛选条件
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-1">
+                <label className="text-xs text-slate-500" htmlFor="history-object-type">对象类型</label>
+                <Select
+                  id="history-object-type"
+                  value={objectType}
+                  onChange={(event) => setObjectType(event.target.value as ObjectTypeFilter)}
+                >
+                  {objectTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid gap-1">
+                <label className="text-xs text-slate-500" htmlFor="history-model">使用的模型</label>
+                <Select id="history-model" value={modelId} onChange={(event) => setModelId(event.target.value)}>
+                  <option value="">全部模型</option>
+                  {models.map((model) => (
+                    <option key={model.model_id} value={model.model_id}>
+                      {model.model_name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid gap-1">
+                <label className="text-xs text-slate-500" htmlFor="history-start">开始日期</label>
+                <Input
+                  id="history-start"
+                  type="date"
+                  value={startDate}
+                  max={endDate || undefined}
+                  onChange={(event) => setStartDate(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <label className="text-xs text-slate-500" htmlFor="history-end">结束日期</label>
+                <Input
+                  id="history-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                />
+              </div>
+            </div>
+            {hasActiveFilters ? (
+              <div className="flex justify-end">
+                <Button size="sm" variant="secondary" onClick={handleClearFilters}>
+                  <RotateCcw size={13} />
+                  清空筛选条件
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
           <div className="space-y-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {tasks.length > 0 ? (
               tasks.map((task) => {
@@ -163,24 +285,32 @@ export function HistoryFavoritesPage() {
                     className="panel-subtle cursor-pointer rounded-[28px] px-5 py-5 transition hover:border-[rgba(99,202,183,0.18)]"
                     role="button"
                     tabIndex={0}
-                    onClick={() => handleOpenHistoryItem(task)}
+                    onClick={() => void handleReloadReport(task)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        handleOpenHistoryItem(task);
+                        void handleReloadReport(task);
                       }
                     }}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-base font-semibold text-slate-100">{task.object_name}</p>
-                        <p className="mt-1 text-sm text-slate-400">{objectTypeLabel(task.object_type)}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                          <span>{objectTypeLabel(task.object_type)}</span>
+                          {task.model_name ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                              <Cpu size={12} />
+                              {task.model_name}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <StatusBadge status={task.status} />
                     </div>
                     <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
                       <Clock3 size={12} />
-                      创建时间：{formatDateTime(task.created_at)}
+                      调研时间：{formatDateTime(task.created_at)}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button
@@ -199,24 +329,21 @@ export function HistoryFavoritesPage() {
                         variant="secondary"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate(`/process?task_id=${task.task_id}`);
+                          void handleReloadReport(task);
                         }}
+                        disabled={reloadingTaskId === task.task_id}
                       >
-                        查看流程
+                        {reloadingTaskId === task.task_id ? '复现中...' : '复现报告'}
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={(event) => {
                           event.stopPropagation();
-                          if (task.report_id) {
-                            navigate(`/report?report_id=${task.report_id}`);
-                          } else {
-                            navigate(`/report?task_id=${task.task_id}`);
-                          }
+                          navigate(`/process?task_id=${task.task_id}`);
                         }}
                       >
-                        查看报告
+                        查看流程
                       </Button>
                       <Button
                         size="sm"
@@ -235,6 +362,19 @@ export function HistoryFavoritesPage() {
                   </div>
                 );
               })
+            ) : loadError ? (
+              <div className="panel-subtle p-5 text-sm text-slate-500">
+                加载历史记录失败，请稍后重试。
+              </div>
+            ) : loaded && hasActiveFilters ? (
+              <div className="panel-subtle flex flex-col items-center gap-3 p-8 text-center text-sm text-slate-500">
+                <FileSearch size={28} className="text-slate-600" />
+                <p>没有符合当前筛选条件的调研记录。</p>
+                <Button size="sm" variant="secondary" onClick={handleClearFilters}>
+                  <RotateCcw size={13} />
+                  清空筛选条件
+                </Button>
+              </div>
             ) : loaded ? (
               <div className="panel-subtle p-5 text-sm text-slate-500">
                 当前暂无历史任务。待完成一次调研后，这里会显示可复查、可跳转的任务记录。
@@ -255,26 +395,35 @@ export function HistoryFavoritesPage() {
                   <span className="text-slate-500">调研对象：</span>
                   {selectedDetail.object_name}
                 </p>
+                {selectedDetail.model_name ? (
+                  <p>
+                    <span className="text-slate-500">使用模型：</span>
+                    {selectedDetail.model_name}
+                    {selectedDetail.model_provider ? `（${selectedDetail.model_provider}）` : ''}
+                  </p>
+                ) : null}
                 <p className="flex items-center gap-2">
                   <span className="text-slate-500">状态：</span>
                   <StatusBadge status={selectedDetail.status} />
+                </p>
+                <p>
+                  <span className="text-slate-500">调研时间：</span>
+                  {formatDateTime(selectedDetail.created_at)}
                 </p>
                 <p>
                   <span className="text-slate-500">数据集：</span>
                   {selectedDetail.fact_dataset}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${selectedDetail.task_id}`)}>
-                    恢复任务
-                  </Button>
                   <Button
                     size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      navigate(selectedDetail.report_id ? `/report?report_id=${selectedDetail.report_id}` : `/report?task_id=${selectedDetail.task_id}`)
-                    }
+                    onClick={() => void handleReloadReport(selectedDetail)}
+                    disabled={reloadingTaskId === selectedDetail.task_id}
                   >
-                    打开报告
+                    {reloadingTaskId === selectedDetail.task_id ? '复现中...' : '复现报告'}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => navigate(`/process?task_id=${selectedDetail.task_id}`)}>
+                    查看流程
                   </Button>
                   <Button
                     size="sm"
